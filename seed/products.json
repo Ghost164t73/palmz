@@ -1,0 +1,55 @@
+[
+  {
+    "name": "Signature Cross",
+    "type": "Cross Strap",
+    "desc": "A clean PALMZ cross-strap design in navy, black and white.",
+    "colors": [
+      "Navy / Black / White"
+    ],
+    "file": "p1.webp",
+    "sizeMin": 43,
+    "sizeMax": 48,
+    "quantity": 10,
+    "available": true
+  },
+  {
+    "name": "Double Band",
+    "type": "Double Strap",
+    "desc": "A warm tan PALMZ double-band slide with a simple everyday profile.",
+    "colors": [
+      "Tan"
+    ],
+    "file": "p2.webp",
+    "sizeMin": 43,
+    "sizeMax": 48,
+    "quantity": 10,
+    "available": true
+  },
+  {
+    "name": "Classic Leather",
+    "type": "Leather",
+    "desc": "A black leather-style PALMZ pair with a refined crossover front.",
+    "colors": [
+      "Black"
+    ],
+    "file": "p3.webp",
+    "sizeMin": 43,
+    "sizeMax": 48,
+    "quantity": 10,
+    "available": true
+  },
+  {
+    "name": "Cross Strap Colorways",
+    "type": "Cross Strap",
+    "desc": "A lighter cross-strap option shown in olive/brown and cream/tan.",
+    "colors": [
+      "Olive / Brown",
+      "Cream / Tan"
+    ],
+    "file": "p4.webp",
+    "sizeMin": 43,
+    "sizeMax": 48,
+    "quantity": 10,
+    "available": true
+  }
+]
