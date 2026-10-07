@@ -3,13 +3,14 @@
 
 <head>
   <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description"
     content="PALMZ footwear — style and comfort from Kano, Nigeria.">
   <title>PALMZ — Footwear</title>
   <style>
     :root {
-      color-scheme: light;
+      color-scheme: light dark;
       --bg: #f7f5ef;
       --surface: #ffffff;
       --surface2: #f1efe8;
@@ -975,6 +976,26 @@
 
       .detail-img {
         height: 320px
+      }
+    }
+    /* ===== Auto theme: follows the device. Light is your design; dark values come from the original dark palette ===== */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --bg: #080a10;
+        --surface: #0e111a;
+        --surface2: #151925;
+        --text: #f6f4ed;
+        --muted: #a5a8b4;
+        --line: rgba(255, 255, 255, .09);
+      }
+      /* navy-on-dark would disappear, so active/selected states use gold in dark mode */
+      .filter.active,
+      .filter:hover,
+      .option.selected {
+        background: var(--gold);
+        border-color: var(--gold);
+        color: #111
       }
     }
   </style>
