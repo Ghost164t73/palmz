@@ -346,6 +346,93 @@
       gap: 16px
     }
 
+    .product-skeleton {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--surface)
+    }
+
+    .skeleton-shimmer {
+      position: relative;
+      overflow: hidden;
+      background: var(--surface2)
+    }
+
+    .skeleton-shimmer::after {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(128, 128, 128, .14), transparent);
+      content: "";
+      transform: translateX(-100%);
+      animation: skeleton-shimmer 1.4s ease-in-out infinite
+    }
+
+    @keyframes skeleton-shimmer {
+      to {
+        transform: translateX(100%)
+      }
+    }
+
+    .skeleton-image {
+      height: 310px
+    }
+
+    .skeleton-info {
+      padding: 15px
+    }
+
+    .skeleton-row,
+    .skeleton-actions {
+      display: flex;
+      gap: 10px
+    }
+
+    .skeleton-row {
+      justify-content: space-between
+    }
+
+    .skeleton-line {
+      height: 12px;
+      margin-bottom: 12px
+    }
+
+    .skeleton-title {
+      width: 48%;
+      height: 15px
+    }
+
+    .skeleton-price {
+      width: 25%
+    }
+
+    .skeleton-description {
+      width: 72%;
+      margin-top: 15px
+    }
+
+    .skeleton-size {
+      width: 40%;
+      height: 10px;
+      margin-top: 18px
+    }
+
+    .skeleton-actions {
+      margin-top: 16px
+    }
+
+    .skeleton-button {
+      flex: 1;
+      height: 36px;
+      margin-bottom: 0
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .skeleton-shimmer::after {
+        animation: none;
+        display: none
+      }
+    }
+
     .card {
       background: var(--surface);
       border: 1px solid var(--line);
@@ -1067,7 +1154,7 @@
             <div class="kicker">THE COLLECTION</div>
             <h2>Find your pair.</h2>
           </div>
-          <div class="section-copy" id="result">4 styles</div>
+          <div class="section-copy" id="result" aria-live="polite">Loading styles…</div>
         </div>
         <div style="margin-bottom:18px">
           <input id="search" oninput="render()"
@@ -1075,7 +1162,44 @@
             style="width:100%;max-width:420px;padding:12px 15px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--text);outline:none">
         </div>
         <div class="filters" id="filters"></div>
-        <div class="products" id="products"></div>
+        <div class="products" id="products" aria-busy="true">
+          <div class="product-skeleton" aria-hidden="true">
+            <div class="skeleton-image skeleton-shimmer"></div>
+            <div class="skeleton-info">
+              <div class="skeleton-row"><div class="skeleton-title skeleton-shimmer"></div><div class="skeleton-price skeleton-line skeleton-shimmer"></div></div>
+              <div class="skeleton-description skeleton-line skeleton-shimmer"></div>
+              <div class="skeleton-size skeleton-shimmer"></div>
+              <div class="skeleton-actions"><div class="skeleton-button skeleton-shimmer"></div><div class="skeleton-button skeleton-shimmer"></div></div>
+            </div>
+          </div>
+          <div class="product-skeleton" aria-hidden="true">
+            <div class="skeleton-image skeleton-shimmer"></div>
+            <div class="skeleton-info">
+              <div class="skeleton-row"><div class="skeleton-title skeleton-shimmer"></div><div class="skeleton-price skeleton-line skeleton-shimmer"></div></div>
+              <div class="skeleton-description skeleton-line skeleton-shimmer"></div>
+              <div class="skeleton-size skeleton-shimmer"></div>
+              <div class="skeleton-actions"><div class="skeleton-button skeleton-shimmer"></div><div class="skeleton-button skeleton-shimmer"></div></div>
+            </div>
+          </div>
+          <div class="product-skeleton" aria-hidden="true">
+            <div class="skeleton-image skeleton-shimmer"></div>
+            <div class="skeleton-info">
+              <div class="skeleton-row"><div class="skeleton-title skeleton-shimmer"></div><div class="skeleton-price skeleton-line skeleton-shimmer"></div></div>
+              <div class="skeleton-description skeleton-line skeleton-shimmer"></div>
+              <div class="skeleton-size skeleton-shimmer"></div>
+              <div class="skeleton-actions"><div class="skeleton-button skeleton-shimmer"></div><div class="skeleton-button skeleton-shimmer"></div></div>
+            </div>
+          </div>
+          <div class="product-skeleton" aria-hidden="true">
+            <div class="skeleton-image skeleton-shimmer"></div>
+            <div class="skeleton-info">
+              <div class="skeleton-row"><div class="skeleton-title skeleton-shimmer"></div><div class="skeleton-price skeleton-line skeleton-shimmer"></div></div>
+              <div class="skeleton-description skeleton-line skeleton-shimmer"></div>
+              <div class="skeleton-size skeleton-shimmer"></div>
+              <div class="skeleton-actions"><div class="skeleton-button skeleton-shimmer"></div><div class="skeleton-button skeleton-shimmer"></div></div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1194,6 +1318,7 @@
 
   <script>
     let PRODUCTS = [];
+    let productsLoading = true;
     let WHATSAPP_NUMBER = "";
     let filter = "All";
     let cart = [];
@@ -1238,6 +1363,7 @@
     }
 
     function render() {
+      if (productsLoading) return;
       const q = ($("#search")?.value || "").trim().toLowerCase();
       const list = PRODUCTS.filter(p => (filter === "All" || p.type ===
         filter) &&
@@ -1478,10 +1604,15 @@ Please confirm the total price, availability and delivery/payment details. Thank
         PRODUCTS = d.products;
         WHATSAPP_NUMBER = d.whatsapp || "";
       } catch (e) {
+        productsLoading = false;
+        $("#products").setAttribute("aria-busy", "false");
+        $("#result").textContent = "Products unavailable";
         $("#products").innerHTML =
           '<div class="empty-state">Could not load products. Please refresh.</div>';
         return;
       }
+      productsLoading = false;
+      $("#products").setAttribute("aria-busy", "false");
       cart = cart.filter(x => PRODUCTS.some(p => p.id === x.id && p.inStock));
       save();
       render();
