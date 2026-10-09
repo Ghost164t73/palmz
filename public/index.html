@@ -511,6 +511,66 @@
       transition: transform .35s
     }
 
+    .gallery-nav {
+      position: absolute;
+      top: 50%;
+      z-index: 2;
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      padding: 0;
+      transform: translateY(-50%);
+      border: 1px solid rgba(255, 255, 255, .7);
+      background: rgba(12, 18, 39, .72);
+      color: #fff;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer
+    }
+
+    .gallery-nav:hover {
+      background: var(--gold);
+      color: #111
+    }
+
+    .gallery-prev {
+      left: 10px
+    }
+
+    .gallery-next {
+      right: 10px
+    }
+
+    .gallery-dots {
+      position: absolute;
+      right: 0;
+      bottom: 12px;
+      left: 0;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      gap: 6px
+    }
+
+    .gallery-dot {
+      width: 8px;
+      height: 8px;
+      padding: 0;
+      border: 1px solid #fff;
+      border-radius: 50% !important;
+      background: rgba(12, 18, 39, .55);
+      cursor: pointer
+    }
+
+    .gallery-dot[aria-current="true"] {
+      background: var(--gold)
+    }
+
+    .gallery-dots .gallery-dot {
+      border-radius: 50% !important
+    }
+
     .card:hover .product-image img {
       transform: scale(1.035)
     }
@@ -895,6 +955,7 @@
 
     .detail-img {
       height: 400px;
+      position: relative;
       border-radius: 0;
       overflow: hidden;
       background: #eeeae1
@@ -1464,7 +1525,7 @@
       `${list.length} style${list.length===1?"":"s"}`;
       $("#products").innerHTML = list.length ? list.map(p => `
     <article class="card">
-      <div class="product-image"><img src="${opt(p.image)}" alt="${esc(p.name)}" loading="lazy"><span class="tag">${esc(p.type)}</span>${badge(p)}</div>
+      ${galleryMarkup(p, "product-image")}
       <div class="info">
         <div class="info-row"><div><div class="name">${esc(p.name)}</div><div class="type">${esc(p.desc)}</div></div><div class="price">${priceLabel(p)}</div></div>
         <div class="sizes">Sizes ${p.sizeMin}–${p.sizeMax}</div>
@@ -1479,12 +1540,47 @@
       updateCart();
     }
 
+    function productImages(product) {
+      return product.images && product.images.length ? product.images : [product.image].filter(Boolean);
+    }
+
+    function galleryMarkup(product, className) {
+      const images = productImages(product);
+      const loading = className === "product-image" ? "lazy" : "eager";
+      const labels = className === "product-image" ?
+        `<span class="tag">${esc(product.type)}</span>${badge(product)}` : "";
+      const controls = images.length > 1 ? `
+        <button class="gallery-nav gallery-prev" type="button" aria-label="Previous ${esc(product.name)} photo" onclick="moveGallery(this,-1)">&#8249;</button>
+        <button class="gallery-nav gallery-next" type="button" aria-label="Next ${esc(product.name)} photo" onclick="moveGallery(this,1)">&#8250;</button>
+        <div class="gallery-dots">${images.map((_, index) => `<button class="gallery-dot" type="button" aria-label="Show photo ${index + 1} of ${images.length}" aria-current="${index === 0}" onclick="showGalleryImage(this,${index})"></button>`).join("")}</div>` : "";
+      return `<div class="${className}" data-product-id="${esc(product.id)}" data-image-index="0"><img src="${esc(opt(images[0] || ""))}" alt="${esc(product.name)}" loading="${loading}">${labels}${controls}</div>`;
+    }
+
+    function showGalleryImage(button, index) {
+      const gallery = button.closest("[data-product-id]");
+      const product = PRODUCTS.find(item => item.id === gallery.dataset.productId);
+      const images = productImages(product);
+      if (!images.length) return;
+      const nextIndex = (index + images.length) % images.length;
+      gallery.dataset.imageIndex = nextIndex;
+      gallery.querySelector("img").src = opt(images[nextIndex]);
+      gallery.querySelectorAll(".gallery-dot").forEach((dot, dotIndex) => {
+        dot.setAttribute("aria-current", String(dotIndex === nextIndex));
+      });
+    }
+
+    function moveGallery(button, direction) {
+      const gallery = button.closest("[data-product-id]");
+      const index = Number(gallery.dataset.imageIndex) + direction;
+      showGalleryImage(gallery.querySelector(".gallery-dot"), index);
+    }
+
     function openProduct(id) {
       selectedProduct = PRODUCTS.find(p => p.id === id);
       selectedSize = selectedProduct.sizes[0];
       selectedColor = selectedProduct.colors[0];
       $("#productDetail").innerHTML = `
-    <div class="detail-img"><img src="${opt(selectedProduct.image)}" alt="${esc(selectedProduct.name)}"></div>
+    ${galleryMarkup(selectedProduct, "detail-img")}
     <div class="detail">
       <div class="kicker">${esc(selectedProduct.type)}</div>
       <h3>${esc(selectedProduct.name)}</h3>

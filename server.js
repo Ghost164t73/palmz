@@ -53,6 +53,10 @@ const upload = multer({
     cb(Object.assign(new Error('Only JPG, PNG or WebP images are allowed'), { status: 400, expose: true }));
   },
 });
+const uploadProductImages = upload.fields([
+  { name: 'images', maxCount: 12 },
+  { name: 'image', maxCount: 1 },
+]);
 const uploadToCloudinary = (buffer) =>
   new Promise((resolve, reject) => {
     cloudinary.uploader
@@ -60,6 +64,34 @@ const uploadToCloudinary = (buffer) =>
       .end(buffer);
   });
 const removeFromCloudinary = (publicId) => (publicId ? cloudinary.uploader.destroy(publicId).catch(() => {}) : null);
+function productImageFiles(req) {
+  const fields = req.files || {};
+  const files = [...(fields.images || []), ...(fields.image || [])];
+  if (files.length > 12) throw bad('Choose no more than 12 product photos');
+  if (files.reduce((total, file) => total + file.size, 0) > 4 * 1024 * 1024) {
+    throw bad('Product photos must total no more than 4MB');
+  }
+  return files;
+}
+async function uploadProductGallery(files) {
+  const images = [];
+  try {
+    for (const file of files) {
+      const img = await uploadToCloudinary(file.buffer);
+      images.push({ url: img.secure_url, publicId: img.public_id });
+    }
+    return images;
+  } catch (err) {
+    await Promise.all(images.map((image) => removeFromCloudinary(image.publicId)));
+    throw err;
+  }
+}
+function productImagePublicIds(product) {
+  return [...new Set([
+    product.image && product.image.publicId,
+    ...(product.images || []).map((image) => image.publicId),
+  ].filter(Boolean))];
+}
 
 // ---------- Admin auth (single password, signed cookie) ----------
 const COOKIE = 'palmz_admin';
@@ -133,32 +165,42 @@ app.get('/api/products', async (req, res) => {
 });
 
 // ---------- Admin API ----------
-app.post('/api/admin/products', requireAdmin, upload.single('image'), async (req, res) => {
+app.post('/api/admin/products', requireAdmin, uploadProductImages, async (req, res) => {
   const data = readFields(req.body);
-  if (!req.file) throw bad('Please choose a product image');
-  const img = await uploadToCloudinary(req.file.buffer);
+  const files = productImageFiles(req);
+  if (!files.length) throw bad('Please choose at least one product image');
+  const images = await uploadProductGallery(files);
   try {
-    const p = await Product.create({ ...data, image: { url: img.secure_url, publicId: img.public_id } });
+    const p = await Product.create({ ...data, image: images[0], images });
     res.status(201).json(p);
   } catch (e) {
-    await removeFromCloudinary(img.public_id);
+    await Promise.all(images.map((image) => removeFromCloudinary(image.publicId)));
     throw e;
   }
 });
 
-app.put('/api/admin/products/:id', requireAdmin, validId, upload.single('image'), async (req, res) => {
+app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, async (req, res) => {
   const p = await Product.findById(req.params.id);
   if (!p) return res.status(404).json({ error: 'Product not found' });
   const data = readFields(req.body);
-  let oldId = null;
-  if (req.file) {
-    const img = await uploadToCloudinary(req.file.buffer);
-    oldId = p.image && p.image.publicId;
-    data.image = { url: img.secure_url, publicId: img.public_id };
+  const files = productImageFiles(req);
+  const oldIds = productImagePublicIds(p);
+  if (files.length) {
+    const images = await uploadProductGallery(files);
+    data.image = images[0];
+    data.images = images;
+    p.set(data);
+    try {
+      await p.save();
+    } catch (err) {
+      await Promise.all(images.map((image) => removeFromCloudinary(image.publicId)));
+      throw err;
+    }
+    await Promise.all(oldIds.map(removeFromCloudinary));
+  } else {
+    p.set(data);
+    await p.save();
   }
-  p.set(data);
-  await p.save();
-  await removeFromCloudinary(oldId);
   res.json(p);
 });
 
@@ -177,7 +219,7 @@ app.patch('/api/admin/products/:id/stock', requireAdmin, validId, async (req, re
 app.delete('/api/admin/products/:id', requireAdmin, validId, async (req, res) => {
   const p = await Product.findByIdAndDelete(req.params.id);
   if (!p) return res.status(404).json({ error: 'Product not found' });
-  await removeFromCloudinary(p.image && p.image.publicId);
+  await Promise.all(productImagePublicIds(p).map(removeFromCloudinary));
   res.json({ ok: true });
 });
 

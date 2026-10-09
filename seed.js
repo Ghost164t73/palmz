@@ -24,7 +24,8 @@ cloudinary.config({
   for (const it of items) {
     const img = await cloudinary.uploader.upload(path.join(__dirname, 'seed', it.file), { folder: 'palmz' });
     const { file, ...rest } = it;
-    await Product.create({ ...rest, image: { url: img.secure_url, publicId: img.public_id } });
+    const image = { url: img.secure_url, publicId: img.public_id };
+    await Product.create({ ...rest, image, images: [image] });
     console.log('Added', it.name);
   }
   console.log('Done. Starter quantities are 10 each: update them in /admin.');

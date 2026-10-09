@@ -57,7 +57,9 @@ label input,label textarea,label select{margin-top:5px;font-weight:400;color:var
 .box{width:min(620px,100%);max-height:94vh;overflow:auto;background:var(--surface);border-radius:22px;padding:22px}
 .box h3{margin:0 0 4px;font:700 26px Georgia,serif}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.preview{width:100%;height:190px;border:1px dashed var(--line);border-radius:14px;background:var(--surface2) center/cover no-repeat;display:grid;place-items:center;color:var(--muted);font-size:12px;margin-top:5px}
+.preview-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-top:5px}
+.preview-gallery img,.preview-empty{width:100%;height:100px;border:1px dashed var(--line);border-radius:10px;background:var(--surface2);object-fit:cover}
+.preview-empty{display:grid;place-items:center;color:var(--muted);font-size:12px}
 .hint{font-size:11px;color:var(--muted);margin-top:4px;font-weight:400}
 .check{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:var(--text);font-weight:600}
 .check input{width:auto;margin:0}
@@ -95,9 +97,9 @@ label input,label textarea,label select{margin-top:5px;font-weight:400;color:var
 <div class="modal" id="formModal" onclick="if(event.target===this)closeForm()">
   <form class="box" id="form" onsubmit="saveProduct(event)">
     <h3 id="formTitle">Add palm</h3>
-    <label>Photo <span class="hint">(JPG, PNG or WebP, max 4MB)</span>
-      <div class="preview" id="preview">No image chosen</div>
-      <input type="file" id="image" accept="image/jpeg,image/png,image/webp" onchange="previewImg()">
+    <label>Product photos <span class="hint">(up to 12 images, 4MB total; upload in the order customers should browse. New photos replace the current gallery.)</span>
+      <div class="preview-gallery" id="preview"><div class="preview-empty">No photos chosen</div></div>
+      <input type="file" id="images" accept="image/jpeg,image/png,image/webp" multiple onchange="previewImg()">
     </label>
     <label>Name<input id="name" required maxlength="80" placeholder="e.g. Signature Cross"></label>
     <div class="two">
@@ -126,6 +128,7 @@ label input,label textarea,label select{margin-top:5px;font-weight:400;color:var
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let products = [], editingId = null;
+let previewUrls = [];
 
 function toast(t, bad) { const el = $("#toast"); el.textContent = t; el.className = "toast show" + (bad ? " bad" : ""); clearTimeout(window.__t); window.__t = setTimeout(() => el.classList.remove("show"), 2200); }
 function showLogin() { $("#appView").style.display = "none"; $("#loginView").style.display = "block"; }
@@ -196,7 +199,7 @@ $("#list").addEventListener("click", async e => {
   else if (act === "edit") openForm(products.find(p => p.id === id));
   else if (act === "del") {
     const p = products.find(x => x.id === id);
-    if (!confirm(`Delete "${p.name}"? This also removes its photo and can't be undone.`)) return;
+    if (!confirm(`Delete "${p.name}"? This also removes its photos and can't be undone.`)) return;
     try { await api(`/api/admin/products/${id}`, { method: "DELETE" }); products = products.filter(x => x.id !== id); render(); toast("Deleted"); }
     catch (err) { toast(err.message, true); }
   }
@@ -208,13 +211,53 @@ $("#list").addEventListener("change", e => {
   if (b.dataset.act === "avail") stock(id, { available: b.checked });
 });
 
+function clearPreviewUrls() {
+  previewUrls.forEach(URL.revokeObjectURL);
+  previewUrls = [];
+}
+function showPreview(images) {
+  const pv = $("#preview");
+  pv.replaceChildren();
+  if (!images.length) {
+    const empty = document.createElement("div");
+    empty.className = "preview-empty";
+    empty.textContent = "No photos chosen";
+    pv.append(empty);
+    return;
+  }
+  images.forEach(src => {
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "Product photo preview";
+    pv.append(img);
+  });
+}
 function previewImg() {
-  const f = $("#image").files[0], pv = $("#preview");
-  if (!f) return;
-  pv.textContent = ""; pv.style.backgroundImage = `url(${URL.createObjectURL(f)})`;
+  clearPreviewUrls();
+  const files = Array.from($("#images").files);
+  if (files.length > 12) {
+    $("#formErr").textContent = "Choose no more than 12 product photos.";
+    $("#images").value = "";
+    showPreview(currentProductImages());
+    return;
+  }
+  if (files.reduce((total, file) => total + file.size, 0) > 4 * 1024 * 1024) {
+    $("#formErr").textContent = "Product photos must total no more than 4MB.";
+    $("#images").value = "";
+    showPreview(currentProductImages());
+    return;
+  }
+  $("#formErr").textContent = "";
+  previewUrls = files.map(file => URL.createObjectURL(file));
+  showPreview(previewUrls);
+}
+function currentProductImages() {
+  const product = products.find(p => p.id === editingId);
+  return product ? (product.images && product.images.length ? product.images : [product.image].filter(Boolean)) : [];
 }
 function openForm(p) {
   editingId = p ? p.id : null;
+  clearPreviewUrls();
   $("#form").reset(); $("#formErr").textContent = "";
   $("#formTitle").textContent = p ? "Edit palm" : "Add palm";
   $("#name").value = p ? p.name : ""; $("#type").value = p ? p.type : "";
@@ -222,19 +265,21 @@ function openForm(p) {
   $("#colors").value = p ? p.colors.join(", ") : "";
   $("#sizeMin").value = p ? p.sizeMin : 43; $("#sizeMax").value = p ? p.sizeMax : 48;
   $("#quantity").value = p ? p.quantity : 0; $("#available").checked = p ? p.available : true;
-  const pv = $("#preview");
-  if (p && p.image) { pv.textContent = ""; pv.style.backgroundImage = `url(${p.image})`; } else { pv.textContent = "No image chosen"; pv.style.backgroundImage = "none"; }
+  showPreview(currentProductImages());
   $("#formModal").classList.add("open");
 }
-function closeForm() { $("#formModal").classList.remove("open"); }
+function closeForm() { clearPreviewUrls(); $("#formModal").classList.remove("open"); }
 
 async function saveProduct(e) {
   e.preventDefault(); $("#formErr").textContent = "";
-  if (!editingId && !$("#image").files[0]) { $("#formErr").textContent = "Please choose a product photo."; return; }
+  const images = Array.from($("#images").files);
+  if (!editingId && !images.length) { $("#formErr").textContent = "Please choose at least one product photo."; return; }
+  if (images.length > 12) { $("#formErr").textContent = "Choose no more than 12 product photos."; return; }
+  if (images.reduce((total, file) => total + file.size, 0) > 4 * 1024 * 1024) { $("#formErr").textContent = "Product photos must total no more than 4MB."; return; }
   const fd = new FormData();
   for (const k of ["name", "type", "price", "desc", "colors", "sizeMin", "sizeMax", "quantity"]) fd.append(k, $("#" + k).value);
   fd.append("available", $("#available").checked);
-  if ($("#image").files[0]) fd.append("image", $("#image").files[0]);
+  images.forEach(image => fd.append("images", image));
   const btn = $("#saveBtn"); btn.disabled = true; btn.textContent = "Saving...";
   try {
     await api(editingId ? `/api/admin/products/${editingId}` : "/api/admin/products", { method: editingId ? "PUT" : "POST", body: fd });

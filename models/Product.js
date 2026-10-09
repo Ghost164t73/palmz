@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 
+const ImageSchema = new mongoose.Schema(
+  { url: { type: String, required: true }, publicId: String },
+  { _id: false }
+);
+
 const ProductSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 80 },
@@ -12,6 +17,7 @@ const ProductSchema = new mongoose.Schema(
     quantity: { type: Number, required: true, min: 0, default: 0 },
     available: { type: Boolean, default: true }, // manual on/off switch
     image: { url: String, publicId: String },
+    images: { type: [ImageSchema], default: [] },
   },
   {
     timestamps: true,
@@ -19,7 +25,10 @@ const ProductSchema = new mongoose.Schema(
       virtuals: true,
       transform(doc, ret) {
         ret.id = String(ret._id);
-        ret.image = ret.image && ret.image.url ? ret.image.url : '';
+        const primaryImage = ret.image && ret.image.url ? ret.image.url : '';
+        ret.images = (ret.images || []).map((image) => image.url).filter(Boolean);
+        ret.image = ret.images[0] || primaryImage;
+        if (!ret.images.length && ret.image) ret.images = [ret.image];
         delete ret._id;
         delete ret.__v;
         delete ret.createdAt;

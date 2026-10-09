@@ -16,3 +16,6 @@ Storefront at `/`, admin panel at `/admin`.
 
 ## How stock works
 Orders are completed on WhatsApp, so stock is NOT reduced automatically. After you confirm a sale, lower the quantity in `/admin` (the − button, or type the number). The store hides "Choose size" and shows "Sold out" at 0 or when Available is off, and stops customers adding more than the quantity left.
+
+## Product photos
+In `/admin`, upload up to 12 JPG, PNG, or WebP photos per product (4 MB total). Photos appear in upload order in the storefront image slider. When editing a product, selecting new photos replaces its current gallery; leaving the photo field empty keeps the existing gallery.
