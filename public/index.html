@@ -51,7 +51,8 @@
 
     a {
       color: inherit;
-      text-decoration: none
+      text-decoration: none;
+      transition: color .2s ease, opacity .2s ease
     }
 
     #app {
@@ -132,7 +133,19 @@
       background: var(--surface);
       color: var(--text);
       display: grid;
-      place-items: center
+      place-items: center;
+      transition: transform .22s ease, background-color .22s ease,
+        border-color .22s ease, box-shadow .22s ease
+    }
+
+    .circle:hover {
+      transform: translateY(-2px);
+      border-color: var(--gold);
+      box-shadow: 0 7px 18px rgba(0, 0, 0, .12)
+    }
+
+    .circle:active {
+      transform: translateY(0) scale(.96)
     }
 
     .circle svg {
@@ -244,7 +257,19 @@
       display: inline-flex;
       justify-content: center;
       align-items: center;
-      gap: 8px
+      gap: 8px;
+      transition: transform .22s ease, box-shadow .22s ease,
+        background-color .22s ease, border-color .22s ease
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .16)
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(0) scale(.98);
+      box-shadow: none
     }
 
     .btn-gold {
@@ -268,7 +293,14 @@
       background: #eef0f4;
       overflow: hidden;
       box-shadow: 0 35px 80px rgba(0, 0, 0, .28);
-      transform: rotate(1.5deg)
+      transform: rotate(1.5deg);
+      transition: transform .45s cubic-bezier(.2, .75, .25, 1),
+        box-shadow .45s ease
+    }
+
+    .hero-image:hover {
+      transform: rotate(0deg) translateY(-3px);
+      box-shadow: 0 42px 90px rgba(0, 0, 0, .34)
     }
 
     .hero-image img {
@@ -330,7 +362,13 @@
       color: var(--muted);
       border-radius: 999px;
       padding: 10px 15px;
-      font-size: 12px
+      font-size: 12px;
+      transition: transform .2s ease, background-color .2s ease,
+        border-color .2s ease, color .2s ease
+    }
+
+    .filter:hover {
+      transform: translateY(-2px)
     }
 
     .filter.active,
@@ -439,12 +477,24 @@
       border-radius: 0;
       overflow: hidden;
       box-shadow: 0 8px 25px rgba(0, 0, 0, .04);
-      transition: transform .2s, border-color .2s
+      transition: transform .28s ease, border-color .28s ease,
+        box-shadow .28s ease;
+      animation: card-enter .42s ease both
     }
+
+    @keyframes card-enter {
+      from { opacity: 0; transform: translateY(10px) }
+      to { opacity: 1; transform: translateY(0) }
+    }
+
+    .card:nth-child(4n + 2) { animation-delay: .04s }
+    .card:nth-child(4n + 3) { animation-delay: .08s }
+    .card:nth-child(4n + 4) { animation-delay: .12s }
 
     .card:hover {
       transform: translateY(-4px);
-      border-color: rgba(201, 163, 74, .45)
+      border-color: rgba(201, 163, 74, .55);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, .10)
     }
 
     .product-image {
@@ -526,7 +576,18 @@
       padding: 11px;
       border-radius: 11px;
       font-size: 11px;
-      font-weight: 900
+      font-weight: 900;
+      transition: transform .2s ease, box-shadow .2s ease,
+        background-color .2s ease, border-color .2s ease
+    }
+
+    .card-actions button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, .12)
+    }
+
+    .card-actions button:active:not(:disabled) {
+      transform: scale(.98)
     }
 
     .view {
@@ -706,7 +767,17 @@
       gap: 12px;
       padding: 13px 0;
       border-bottom: 1px solid var(--line)
+      ;animation: cart-item-enter .3s ease both
     }
+
+    @keyframes cart-item-enter {
+      from { opacity: 0; transform: translateX(18px) }
+      to { opacity: 1; transform: translateX(0) }
+    }
+
+    .cart-row:nth-child(2) { animation-delay: .04s }
+    .cart-row:nth-child(3) { animation-delay: .08s }
+    .cart-row:nth-child(4) { animation-delay: .12s }
 
     .cart-thumb {
       height: 76px;
@@ -865,7 +936,18 @@
       color: var(--text);
       border-radius: 9px;
       padding: 9px 11px;
-      font-size: 11px
+      font-size: 11px;
+      transition: transform .18s ease, background-color .18s ease,
+        border-color .18s ease, color .18s ease
+    }
+
+    .option:hover {
+      transform: translateY(-2px)
+    }
+
+    button:focus-visible, a:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 3px
     }
 
     .option.selected {
@@ -1084,6 +1166,15 @@
         background: var(--gold);
         border-color: var(--gold);
         color: #111
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important
       }
     }
   </style>
