@@ -202,16 +202,16 @@ app.get('/api/customer/orders', requireCustomer, async (req, res) => {
   const orders = await Order.find({ customer: req.customerId }).sort({ createdAt: -1 }).limit(50).lean();
   res.json({ orders });
 });
-app.post('/api/customer/orders', requireCustomer, async (req, res) => {
-  const customer = await Customer.findById(req.customerId);
-  if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
-  const body = req.body || {};
-  const customerName = String(body.customerName || customer.name).trim();
+const guestOrderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
+async function orderContact(body, account = null) {
+  const customerName = String(body.customerName || (account && account.name) || '').trim();
+  const email = String((account && account.email) || body.email || '').trim().toLowerCase();
   const phone = String(body.phone || '').trim();
   const address = String(body.address || '').trim();
   const city = String(body.city || '').trim();
   const note = String(body.note || '').trim();
   if (!customerName || customerName.length > 80) throw bad('Enter a name of 1 to 80 characters');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw bad('Enter a valid email address');
   if (!phone || phone.length > 40) throw bad('Enter a phone number of 1 to 40 characters');
   if (!address || address.length > 300) throw bad('Enter a delivery address of 1 to 300 characters');
   if (!city || city.length > 120) throw bad('Enter a city and state of 1 to 120 characters');
@@ -222,7 +222,6 @@ app.post('/api/customer/orders', requireCustomer, async (req, res) => {
   if (body.items.some((item) => !item || typeof item !== 'object' || Array.isArray(item))) {
     throw bad('An item in your bag is invalid');
   }
-
   const productIds = [...new Set(body.items.map((item) => String(item.productId || '')))];
   if (productIds.some((id) => !mongoose.isValidObjectId(id))) throw bad('An item in your bag is no longer available');
   const products = await Product.find({ _id: { $in: productIds } });
@@ -254,17 +253,51 @@ app.post('/api/customer/orders', requireCustomer, async (req, res) => {
     if (quantity > productsById.get(productId).quantity) throw bad('There is not enough stock for an item in your bag');
   }
 
-  const order = await Order.create({
-    customer: customer._id,
+  return {
+    ...(account ? { customer: account._id, source: 'account' } : { source: 'guest' }),
     customerName,
-    email: customer.email,
+    email,
     phone,
     address,
     city,
     note,
     items,
-  });
+    paymentProvider: 'whatsapp',
+    paymentStatus: 'not_started',
+  };
+}
+app.post('/api/orders', guestOrderLimiter, async (req, res) => {
+  const order = await Order.create(await orderContact(req.body || {}));
+  res.status(201).json({ order: { id: String(order._id), status: order.status } });
+});
+app.post('/api/customer/orders', requireCustomer, async (req, res) => {
+  const customer = await Customer.findById(req.customerId);
+  if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
+  const order = await Order.create(await orderContact(req.body || {}, customer));
   res.status(201).json({ order });
+});
+
+// ---------- Admin order management ----------
+app.get('/api/admin/orders', requireAdmin, async (req, res) => {
+  const filter = {};
+  if (req.query.status && req.query.status !== 'all') {
+    if (!Order.ORDER_STATUSES.includes(req.query.status)) throw bad('Unknown order status');
+    filter.status = req.query.status;
+  }
+  const orders = await Order.find(filter).sort({ createdAt: -1 }).limit(200).lean();
+  res.json({ orders, statuses: Order.ORDER_STATUSES });
+});
+app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Order not found' });
+  const status = req.body && req.body.status;
+  if (!Order.ORDER_STATUSES.includes(status)) throw bad('Choose a valid order status');
+  const order = await Order.findByIdAndUpdate(
+    req.params.id,
+    { $set: { status } },
+    { new: true, runValidators: true }
+  ).lean();
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  res.json({ order });
 });
 
 // ---------- Validation ----------
@@ -298,7 +331,9 @@ function readFields(b) {
     available: b.available === true || b.available === 'true',
   };
 }
-const validId = (req, res, next) => (mongoose.isValidObjectId(req.params.id) ? next() : res.status(404).json({ error: 'Product not found' }));
+function validId(req, res, next) {
+  return mongoose.isValidObjectId(req.params.id) ? next() : res.status(404).json({ error: 'Product not found' });
+}
 
 // ---------- Public API ----------
 app.get('/api/products', async (req, res) => {
@@ -369,6 +404,7 @@ app.delete('/api/admin/products/:id', requireAdmin, validId, async (req, res) =>
 // ---------- Pages ----------
 const pub = path.join(__dirname, 'public');
 app.get('/admin', (req, res) => res.sendFile(path.join(pub, 'admin.html')));
+app.get('/admin/orders', (req, res) => res.sendFile(path.join(pub, 'orders.html')));
 app.use(express.static(pub));
 
 // Express 4 doesn't catch rejected promises by itself, so wrap async routes

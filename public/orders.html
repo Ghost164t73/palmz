@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Orders — PALMZ Admin</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f5ef;
+      --surface: #fff;
+      --surface2: #f1efe8;
+      --text: #11141c;
+      --muted: #6e6d68;
+      --line: rgba(17, 20, 28, .12);
+      --navy: #0c1227;
+      --gold: #c9a34a;
+      --red: #b3261e;
+      --green: #1f8a4c
+    }
+
+    * { box-sizing: border-box }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif
+    }
+    button, select { font: inherit }
+    button, a { cursor: pointer }
+    a { color: inherit; text-decoration: none }
+    .top { background: var(--navy); color: #fff }
+    .wrap { width: min(1120px, calc(100% - 32px)); margin: auto }
+    .top .wrap {
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px
+    }
+    .brand { font-weight: 900; letter-spacing: .2em }
+    .top-actions { display: flex; align-items: center; gap: 12px; font-size: 13px }
+    .top-actions button { border: 1px solid rgba(255,255,255,.2); background: none; color: #fff; padding: 8px 12px }
+    main { padding: 28px 0 60px }
+    .heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap }
+    h1 { margin: 0; font: 700 32px Georgia, serif }
+    .muted { color: var(--muted); font-size: 13px; line-height: 1.6 }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0 }
+    .stat { padding: 14px 16px; border: 1px solid var(--line); background: var(--surface) }
+    .stat b { display: block; font-size: 22px }
+    .stat span { color: var(--muted); font-size: 11px }
+    .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px }
+    .toolbar select { min-width: 210px; padding: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text) }
+    .orders { display: grid; gap: 12px }
+    .order { border: 1px solid var(--line); background: var(--surface) }
+    .order-top { display: flex; justify-content: space-between; gap: 16px; padding: 16px; border-bottom: 1px solid var(--line) }
+    .order-id { font-size: 11px; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere }
+    .order-content { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 18px; padding: 16px }
+    .label { margin-bottom: 5px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase }
+    .customer-name { font-weight: 800 }
+    .contact { margin-top: 8px; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere }
+    .contact a { text-decoration: underline; text-underline-offset: 2px }
+    .items { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.8 }
+    .order-note { margin-top: 8px; color: var(--muted); font-size: 12px; white-space: pre-wrap }
+    .order-manage { display: grid; align-content: start; gap: 10px }
+    .order-manage select { width: 100%; padding: 10px; border: 1px solid var(--line); background: var(--surface2); color: var(--text) }
+    .payment { font-size: 12px; color: var(--muted); line-height: 1.5 }
+    .message { padding: 42px 14px; border: 1px dashed var(--line); background: var(--surface); text-align: center; color: var(--muted) }
+    .toast { position: fixed; left: 50%; bottom: 20px; padding: 11px 16px; background: var(--navy); color: #fff; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; transition: .2s }
+    .toast.show { transform: translate(-50%, 0); opacity: 1 }
+    .toast.error { background: var(--red) }
+    [hidden] { display: none !important }
+    @media(max-width:760px) {
+      .stats { grid-template-columns: repeat(2, 1fr) }
+      .order-content { grid-template-columns: 1fr 1fr }
+      .order-manage { grid-column: 1 / -1 }
+    }
+    @media(max-width:500px) {
+      .order-content { grid-template-columns: 1fr }
+      .order-manage { grid-column: auto }
+      .order-top { align-items: start; flex-direction: column }
+      .top-actions { gap: 8px }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a href="/admin" class="brand">PALMZ ADMIN</a>
+      <div class="top-actions">
+        <a href="/admin">Products</a>
+        <button type="button" onclick="logout()">Sign out</button>
+      </div>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="heading">
+      <div><h1>Orders</h1><div class="muted">WhatsApp order requests. Updating status does not reserve stock.</div></div>
+      <button type="button" onclick="loadOrders()">Refresh</button>
+    </div>
+    <section class="stats" id="stats" aria-live="polite"></section>
+    <div class="toolbar">
+      <label for="statusFilter">Show orders</label>
+      <select id="statusFilter" onchange="loadOrders()">
+        <option value="all">All statuses</option>
+        <option value="pending_confirmation">Pending confirmation</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="fulfilled">Fulfilled</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+      <span class="muted" id="resultCount"></span>
+    </div>
+    <section class="orders" id="orders" aria-live="polite"><div class="message">Loading orders…</div></section>
+  </main>
+  <div class="toast" id="toast" role="status"></div>
+  <script>
+    const $ = selector => document.querySelector(selector);
+    const STATUS_LABELS = {
+      pending_confirmation: "Pending confirmation",
+      confirmed: "Confirmed",
+      fulfilled: "Fulfilled",
+      cancelled: "Cancelled"
+    };
+    const PAYMENT_LABELS = {
+      not_started: "Not started",
+      pending: "Pending",
+      paid: "Paid",
+      failed: "Failed",
+      refunded: "Refunded"
+    };
+
+    function escapeHtml(value) {
+      return String(value == null ? "" : value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[char]);
+    }
+
+    async function request(url, options = {}) {
+      const response = await fetch(url, { credentials: "same-origin", ...options });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        location.replace("/admin?next=orders");
+        throw new Error("Your admin session has expired. Please sign in again.");
+      }
+      if (!response.ok) throw new Error(data.error || "Request failed");
+      return data;
+    }
+
+    function showMessage(message, error = false) {
+      $("#orders").innerHTML = `<div class="message">${escapeHtml(message)}</div>`;
+      $("#resultCount").textContent = "";
+      if (error) toast(message, true);
+    }
+
+    function renderStats(orders) {
+      const counts = Object.fromEntries(Object.keys(STATUS_LABELS).map(status => [status, orders.filter(order => order.status === status).length]));
+      $("#stats").innerHTML = `
+        <div class="stat"><b>${orders.length}</b><span>Orders shown</span></div>
+        <div class="stat"><b>${counts.pending_confirmation}</b><span>Pending confirmation</span></div>
+        <div class="stat"><b>${counts.confirmed}</b><span>Confirmed</span></div>
+        <div class="stat"><b>${counts.fulfilled}</b><span>Fulfilled</span></div>`;
+    }
+
+    function renderOrder(order) {
+      const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.createdAt));
+      const phoneDigits = order.phone.replace(/\D/g, "");
+      const whatsappNumber = phoneDigits.startsWith("0") ? `234${phoneDigits.slice(1)}` : phoneDigits;
+      const items = order.items.map(item => `<li>${item.quantity} × ${escapeHtml(item.name)} — size ${escapeHtml(item.size)}, ${escapeHtml(item.color)}${item.unitPrice != null ? ` — ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}</li>`).join("");
+      return `<article class="order" data-id="${escapeHtml(order._id)}">
+        <header class="order-top">
+          <div><strong>${escapeHtml(order.customerName)}</strong><div class="order-id">Order ${escapeHtml(order._id)} · ${date} · ${order.source === "account" ? "Customer account" : "Guest"}</div></div>
+          <strong>${escapeHtml(STATUS_LABELS[order.status] || order.status)}</strong>
+        </header>
+        <div class="order-content">
+          <section><div class="label">Customer</div><div class="customer-name">${escapeHtml(order.customerName)}</div><div class="contact"><a href="mailto:${encodeURIComponent(order.email)}">${escapeHtml(order.email)}</a><br><a href="tel:${encodeURIComponent(order.phone)}">${escapeHtml(order.phone)}</a>${whatsappNumber ? `<br><a target="_blank" rel="noopener noreferrer" href="https://wa.me/${encodeURIComponent(whatsappNumber)}">Message on WhatsApp</a>` : ""}<br>${escapeHtml(order.address)}<br>${escapeHtml(order.city)}</div></section>
+          <section><div class="label">Items</div><ul class="items">${items}</ul>${order.note ? `<div class="order-note"><strong>Note:</strong> ${escapeHtml(order.note)}</div>` : ""}</section>
+          <section class="order-manage"><div class="label">Order status</div><select aria-label="Update order status" onchange="updateStatus('${escapeHtml(order._id)}', this.value, this)">${Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${order.status === value ? "selected" : ""}>${label}</option>`).join("")}</select><div class="payment"><strong>Payment:</strong> ${escapeHtml(order.paymentProvider || "whatsapp")} · ${escapeHtml(PAYMENT_LABELS[order.paymentStatus] || "Not started")}<br>Payment tracking is separate from order status.</div></section>
+        </div>
+      </article>`;
+    }
+
+    async function loadOrders() {
+      showMessage("Loading orders…");
+      try {
+        const status = $("#statusFilter").value;
+        const { orders } = await request(`/api/admin/orders?status=${encodeURIComponent(status)}`);
+        renderStats(orders);
+        $("#resultCount").textContent = `${orders.length} order${orders.length === 1 ? "" : "s"}`;
+        $("#orders").innerHTML = orders.length ? orders.map(renderOrder).join("") : '<div class="message">No orders found for this status.</div>';
+      } catch (error) {
+        if (!/session has expired/.test(error.message)) showMessage(error.message, true);
+      }
+    }
+
+    async function updateStatus(id, status, select) {
+      select.disabled = true;
+      try {
+        await request(`/api/admin/orders/${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status })
+        });
+        toast("Order status updated");
+        await loadOrders();
+      } catch (error) {
+        toast(error.message, true);
+        await loadOrders();
+      }
+    }
+
+    async function logout() {
+      try {
+        await fetch("/api/admin/logout", { method: "POST", credentials: "same-origin" });
+        location.replace("/admin");
+      } catch (error) {
+        toast(error.message, true);
+      }
+    }
+
+    function toast(message, error = false) {
+      const element = $("#toast");
+      element.textContent = message;
+      element.classList.toggle("error", error);
+      element.classList.add("show");
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => element.classList.remove("show"), 2400);
+    }
+
+    loadOrders();
+  </script>
+</body>
+</html>

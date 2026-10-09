@@ -14,8 +14,10 @@ Storefront at `/`, admin panel at `/admin`.
 - In MongoDB Atlas > Network Access, allow `0.0.0.0/0` (Vercel's IPs change)
 - Run `npm run seed` once from your own computer (with the same `.env`) to load the starter palms
 
-## How stock works
-Orders are completed on WhatsApp, so stock is NOT reduced automatically. After you confirm a sale, lower the quantity in `/admin` (the − button, or type the number). The store hides "Choose size" and shows "Sold out" at 0 or when Available is off, and stops customers adding more than the quantity left.
+## How orders and stock work
+Guest and Google-account checkouts are saved as order requests and then opened in WhatsApp. Manage requests at `/admin/orders`; statuses are Pending confirmation, Confirmed, Fulfilled, or Cancelled. Updating an order status does not reserve or reduce stock. After you confirm a sale, lower the quantity in `/admin` (the − button, or type the number). The store hides "Choose size" and shows "Sold out" at 0 or when Available is off, and stops customers adding more than the quantity left.
+
+Payment state is stored separately from order status. WhatsApp requests start with payment not started; this does not mark an order as paid. A future Paystack integration can update payment state independently.
 
 ## Product photos
 In `/admin`, upload up to 12 JPG, PNG, or WebP photos per product (4 MB total). Photos appear in upload order in the storefront image slider. When editing a product, selecting new photos replaces its current gallery; leaving the photo field empty keeps the existing gallery.

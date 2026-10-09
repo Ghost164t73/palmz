@@ -2110,25 +2110,24 @@ ORDER
 ${lines}
 
 Please confirm the total price, availability and delivery/payment details. Thank you!`;
-        if (customer) {
-          await customerRequest("/api/customer/orders", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              customerName: $("#customerName").value.trim(),
-              phone: $("#customerPhone").value.trim(),
-              address: $("#customerAddress").value.trim(),
-              city: $("#customerCity").value.trim(),
-              note: $("#customerNote").value.trim(),
-              items: cart.map(item => ({
-                productId: item.id,
-                size: item.size,
-                color: item.color,
-                quantity: item.qty
-              }))
-            })
-          });
-        }
+        await customerRequest(customer ? "/api/customer/orders" : "/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerName: $("#customerName").value.trim(),
+            email: $("#customerEmail").value.trim(),
+            phone: $("#customerPhone").value.trim(),
+            address: $("#customerAddress").value.trim(),
+            city: $("#customerCity").value.trim(),
+            note: $("#customerNote").value.trim(),
+            items: cart.map(item => ({
+              productId: item.id,
+              size: item.size,
+              color: item.color,
+              quantity: item.qty
+            }))
+          })
+        });
         whatsappWindow.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
       } catch (error) {
         whatsappWindow.close();
@@ -2148,7 +2147,7 @@ Please confirm the total price, availability and delivery/payment details. Thank
       closeCheckout();
       orderSubmitting = false;
       if (submitButton) submitButton.disabled = false;
-      if (customer) showToast("Order request saved to your account");
+      showToast(customer ? "Order request saved to your account" : "Order request sent to PALMZ");
     }
 
     function openWhatsApp(message) {
