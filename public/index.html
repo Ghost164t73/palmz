@@ -113,11 +113,31 @@
       display: flex;
       gap: 28px;
       font-size: 13px;
+      text-transform: uppercase;
       color: var(--muted)
     }
 
     .navlinks a:hover {
       color: var(--gold)
+    }
+
+    .menu-toggle {
+      display: none;
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      place-items: center
+    }
+
+    .menu-toggle svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round
     }
 
     .actions {
@@ -781,6 +801,20 @@
       display: block
     }
 
+    @keyframes bag-overlay-enter {
+      from { opacity: 0 }
+      to { opacity: 1 }
+    }
+
+    @keyframes bag-drawer-enter {
+      from { opacity: .7; transform: translateX(32px) }
+      to { opacity: 1; transform: translateX(0) }
+    }
+
+    .overlay.open {
+      animation: bag-overlay-enter .24s ease both
+    }
+
     .drawer {
       position: absolute;
       right: 0;
@@ -791,6 +825,10 @@
       display: flex;
       flex-direction: column;
       border-left: 1px solid var(--line)
+    }
+
+    .overlay.open .drawer {
+      animation: bag-drawer-enter .32s cubic-bezier(.2, .75, .25, 1) both
     }
 
     .drawer-head {
@@ -1148,8 +1186,32 @@
         height: 68px
       }
 
+      .menu-toggle {
+        display: grid
+      }
+
       .navlinks {
-        display: none
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 14px;
+        z-index: 45;
+        min-width: 190px;
+        flex-direction: column;
+        gap: 0;
+        padding: 8px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow)
+      }
+
+      .navlinks.open {
+        display: flex
+      }
+
+      .navlinks a {
+        padding: 12px;
+        color: var(--text)
       }
 
       .hero-grid {
@@ -1250,12 +1312,20 @@
         <a href="#" class="logo"><img
             src="data:image/webp;base64,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"
             alt="PALMZ">PALMZ</a>
-        <nav class="navlinks">
+    
+        <nav class="navlinks" id="mainNav">
           <a href="#shop">Shop</a>
           <a href="#story">The brand</a>
           <a href="#order">How to order</a>
         </nav>
         <div class="actions">
+              <button class="menu-toggle" type="button" onclick="toggleMenu()"
+          aria-label="Open navigation menu" aria-expanded="false"
+          aria-controls="mainNav">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
           <button class="circle search" onclick="focusSearch()"
             aria-label="Search">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1484,6 +1554,23 @@
     let selectedColor = null;
 
     const $ = s => document.querySelector(s);
+
+    function toggleMenu() {
+      const menu = $("#mainNav");
+      const button = $(".menu-toggle");
+      const isOpen = menu.classList.toggle("open");
+      button.setAttribute("aria-expanded", String(isOpen));
+      button.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
+    }
+
+    function closeMenu() {
+      $("#mainNav").classList.remove("open");
+      $(".menu-toggle").setAttribute("aria-expanded", "false");
+      $(".menu-toggle").setAttribute("aria-label", "Open navigation menu");
+    }
+
+    document.querySelectorAll("#mainNav a").forEach(link =>
+      link.addEventListener("click", closeMenu));
 
     function money(n) {
       return "₦" + Number(n).toLocaleString("en-NG");
