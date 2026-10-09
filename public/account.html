@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>My Account — PALMZ</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f5ef;
+      --surface: #fff;
+      --surface2: #f1efe8;
+      --text: #11141c;
+      --muted: #6e6d68;
+      --line: rgba(17, 20, 28, .12);
+      --navy: #0c1227;
+      --gold: #c9a34a;
+      --red: #b3261e
+    }
+
+    * { box-sizing: border-box }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif
+    }
+    button, a { font: inherit }
+    a { color: inherit; text-decoration: none }
+    .top { background: var(--navy); color: #fff }
+    .top-inner, main { width: min(760px, calc(100% - 32px)); margin: auto }
+    .top-inner {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px
+    }
+    .brand { font-weight: 900; letter-spacing: .18em }
+    .top-link { font-size: 13px; color: #e9e6da }
+    main { padding: 42px 0 70px }
+    h1 { margin: 0 0 8px; font: 700 36px Georgia, serif }
+    h2 { margin: 30px 0 12px; font: 700 24px Georgia, serif }
+    .muted { color: var(--muted); font-size: 13px; line-height: 1.6 }
+    .panel {
+      margin-top: 22px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      background: var(--surface)
+    }
+    .profile { display: flex; align-items: center; gap: 14px }
+    .profile img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover }
+    .profile-name { font-weight: 800 }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 10px 16px;
+      border: 0;
+      background: var(--gold);
+      color: #111;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer
+    }
+    .button.secondary { background: var(--surface2); border: 1px solid var(--line) }
+    .orders { display: grid; gap: 12px }
+    .order {
+      padding: 16px;
+      border: 1px solid var(--line);
+      background: var(--surface)
+    }
+    .order-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 800 }
+    .status { color: #7a5a12; text-align: right }
+    .order-items { margin: 10px 0; color: var(--muted); font-size: 13px; line-height: 1.7 }
+    .order-delivery { padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.6 }
+    .message { margin-top: 16px; color: var(--muted); font-size: 13px; line-height: 1.6 }
+    [hidden] { display: none !important }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --bg: #080a10;
+        --surface: #0e111a;
+        --surface2: #151925;
+        --text: #f6f4ed;
+        --muted: #a5a8b4;
+        --line: rgba(255, 255, 255, .09)
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <a href="/" class="brand">PALMZ</a>
+      <a href="/" class="top-link">Back to store</a>
+    </div>
+  </header>
+  <main>
+    <h1>My account</h1>
+    <div class="muted">View your saved details and order requests.</div>
+    <section class="panel" id="signedOut">
+      <strong>Sign in with Google</strong>
+      <p class="muted">Save your checkout details and access your order history on any device. Guest checkout is also available.</p>
+      <div id="googleButton"></div>
+      <div class="message" id="status" aria-live="polite">Checking Google sign-in…</div>
+    </section>
+    <section class="panel" id="signedIn" hidden>
+      <div class="profile">
+        <img id="picture" alt="" hidden>
+        <div><div class="profile-name" id="name"></div><div class="muted" id="email"></div></div>
+      </div>
+      <div class="actions">
+        <button class="button secondary" type="button" onclick="signOut()">Sign out</button>
+      </div>
+    </section>
+    <section id="history" hidden>
+      <h2>Order history</h2>
+      <div class="orders" id="orders"></div>
+    </section>
+  </main>
+  <script>
+    const $ = selector => document.querySelector(selector);
+    let googleReady = false;
+
+    async function request(url, options = {}) {
+      const response = await fetch(url, { credentials: "same-origin", ...options });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(data.error || "Request failed");
+        error.status = response.status;
+        throw error;
+      }
+      return data;
+    }
+
+    function showSignedIn(customer) {
+      $("#signedOut").hidden = true;
+      $("#signedIn").hidden = false;
+      $("#history").hidden = false;
+      $("#name").textContent = customer.name;
+      $("#email").textContent = customer.email;
+      const picture = $("#picture");
+      picture.hidden = !customer.picture;
+      if (customer.picture) picture.src = customer.picture;
+      if (googleReady) $("#googleButton").replaceChildren();
+      loadOrders();
+    }
+
+    async function loadOrders() {
+      $("#orders").innerHTML = '<div class="muted">Loading your orders…</div>';
+      try {
+        const { orders } = await request("/api/customer/orders");
+        $("#orders").innerHTML = orders.length ? orders.map(order => `
+          <article class="order">
+            <div class="order-head">
+              <span>${new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(order.createdAt))}</span>
+              <span class="status">Pending confirmation</span>
+            </div>
+            <div class="order-items">${order.items.map(item => `${item.quantity} × ${escapeHtml(item.name)} — size ${escapeHtml(item.size)}, ${escapeHtml(item.color)}${item.unitPrice != null ? ` — ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}`).join("<br>")}</div>
+            <div class="order-delivery">${escapeHtml(order.address)}, ${escapeHtml(order.city)}<br>Phone: ${escapeHtml(order.phone)}</div>
+          </article>`).join("") : '<div class="panel muted">No saved orders yet.</div>';
+      } catch (error) {
+        $("#orders").innerHTML = `<div class="panel muted">${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? "" : value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[char]);
+    }
+
+    async function googleCredential(response) {
+      $("#status").textContent = "Signing in…";
+      try {
+        const result = await request("/api/customer/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: response.credential })
+        });
+        $("#status").textContent = "Signed in.";
+        showSignedIn(result.customer);
+      } catch (error) {
+        $("#status").textContent = error.message;
+      }
+    }
+
+    async function initializeGoogle() {
+      try {
+        const config = await request("/api/customer/google-config");
+        if (!config.clientId) {
+          $("#status").textContent = "Google sign-in is not configured. Set GOOGLE_CLIENT_ID on the server.";
+          return;
+        }
+        if (!window.google || !window.google.accounts) {
+          $("#status").textContent = "Google sign-in could not load. Please refresh and try again.";
+          return;
+        }
+        window.google.accounts.id.initialize({ client_id: config.clientId, callback: googleCredential });
+        window.google.accounts.id.renderButton($("#googleButton"), { theme: "outline", size: "large", text: "signin_with", shape: "rectangular" });
+        googleReady = true;
+        $("#status").textContent = "Sign in to see your saved order requests.";
+      } catch (error) {
+        $("#status").textContent = error.message;
+      }
+    }
+
+    async function restoreSession() {
+      try {
+        const { customer } = await request("/api/customer/me");
+        showSignedIn(customer);
+      } catch (error) {
+        if (error.status !== 401) $("#status").textContent = error.message;
+      }
+    }
+
+    async function signOut() {
+      try {
+        await request("/api/customer/logout", { method: "POST" });
+        $("#signedIn").hidden = true;
+        $("#history").hidden = true;
+        $("#signedOut").hidden = false;
+        $("#status").textContent = "You have signed out.";
+        if (googleReady) {
+          $("#googleButton").replaceChildren();
+          window.google.accounts.id.renderButton($("#googleButton"), { theme: "outline", size: "large", text: "signin_with", shape: "rectangular" });
+        }
+      } catch (error) {
+        $("#status").textContent = error.message;
+      }
+    }
+
+    restoreSession();
+  </script>
+  <script src="https://accounts.google.com/gsi/client" async defer onload="initializeGoogle()" onerror="document.getElementById('status').textContent='Google sign-in could not load. Please refresh and try again.'"></script>
+</body>
+</html>

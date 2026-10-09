@@ -7,7 +7,10 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const { OAuth2Client } = require('google-auth-library');
 const Product = require('./models/Product');
+const Customer = require('./models/Customer');
+const Order = require('./models/Order');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -95,16 +98,35 @@ function productImagePublicIds(product) {
 
 // ---------- Admin auth (single password, signed cookie) ----------
 const COOKIE = 'palmz_admin';
+const CUSTOMER_COOKIE = 'palmz_customer';
 const readCookie = (req) => {
   const m = (req.headers.cookie || '').match(new RegExp('(?:^|;\\s*)' + COOKIE + '=([^;]+)'));
   return m ? m[1] : null;
 };
+const readCustomerCookie = (req) => {
+  const m = (req.headers.cookie || '').match(new RegExp('(?:^|;\\s*)' + CUSTOMER_COOKIE + '=([^;]+)'));
+  return m ? m[1] : null;
+};
+const googleClient = new OAuth2Client();
 function requireAdmin(req, res, next) {
   try {
-    jwt.verify(readCookie(req) || '', process.env.JWT_SECRET || '');
+    const claims = jwt.verify(readCookie(req) || '', process.env.JWT_SECRET || '');
+    if (typeof claims !== 'object' || claims.admin !== true) return res.status(401).json({ error: 'Not signed in' });
     next();
   } catch {
     res.status(401).json({ error: 'Not signed in' });
+  }
+}
+function requireCustomer(req, res, next) {
+  try {
+    const claims = jwt.verify(readCustomerCookie(req) || '', process.env.JWT_SECRET || '');
+    if (typeof claims !== 'object' || claims.scope !== 'customer' || !mongoose.isValidObjectId(claims.customer)) {
+      return res.status(401).json({ error: 'Please sign in with Google' });
+    }
+    req.customerId = claims.customer;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Please sign in with Google' });
   }
 }
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many attempts. Try again in 15 minutes.' } });
@@ -123,6 +145,127 @@ app.post('/api/admin/logout', (req, res) => {
   res.json({ ok: true });
 });
 app.get('/api/admin/me', requireAdmin, (req, res) => res.json({ ok: true }));
+
+// ---------- Customer auth ----------
+const customerLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false });
+app.get('/api/customer/google-config', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ clientId: process.env.GOOGLE_CLIENT_ID || '' });
+});
+app.post('/api/customer/google', customerLoginLimiter, async (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.JWT_SECRET) {
+    return res.status(503).json({ error: 'Google sign-in is not configured yet' });
+  }
+  const credential = req.body && typeof req.body.credential === 'string' ? req.body.credential : '';
+  if (!credential) return res.status(400).json({ error: 'Google sign-in credential is required' });
+
+  let profile;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    profile = ticket.getPayload();
+  } catch {
+    return res.status(401).json({ error: 'Google sign-in could not be verified. Please try again.' });
+  }
+  if (!profile || !profile.sub || !profile.email || profile.email_verified !== true) {
+    return res.status(401).json({ error: 'Use a Google account with a verified email address' });
+  }
+
+  const customer = await Customer.findOneAndUpdate(
+    { googleId: profile.sub },
+    {
+      $set: {
+        name: String(profile.name || profile.email).slice(0, 80),
+        email: profile.email,
+        picture: profile.picture || '',
+      },
+    },
+    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+  );
+  const token = jwt.sign({ customer: String(customer._id), scope: 'customer' }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${CUSTOMER_COOKIE}=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax${secure}`);
+  res.json({ customer });
+});
+app.get('/api/customer/me', requireCustomer, async (req, res) => {
+  const customer = await Customer.findById(req.customerId);
+  if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
+  res.json({ customer });
+});
+app.post('/api/customer/logout', (req, res) => {
+  res.setHeader('Set-Cookie', `${CUSTOMER_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`);
+  res.json({ ok: true });
+});
+app.get('/api/customer/orders', requireCustomer, async (req, res) => {
+  const orders = await Order.find({ customer: req.customerId }).sort({ createdAt: -1 }).limit(50).lean();
+  res.json({ orders });
+});
+app.post('/api/customer/orders', requireCustomer, async (req, res) => {
+  const customer = await Customer.findById(req.customerId);
+  if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
+  const body = req.body || {};
+  const customerName = String(body.customerName || customer.name).trim();
+  const phone = String(body.phone || '').trim();
+  const address = String(body.address || '').trim();
+  const city = String(body.city || '').trim();
+  const note = String(body.note || '').trim();
+  if (!customerName || customerName.length > 80) throw bad('Enter a name of 1 to 80 characters');
+  if (!phone || phone.length > 40) throw bad('Enter a phone number of 1 to 40 characters');
+  if (!address || address.length > 300) throw bad('Enter a delivery address of 1 to 300 characters');
+  if (!city || city.length > 120) throw bad('Enter a city and state of 1 to 120 characters');
+  if (note.length > 500) throw bad('Order note must be 500 characters or fewer');
+  if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 50) {
+    throw bad('An order must contain between 1 and 50 items');
+  }
+  if (body.items.some((item) => !item || typeof item !== 'object' || Array.isArray(item))) {
+    throw bad('An item in your bag is invalid');
+  }
+
+  const productIds = [...new Set(body.items.map((item) => String(item.productId || '')))];
+  if (productIds.some((id) => !mongoose.isValidObjectId(id))) throw bad('An item in your bag is no longer available');
+  const products = await Product.find({ _id: { $in: productIds } });
+  const productsById = new Map(products.map((product) => [String(product._id), product]));
+  const quantities = new Map();
+  const items = body.items.map((item) => {
+    const productId = String(item.productId);
+    const product = productsById.get(productId);
+    const quantity = Number(item.quantity);
+    const size = String(item.size || '');
+    const color = String(item.color || '');
+    if (!product || !product.inStock || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+      throw bad('An item in your bag is no longer available');
+    }
+    if (!product.sizes.includes(size) || !product.colors.includes(color)) {
+      throw bad('A size or colour in your bag is no longer available');
+    }
+    quantities.set(productId, (quantities.get(productId) || 0) + quantity);
+    return {
+      productId,
+      name: product.name,
+      size,
+      color,
+      quantity,
+      unitPrice: product.price,
+    };
+  });
+  for (const [productId, quantity] of quantities) {
+    if (quantity > productsById.get(productId).quantity) throw bad('There is not enough stock for an item in your bag');
+  }
+
+  const order = await Order.create({
+    customer: customer._id,
+    customerName,
+    email: customer.email,
+    phone,
+    address,
+    city,
+    note,
+    items,
+  });
+  res.status(201).json({ order });
+});
 
 // ---------- Validation ----------
 const bad = (msg) => Object.assign(new Error(msg), { status: 400, expose: true });

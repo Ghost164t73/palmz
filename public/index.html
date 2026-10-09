@@ -121,6 +121,10 @@
       color: var(--gold)
     }
 
+    .account-menu-button {
+      display: none
+    }
+
     .menu-toggle {
       display: none;
       width: 42px;
@@ -143,6 +147,18 @@
     .actions {
       display: flex;
       gap: 8px
+    }
+
+    .account-button {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50% !important;
+      background: var(--surface);
+      color: var(--text);
+      padding: 0
     }
 
     .circle {
@@ -1123,6 +1139,50 @@
       margin-top: 9px
     }
 
+    .account-signin {
+      display: grid;
+      justify-items: start;
+      gap: 12px;
+      margin: 16px 0
+    }
+
+    .account-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0
+    }
+
+    .account-profile img {
+      width: 44px;
+      height: 44px;
+      border-radius: 50% !important;
+      object-fit: cover
+    }
+
+    .account-orders {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px
+    }
+
+    .account-order {
+      padding: 12px;
+      border: 1px solid var(--line);
+      background: var(--surface2)
+    }
+
+    .account-order p,
+    .account-signin-message {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5
+    }
+
+    .account-order p {
+      margin: 7px 0
+    }
+
     .toast {
       position: fixed;
       z-index: 200;
@@ -1154,6 +1214,10 @@
       border-radius: 4px !important
     }
 
+    .account-button {
+      border-radius: 50% !important
+    }
+
     .hero-image {
       border-radius: 34px !important
     }
@@ -1183,26 +1247,46 @@
       }
 
       .nav {
-        height: 68px
+        position: relative;
+        height: 68px;
+        gap: 8px
       }
 
       .menu-toggle {
-        display: grid
+        display: grid;
+        flex: 0 0 38px;
+        width: 38px;
+        height: 38px
       }
 
       .navlinks {
-        display: none;
         position: absolute;
-        top: 100%;
-        right: 14px;
+        top: calc(100% + 1px);
+        right: 0;
         z-index: 45;
+        display: none;
         min-width: 190px;
         flex-direction: column;
         gap: 0;
         padding: 8px;
-        background: var(--surface);
         border: 1px solid var(--line);
+        background: var(--surface);
         box-shadow: var(--shadow)
+      }
+
+      .account-button {
+        flex: 0 0 38px;
+        width: 38px;
+        height: 38px
+      }
+
+      .actions {
+        gap: 6px
+      }
+
+      .actions .circle {
+        width: 38px;
+        height: 38px
       }
 
       .navlinks.open {
@@ -1212,6 +1296,24 @@
       .navlinks a {
         padding: 12px;
         color: var(--text)
+      }
+
+      .actions > .account-button {
+        display: none
+      }
+
+      .navlinks .account-menu-button {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 12px;
+        border: 0;
+        border-top: 1px solid var(--line);
+        background: transparent;
+        color: var(--text);
+        text-align: left;
+        font-weight: 700
       }
 
       .hero-grid {
@@ -1271,6 +1373,29 @@
         height: 320px
       }
     }
+
+    @media(max-width:360px) {
+      .nav {
+        gap: 4px
+      }
+
+      .menu-toggle,
+      .account-button,
+      .actions .circle {
+        width: 34px;
+        height: 34px
+      }
+
+      .menu-toggle,
+      .account-button {
+        flex-basis: 34px
+      }
+
+      .actions {
+        gap: 4px
+      }
+    }
+
     /* ===== Auto theme: follows the device. Light is your design; dark values come from the original dark palette ===== */
     @media (prefers-color-scheme: dark) {
       :root {
@@ -1317,6 +1442,13 @@
           <a href="#shop">Shop</a>
           <a href="#story">The brand</a>
           <a href="#order">How to order</a>
+          <button class="account-menu-button" type="button" onclick="openCustomerAccount()">
+            <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20">
+              <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.7"></circle>
+              <path d="M5 20c.5-3.4 3.2-5.3 7-5.3s6.5 1.9 7 5.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
+            </svg>
+            Your account
+          </button>
         </nav>
         <div class="actions">
               <button class="menu-toggle" type="button" onclick="toggleMenu()"
@@ -1331,6 +1463,12 @@
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="11" cy="11" r="5.5"></circle>
               <path d="M16 16l4.5 4.5"></path>
+            </svg>
+          </button>
+          <button class="account-button" id="accountButton" onclick="openCustomerAccount()" aria-label="Account" title="Account">
+            <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20">
+              <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.7"></circle>
+              <path d="M5 20c.5-3.4 3.2-5.3 7-5.3s6.5 1.9 7 5.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
             </svg>
           </button>
           <button class="circle cart" onclick="openCart()"
@@ -1527,6 +1665,7 @@
           <textarea id="customerNote"
             placeholder="Anything PALMZ should know?"></textarea>
         </label>
+        <div class="note" id="checkoutAccountMessage">Guest checkout is available. Use the account icon to sign in with Google and save your order history.</div>
         <button class="btn whatsapp full" type="submit">Send order to PALMZ
           WhatsApp →</button>
         <div class="note">WhatsApp will open with your order details already
@@ -1536,11 +1675,38 @@
     </div>
   </div>
 
+  <div class="modal" id="customerModal">
+    <div class="modal-box">
+      <div class="checkout-head">
+        <h3>Your PALMZ account</h3>
+        <button class="close" onclick="closeCustomerAccount()">×</button>
+      </div>
+      <div class="account-signin-message" id="googleStatus" aria-live="polite">Checking Google sign-in…</div>
+      <div class="account-signin" id="customerSignedOut">
+        <div id="googleButton"></div>
+      </div>
+      <div id="customerSignedIn" hidden>
+        <div class="account-profile">
+          <img id="customerPicture" alt="" hidden>
+          <div><strong id="accountCustomerName"></strong><div class="account-signin-message" id="accountCustomerEmail"></div></div>
+        </div>
+        <p class="account-signin-message">Your Google sign-in is ready. View your order history on your account page.</p>
+        <a class="btn btn-gold" href="account.html">View order history</a>
+        <button class="btn ghost" type="button" onclick="customerLogout()">Sign out</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast">Added to your bag</div>
 
   <script>
     let PRODUCTS = [];
     let productsLoading = true;
+    let customer = null;
+    let googleClientId = "";
+    let customerSessionPromise = Promise.resolve();
+    let orderSubmitting = false;
+    let googleSignInReady = false;
     let WHATSAPP_NUMBER = "";
     let filter = "All";
     let cart = [];
@@ -1789,14 +1955,146 @@
       $("#checkoutModal").classList.remove("open");
     }
 
-    function sendOrder(e) {
+    function customerRequest(url, options = {}) {
+      return fetch(url, { credentials: "same-origin", ...options }).then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const error = new Error(data.error || "Request failed");
+          error.status = response.status;
+          throw error;
+        }
+        return data;
+      });
+    }
+
+    function setCustomer(profile) {
+      customer = profile;
+      $("#accountButton").setAttribute("aria-label", profile ? `Account for ${profile.name}` : "Sign in with Google");
+      $("#customerSignedOut").hidden = Boolean(profile);
+      $("#customerSignedIn").hidden = !profile;
+      $("#checkoutAccountMessage").textContent = profile ?
+        `Signed in as ${profile.email}. Your checkout requests will be saved to your account.` :
+        "Guest checkout is available. Use the account icon to sign in with Google and save your order history.";
+      $("#accountCustomerName").textContent = profile ? profile.name : "";
+      $("#accountCustomerEmail").textContent = profile ? profile.email : "";
+      $("#customerName").value = profile ? profile.name : "";
+      $("#customerEmail").value = profile ? profile.email : "";
+      $("#customerEmail").readOnly = Boolean(profile);
+      const picture = $("#customerPicture");
+      picture.hidden = !profile || !profile.picture;
+      if (profile && profile.picture) picture.src = profile.picture;
+      if (profile && googleSignInReady) $("#googleButton").replaceChildren();
+    }
+
+    function openCustomerAccount() {
+      if (customer) {
+        window.location.href = "account.html";
+        return;
+      }
+      $("#customerModal").classList.add("open");
+    }
+
+    function closeCustomerAccount() {
+      $("#customerModal").classList.remove("open");
+    }
+
+    async function handleGoogleCredential(response) {
+      $("#googleStatus").textContent = "Signing in…";
+      try {
+        const result = await customerRequest("/api/customer/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: response.credential })
+        });
+        setCustomer(result.customer);
+        $("#googleStatus").textContent = "Signed in with Google.";
+      } catch (error) {
+        $("#googleStatus").textContent = error.message;
+      }
+    }
+
+    async function initializeGoogleSignIn() {
+      try {
+        const config = await customerRequest("/api/customer/google-config");
+        googleClientId = config.clientId;
+        if (!googleClientId) {
+          $("#googleStatus").textContent = "Google sign-in is not configured yet. Add GOOGLE_CLIENT_ID to the server environment.";
+          return;
+        }
+        if (!window.google || !window.google.accounts) {
+          $("#googleStatus").textContent = "Google sign-in could not load. Please refresh and try again.";
+          return;
+        }
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: handleGoogleCredential
+        });
+        googleSignInReady = true;
+        renderGoogleButton();
+        if (customer) $("#googleButton").replaceChildren();
+        $("#googleStatus").textContent = "Sign in to save your details and order history. You can also check out as a guest.";
+      } catch (error) {
+        $("#googleStatus").textContent = error.message;
+      }
+    }
+
+    function renderGoogleButton() {
+      if (!googleSignInReady || customer) return;
+      $("#googleButton").replaceChildren();
+      window.google.accounts.id.renderButton($("#googleButton"), {
+        theme: "outline",
+        size: "large",
+        text: "signin_with",
+        shape: "rectangular"
+      });
+    }
+
+    async function restoreCustomerSession() {
+      try {
+        const result = await customerRequest("/api/customer/me");
+        setCustomer(result.customer);
+      } catch (error) {
+        if (error.status !== 401) $("#googleStatus").textContent = error.message;
+      }
+    }
+
+    async function customerLogout() {
+      try {
+        await customerRequest("/api/customer/logout", { method: "POST" });
+        setCustomer(null);
+        renderGoogleButton();
+        $("#googleStatus").textContent = "You have signed out.";
+      } catch (error) {
+        $("#googleStatus").textContent = error.message;
+      }
+    }
+
+    async function sendOrder(e) {
       e.preventDefault();
+      if (orderSubmitting) return;
+      if (!WHATSAPP_NUMBER) {
+        showToast("WhatsApp number not set yet");
+        return;
+      }
+      orderSubmitting = true;
+      const submitButton = e.submitter;
+      if (submitButton) submitButton.disabled = true;
       const lines = cart.map(x => {
         const p = PRODUCTS.find(z => z.id === x.id);
         return `• ${x.qty} × ${x.name} | Size ${x.size} | ${x.color}${p&&p.price!=null?` | ${money(p.price)} each`:""}`;
       }).join("\n");
-      const msg =
-        `Hello PALMZ 👋
+      const whatsappWindow = window.open("about:blank", "_blank");
+      if (!whatsappWindow) {
+        orderSubmitting = false;
+        if (submitButton) submitButton.disabled = false;
+        showToast("Allow pop-ups to continue to WhatsApp");
+        return;
+      }
+      try {
+        whatsappWindow.opener = null;
+        await customerSessionPromise;
+        const msg =
+          `Hello PALMZ 👋
 
 I'd like to place an order.
 
@@ -1812,11 +2110,45 @@ ORDER
 ${lines}
 
 Please confirm the total price, availability and delivery/payment details. Thank you!`;
-      openWhatsApp(msg);
+        if (customer) {
+          await customerRequest("/api/customer/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customerName: $("#customerName").value.trim(),
+              phone: $("#customerPhone").value.trim(),
+              address: $("#customerAddress").value.trim(),
+              city: $("#customerCity").value.trim(),
+              note: $("#customerNote").value.trim(),
+              items: cart.map(item => ({
+                productId: item.id,
+                size: item.size,
+                color: item.color,
+                quantity: item.qty
+              }))
+            })
+          });
+        }
+        whatsappWindow.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+      } catch (error) {
+        whatsappWindow.close();
+        orderSubmitting = false;
+        if (submitButton) submitButton.disabled = false;
+        if (error.status === 401) {
+          setCustomer(null);
+          showToast("Your sign-in expired. Sign in again or retry as a guest.");
+        } else {
+          showToast(error.message);
+        }
+        return;
+      }
       cart = [];
       save();
       updateCart();
       closeCheckout();
+      orderSubmitting = false;
+      if (submitButton) submitButton.disabled = false;
+      if (customer) showToast("Order request saved to your account");
     }
 
     function openWhatsApp(message) {
@@ -1892,7 +2224,9 @@ Please confirm the total price, availability and delivery/payment details. Thank
       render();
     }
     loadProducts();
+    customerSessionPromise = restoreCustomerSession();
   </script>
+  <script src="https://accounts.google.com/gsi/client" async defer onload="initializeGoogleSignIn()" onerror="document.getElementById('googleStatus').textContent='Google sign-in could not load. Please refresh and try again.'"></script>
 </body>
 
 </html>
