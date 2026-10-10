@@ -1,6 +1,8 @@
 # PALMZ store (dynamic) 
 
-Storefront at `/`, admin panel at `/admin`.
+Storefront at `/`, products-only shop at `/shop`, product details at
+`/product/:id`, cart at `/cart`, checkout at `/checkout`, and the PALMZ about
+page at `/about`. Admin panel at `/admin`.
 
 ## Run locally
 1. `npm install`

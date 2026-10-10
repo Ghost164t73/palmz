@@ -405,6 +405,8 @@ app.delete('/api/admin/products/:id', requireAdmin, validId, async (req, res) =>
 const pub = path.join(__dirname, 'public');
 app.get('/admin', (req, res) => res.sendFile(path.join(pub, 'admin.html')));
 app.get('/admin/orders', (req, res) => res.sendFile(path.join(pub, 'orders.html')));
+app.get(['/shop', '/cart', '/checkout', '/about', '/product/:id'], (req, res) =>
+  res.sendFile(path.join(pub, 'index.html')));
 app.use(express.static(pub));
 
 // Express 4 doesn't catch rejected promises by itself, so wrap async routes
