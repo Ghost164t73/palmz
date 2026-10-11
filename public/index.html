@@ -10,11 +10,10 @@
   <title>PALMZ — Footwear</title>
   <script>
     const path = location.pathname.replace(/\/+$/, "") || "/";
-    const page = /^\/product\/[^/]+$/.test(path) ? "/product" : path;
+    const page = path === "/cart" ? "/" : /^\/product\/[^/]+$/.test(path) ? "/product" : path;
     document.documentElement.dataset.page = page;
     document.title = ({
       "/shop": "Shop PALMZ Footwear",
-      "/cart": "Your Bag — PALMZ",
       "/checkout": "Checkout — PALMZ",
       "/about": "About PALMZ",
       "/product": "Product details — PALMZ"
@@ -1141,11 +1140,20 @@
       line-height: 1.6
     }
 
-    .commerce-heading a {
+    .commerce-heading a,
+    .commerce-heading .back-link {
       display: inline-block;
       margin-bottom: 14px;
       color: var(--muted);
       font-size: 14px
+    }
+
+    .commerce-heading .back-link {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      font: inherit
     }
 
     #productPage {
@@ -1880,13 +1888,13 @@
               <path d="M5 20c.5-3.4 3.2-5.3 7-5.3s6.5 1.9 7 5.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
             </svg>
           </button>
-          <a class="circle cart" href="/cart" aria-label="Bag">
+          <button class="circle cart" type="button" onclick="openCart()" aria-label="Bag">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5.5 8.5h13l-1 10.25a1.25 1.25 0 0 1-1.25 1.13h-9.5a1.25 1.25 0 0 1-1.25-1.13L5.5 8.5Z"></path>
               <path d="M9 8.5V6.75a3 3 0 0 1 6 0V8.5"></path>
             </svg>
             <span class="count" id="count">0</span>
-          </a>
+          </button>
         </div>
       </div>
     </header>
@@ -2018,7 +2026,7 @@
           <p>Add your footwear to the bag and send your order to PALMZ through
             WhatsApp.</p>
         </div>
-        <a class="btn btn-gold" href="/cart">View my bag →</a>
+        <button class="btn btn-gold" type="button" onclick="openCart()">View my bag →</button>
       </div>
     </section>
 
@@ -2040,7 +2048,7 @@
   </main>
 
   <main class="container commerce-heading" id="checkoutPageHeading">
-    <a href="/cart">← Back to your bag</a>
+    <button class="back-link" type="button" onclick="openCart()">← Back to your bag</button>
     <div class="eyebrow">Almost yours</div>
     <!-- <h1>Checkout</h1>
     <p>Share your delivery details and PALMZ will confirm your order on WhatsApp.</p> -->
@@ -2414,19 +2422,11 @@
     }
 
     function openCart() {
-      if (location.pathname.replace(/\/+$/, "") !== "/cart") {
-        location.href = "/cart";
-        return;
-      }
       updateCart();
       $("#cartOverlay").classList.add("open");
     }
 
     function closeCart() {
-      if (location.pathname.replace(/\/+$/, "") === "/cart") {
-        location.href = "/shop";
-        return;
-      }
       $("#cartOverlay").classList.remove("open");
     }
 
@@ -2455,7 +2455,7 @@
 
     function closeCheckout() {
       if (location.pathname.replace(/\/+$/, "") === "/checkout") {
-        location.href = "/cart";
+        location.href = "/shop";
         return;
       }
       $("#checkoutModal").classList.remove("open");
@@ -2760,7 +2760,6 @@ Please confirm the total price, availability and delivery/payment details. Thank
     }
     loadProducts();
     customerSessionPromise = restoreCustomerSession();
-    if (location.pathname.replace(/\/+$/, "") === "/cart") openCart();
     if (location.pathname.replace(/\/+$/, "") === "/checkout") {
       refreshCheckoutPage();
     }
