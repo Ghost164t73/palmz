@@ -316,6 +316,37 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   const orders = await Order.find(filter).sort({ createdAt: -1 }).limit(200).lean();
   res.json({ orders, statuses: Order.ORDER_STATUSES });
 });
+app.get('/api/admin/sales', requireAdmin, async (req, res) => {
+  const orders = await Order.find({
+    $or: [
+      { 'salesHistory.0': { $exists: true } },
+      { status: { $in: ['confirmed', 'fulfilled'] } },
+    ],
+  }).sort({ createdAt: -1 }).select('customerName email status items salesHistory createdAt updatedAt').lean();
+  const sales = [];
+  for (const order of orders) {
+    const events = order.salesHistory || [];
+    const reversedBy = new Map(events.filter((event) => event.type === 'reversal').map((event) => [event.reverses, event]));
+    const recordedSales = events.filter((event) => event.type === 'sale');
+    recordedSales.forEach((event) => {
+      const reversal = reversedBy.get(String(event._id));
+      sales.push({
+        id: String(event._id), orderId: String(order._id), customerName: order.customerName,
+        email: order.email, status: order.status, soldAt: event.createdAt,
+        items: event.items, reversed: Boolean(reversal), reversedAt: reversal && reversal.createdAt,
+      });
+    });
+    if (!recordedSales.length && ['confirmed', 'fulfilled'].includes(order.status)) {
+      sales.push({
+        id: `legacy-${order._id}`, orderId: String(order._id), customerName: order.customerName,
+        email: order.email, status: order.status, soldAt: order.updatedAt || order.createdAt,
+        items: order.items, reversed: false, legacy: true,
+      });
+    }
+  }
+  sales.sort((a, b) => new Date(b.soldAt) - new Date(a.soldAt));
+  res.json({ sales });
+});
 app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Order not found' });
   const status = req.body && req.body.status;
@@ -360,6 +391,12 @@ app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
           if (!result.modifiedCount) throw bad(`Not enough stock for ${product.name}, ${item.color}, size ${item.size}`);
           applied.push({ productId: product._id, color: item.color, size: item.size, key, quantity: item.quantity });
         }
+        order.salesHistory.push({
+          type: 'sale',
+          status,
+          items: order.items.map((item) => item.toObject()),
+          createdAt: new Date(),
+        });
       } catch (error) {
         for (const item of applied) {
           await Product.updateOne({ _id: item.productId }, {
@@ -392,6 +429,8 @@ app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
         product.stockHistory.push({ color: item.color, size: item.size, quantity: item.quantity, reason: 'cancelled order returned', createdAt: new Date() });
         await product.save();
       }
+      const sale = [...order.salesHistory].reverse().find((event) => event.type === 'sale' && !order.salesHistory.some((candidate) => candidate.type === 'reversal' && candidate.reverses === String(event._id)));
+      if (sale) order.salesHistory.push({ type: 'reversal', status, reverses: String(sale._id), items: sale.items, createdAt: new Date() });
     }
   }
 
@@ -525,6 +564,7 @@ app.delete('/api/admin/products/:id', requireAdmin, validId, async (req, res) =>
 const pub = path.join(__dirname, 'public');
 app.get('/admin', (req, res) => res.sendFile(path.join(pub, 'admin.html')));
 app.get('/admin/orders', (req, res) => res.sendFile(path.join(pub, 'orders.html')));
+app.get('/admin/sales', (req, res) => res.sendFile(path.join(pub, 'sales.html')));
 app.get(['/shop', '/cart', '/checkout', '/about', '/product/:id'], (req, res) =>
   res.sendFile(path.join(pub, 'index.html')));
 app.use(express.static(pub));

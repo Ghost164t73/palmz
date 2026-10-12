@@ -14,6 +14,17 @@ const OrderItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const SaleEventSchema = new mongoose.Schema(
+  {
+    type: { type: String, enum: ['sale', 'reversal'], required: true },
+    status: { type: String, default: '' },
+    items: { type: [OrderItemSchema], default: [] },
+    reverses: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 const OrderSchema = new mongoose.Schema(
   {
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', default: null },
@@ -27,6 +38,7 @@ const OrderSchema = new mongoose.Schema(
     items: { type: [OrderItemSchema], required: true },
     status: { type: String, enum: ORDER_STATUSES, default: 'pending_confirmation' },
     inventoryDeducted: { type: Boolean, default: false },
+    salesHistory: { type: [SaleEventSchema], default: [] },
     paymentProvider: { type: String, enum: ['whatsapp', 'paystack'], default: 'whatsapp' },
     paymentStatus: { type: String, enum: ['not_started', 'pending', 'paid', 'failed', 'refunded'], default: 'not_started' },
   },
