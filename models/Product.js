@@ -15,6 +15,9 @@ const ProductSchema = new mongoose.Schema(
     sizeMin: { type: Number, required: true, min: 20, max: 60 },
     sizeMax: { type: Number, required: true, min: 20, max: 60 },
     quantity: { type: Number, required: true, min: 0, default: 0 },
+    stockBySize: { type: Map, of: Number, default: {} },
+    stockByVariant: { type: Map, of: Number, default: {} },
+    stockHistory: { type: [{ color: String, size: String, quantity: Number, reason: String, createdAt: { type: Date, default: Date.now } }], default: [] },
     available: { type: Boolean, default: true }, // manual on/off switch
     image: { url: String, publicId: String },
     images: { type: [ImageSchema], default: [] },
@@ -33,6 +36,8 @@ const ProductSchema = new mongoose.Schema(
         delete ret.__v;
         delete ret.createdAt;
         delete ret.updatedAt;
+        ret.stockBySize = ret.stockBySize instanceof Map ? Object.fromEntries(ret.stockBySize) : (ret.stockBySize || {});
+        ret.stockByVariant = ret.stockByVariant instanceof Map ? Object.fromEntries(ret.stockByVariant) : (ret.stockByVariant || {});
         return ret;
       },
     },
@@ -48,7 +53,7 @@ ProductSchema.virtual('sizes').get(function () {
 
 // what the storefront uses: switched on AND something left
 ProductSchema.virtual('inStock').get(function () {
-  return this.available && this.quantity > 0;
+  return this.available && (this.quantity > 0 || [...(this.stockByVariant || new Map()).values()].some((n) => n > 0));
 });
 
 module.exports = mongoose.models.Product || mongoose.model('Product', ProductSchema);

@@ -67,6 +67,11 @@ label input,label textarea,label select{margin-top:5px;font-weight:400;color:var
 .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,15px);opacity:0;pointer-events:none;background:var(--navy);color:#fff;padding:11px 18px;border-radius:999px;font-size:12px;font-weight:800;transition:.2s;z-index:99}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .toast.bad{background:var(--red)}
+.inventory-tools{display:grid;grid-template-columns:minmax(220px,1fr) 180px 180px;gap:10px;margin:18px 0}
+.table-wrap{overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;margin-bottom:24px}
+table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line);font-size:13px}th{font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;background:#faf9f5}tbody tr{cursor:pointer}tbody tr:hover,tbody tr.selected{background:#f7f3e8}tbody tr:last-child td{border:0}.product-cell{display:flex;align-items:center;gap:12px;font-weight:750}.product-cell img{width:42px;height:42px;object-fit:cover;border-radius:9px;background:var(--surface2)}
+.detail{display:none;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;margin:0 0 40px;scroll-margin-top:18px}.detail.open{display:block}.detail-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.detail h3{margin:0;font-size:18px}.sizes{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.size-stock{border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:10px 13px;font-size:12px}.size-stock b{display:block;font-size:16px;margin-top:3px}.detail-actions{display:flex;gap:8px;flex-wrap:wrap}.detail .hint{margin-top:12px}.matrix{width:100%;min-width:0;margin:12px 0 16px}.matrix th,.matrix td{padding:10px;text-align:center}.matrix th:first-child,.matrix td:first-child{text-align:left}.variant-total{font-weight:800}.variant-control{display:flex;align-items:center;justify-content:center;gap:6px}.variant-control button{width:25px;height:25px;padding:0;line-height:1}.variant-control span{min-width:18px;font-weight:750}
+@media(max-width:640px){.inventory-tools{grid-template-columns:1fr 1fr}.inventory-tools input{grid-column:1/-1}.bar h2{font-size:26px}}
 @media(max-width:640px){.item{grid-template-columns:70px 1fr}.item img{width:70px;height:70px}.ctrl{grid-column:1/-1;flex-direction:row;justify-content:space-between;flex-wrap:wrap;align-items:center}.two{grid-template-columns:1fr}}
 </style>
 </head>
@@ -88,15 +93,17 @@ label input,label textarea,label select{margin-top:5px;font-weight:400;color:var
     <div class="row"><a href="/admin/orders">Orders</a><a href="/" target="_blank">View store</a><button onclick="logout()">Sign out</button></div>
   </div></div>
   <div class="wrap">
-    <div class="bar"><h2>Your palms</h2><button class="btn" onclick="openForm()">+ Add palm</button></div>
+    <div class="bar"><h2>Inventory</h2><button class="btn" onclick="openForm()">+ Add product</button></div>
     <div class="stats" id="stats"></div>
-    <div class="list" id="list"></div>
+    <div class="inventory-tools"><input id="search" placeholder="Search products…" oninput="renderTable()"><select id="category" onchange="renderTable()"><option value="">All categories</option></select><select id="stockFilter" onchange="renderTable()"><option value="">All stock statuses</option><option value="In stock">In stock</option><option value="Low stock">Low stock</option><option value="Sold out">Sold out</option><option value="Unavailable">Unavailable</option></select></div>
+    <div class="table-wrap"><table><thead><tr><th>Product</th><th>Variant</th><th>Size</th><th>Stock</th><th>Status</th></tr></thead><tbody id="list"></tbody></table></div>
+    <section class="detail" id="detail"></section>
   </div>
 </div>
 
 <div class="modal" id="formModal" onclick="if(event.target===this)closeForm()">
   <form class="box" id="form" onsubmit="saveProduct(event)">
-    <h3 id="formTitle">Add palm</h3>
+    <h3 id="formTitle">Add product</h3>
     <label>Product photos <span class="hint">(up to 12 images, 4MB total; upload in the order customers should browse. New photos replace the current gallery.)</span>
       <div class="preview-gallery" id="preview"><div class="preview-empty">No photos chosen</div></div>
       <input type="file" id="images" accept="image/jpeg,image/png,image/webp" multiple onchange="previewImg()">
@@ -112,13 +119,10 @@ label input,label textarea,label select{margin-top:5px;font-weight:400;color:var
       <label>Smallest size<input id="sizeMin" type="number" min="20" max="60" step="1" required value="43"></label>
       <label>Largest size<input id="sizeMax" type="number" min="20" max="60" step="1" required value="48"></label>
     </div>
-    <div class="two">
-      <label>Quantity remaining<input id="quantity" type="number" min="0" step="1" required value="0"></label>
-      <div></div>
-    </div>
+    <div class="two"><label>Opening stock<input id="quantity" type="number" min="0" step="1" required value="0"></label><div class="hint" style="align-self:center">Opening stock is distributed evenly across the selected sizes.</div></div>
     <label class="check"><input type="checkbox" id="available" checked> Available for sale</label>
     <div class="err" id="formErr"></div>
-    <div class="actions"><button type="button" class="btn ghost" onclick="closeForm()">Cancel</button><button class="btn dark" id="saveBtn" type="submit">Save palm</button></div>
+    <div class="actions"><button type="button" class="btn ghost" onclick="closeForm()">Cancel</button><button class="btn dark" id="saveBtn" type="submit">Save product</button></div>
   </form>
 </div>
 
@@ -127,7 +131,7 @@ label input,label textarea,label select{margin-top:5px;font-weight:400;color:var
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let products = [], editingId = null;
+let products = [], editingId = null, selectedId = null;
 let previewUrls = [];
 
 function toast(t, bad) { const el = $("#toast"); el.textContent = t; el.className = "toast show" + (bad ? " bad" : ""); clearTimeout(window.__t); window.__t = setTimeout(() => el.classList.remove("show"), 2200); }
@@ -163,61 +167,43 @@ async function load() {
   catch (err) { toast(err.message, true); }
 }
 
-function status(p) {
-  if (!p.available) return '<span class="chip off">Hidden / unavailable</span>';
-  if (p.quantity === 0) return '<span class="chip out">Sold out</span>';
-  if (p.quantity <= 5) return '<span class="chip low">Low stock</span>';
-  return '<span class="chip ok">Available</span>';
+function variantKey(color,size){return `${encodeURIComponent(String(color)).replace(/\./g,'%2E')}__${size}`}
+function variantQuantities(p){
+ const raw=p.stockByVariant||{};if(Object.keys(raw).length)return raw;
+ const colors=p.colors&&p.colors.length?p.colors:['Standard'],sizes=Array.from({length:p.sizeMax-p.sizeMin+1},(_,i)=>String(p.sizeMin+i)),out={},legacy=p.stockBySize||{};
+ if(Object.keys(legacy).length){sizes.forEach(size=>{const count=Number(legacy[size]||0);colors.forEach((color,i)=>out[variantKey(color,size)]=Math.floor(count/colors.length)+(i<count%colors.length?1:0))})}
+ else{const combinations=colors.length*sizes.length,each=Math.floor((p.quantity||0)/combinations),rem=(p.quantity||0)%combinations;let i=0;colors.forEach(color=>sizes.forEach(size=>out[variantKey(color,size)]=each+(i++<rem?1:0)))}
+ return out;
 }
-
-function render() {
-  const live = products.filter(p => p.inStock).length;
-  $("#stats").innerHTML = `<div class="stat"><b>${products.length}</b><span>Total palms</span></div><div class="stat"><b>${live}</b><span>On sale now</span></div><div class="stat"><b>${products.length - live}</b><span>Sold out / off</span></div>`;
-  $("#types").innerHTML = [...new Set(products.map(p => p.type))].map(t => `<option value="${esc(t)}">`).join("");
-  $("#list").innerHTML = products.length ? products.map(p => `
-    <div class="item" data-id="${p.id}">
-      <img src="${esc(p.image)}" alt="">
-      <div>
-        <h3>${esc(p.name)} ${status(p)}</h3>
-        <div class="meta">${esc(p.type)} · Sizes ${p.sizeMin}–${p.sizeMax} · ${p.price != null ? "₦" + Number(p.price).toLocaleString("en-NG") : "Price via WhatsApp"}<br>${p.colors.map(esc).join(", ")}</div>
-      </div>
-      <div class="ctrl">
-        <div class="row">
-          <div class="stepper"><button data-act="dec" aria-label="Less">−</button><input data-act="qty" type="number" min="0" value="${p.quantity}" aria-label="Quantity remaining"><button data-act="inc" aria-label="More">+</button></div>
-          <label class="switch" style="margin:0"><input data-act="avail" type="checkbox" ${p.available ? "checked" : ""}> Available</label>
-        </div>
-        <div class="row"><button class="small" data-act="edit">Edit</button><button class="small del" data-act="del">Delete</button></div>
-      </div>
-    </div>`).join("") : '<div class="empty">No palms yet. Click <b>+ Add palm</b> to create your first one.</div>';
+function total(p){return Object.values(variantQuantities(p)).reduce((a,b)=>a+Number(b||0),0)}function stockStatus(p){const n=total(p);return !p.available?'Unavailable':n===0?'Sold out':n<=5?'Low stock':'In stock'}
+function badge(s){return `<span class="chip ${s==='In stock'?'ok':s==='Low stock'?'low':s==='Sold out'?'out':'off'}">${s}</span>`}
+function render(){
+ const sum=products.reduce((a,p)=>a+total(p),0);
+ $("#stats").innerHTML=`<div class="stat"><b>${products.length}</b><span>Products</span></div><div class="stat"><b>${sum}</b><span>Pairs in stock</span></div><div class="stat"><b>${products.filter(p=>stockStatus(p)==='Low stock').length}</b><span>Low stock</span></div><div class="stat"><b>${products.filter(p=>stockStatus(p)==='Sold out').length}</b><span>Sold out</span></div>`;
+ $("#types").innerHTML=[...new Set(products.map(p=>p.type))].map(t=>`<option value="${esc(t)}">`).join("");
+ const sel=$("#category"), old=sel.value;sel.innerHTML='<option value="">All categories</option>'+[...new Set(products.map(p=>p.type))].map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');sel.value=old;
+ renderTable(); if(selectedId&&products.some(p=>p.id===selectedId))renderDetail(products.find(p=>p.id===selectedId));else{$("#detail").classList.remove('open');selectedId=null}
 }
-
-async function stock(id, body) {
-  try {
-    const p = await api(`/api/admin/products/${id}/stock`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    products = products.map(x => x.id === id ? p : x); render(); toast("Saved");
-  } catch (err) { toast(err.message, true); load(); }
+function renderTable(){
+ const q=$("#search").value.toLowerCase(),cat=$("#category").value,f=$("#stockFilter").value;
+ const rows=products.filter(p=>(!q||`${p.name} ${p.type} ${(p.colors||[]).join(' ')}`.toLowerCase().includes(q))&&(!cat||p.type===cat)&&(!f||stockStatus(p)===f));
+ $("#list").innerHTML=rows.length?rows.map(p=>`<tr data-id="${p.id}" class="${selectedId===p.id?'selected':''}"><td><div class="product-cell"><img src="${esc(p.image)}" alt=""><span>${esc(p.name)}</span></div></td><td>${(p.colors||[]).map(esc).join(', ')}</td><td>${p.sizeMin}–${p.sizeMax}</td><td><b>${total(p)}</b></td><td>${badge(stockStatus(p))}</td></tr>`).join(''):`<tr><td colspan="5" class="empty">${products.length?'No products match these filters.':'No products yet. Add your first product.'}</td></tr>`;
 }
-
-$("#list").addEventListener("click", async e => {
-  const b = e.target.closest("[data-act]"); if (!b) return;
-  const id = b.closest(".item").dataset.id, act = b.dataset.act;
-  if (act === "dec") stock(id, { delta: -1 });
-  else if (act === "inc") stock(id, { delta: 1 });
-  else if (act === "edit") openForm(products.find(p => p.id === id));
-  else if (act === "del") {
-    const p = products.find(x => x.id === id);
-    if (!confirm(`Delete "${p.name}"? This also removes its photos and can't be undone.`)) return;
-    try { await api(`/api/admin/products/${id}`, { method: "DELETE" }); products = products.filter(x => x.id !== id); render(); toast("Deleted"); }
-    catch (err) { toast(err.message, true); }
-  }
+function renderDetail(p){
+ const d=$("#detail"),q=variantQuantities(p),colors=p.colors&&p.colors.length?p.colors:['Standard'],sizes=Array.from({length:p.sizeMax-p.sizeMin+1},(_,i)=>String(p.sizeMin+i));d.classList.add('open');
+ d.innerHTML=`<div class="detail-head"><h3>${esc(p.name)} · ${esc(p.type)}</h3><button class="small" data-act="close">Close</button></div><div class="meta">Stock by color and size · adjust each variant here</div><div class="table-wrap"><table class="matrix"><thead><tr><th>Color</th>${sizes.map(s=>`<th>${s}</th>`).join('')}<th>Total</th></tr></thead><tbody>${colors.map(color=>{const row=sizes.map(size=>Number(q[variantKey(color,size)]||0));return `<tr><td>${esc(color)}</td>${sizes.map((size,i)=>`<td><div class="variant-control"><button type="button" class="small" ${row[i]<=0?'disabled':''} data-act="variant-dec" data-color="${esc(color)}" data-size="${size}" aria-label="Reduce ${esc(color)} size ${size}">−</button><span>${row[i]}</span><button type="button" class="small" data-act="variant-inc" data-color="${esc(color)}" data-size="${size}" aria-label="Increase ${esc(color)} size ${size}">+</button></div></td>`).join('')}<td class="variant-total">${row.reduce((a,b)=>a+b,0)}</td></tr>`}).join('')}</tbody></table></div><div class="detail-actions"><button class="btn" data-act="receive">+ Receive stock</button><button class="btn dark" data-act="edit">Edit product</button><button class="btn ghost" data-act="history">View history</button><button class="small del" data-act="del">Delete product</button></div><div class="hint" id="history"></div>`;
+}$("#list").addEventListener("click",e=>{const row=e.target.closest('tr[data-id]');if(!row)return;selectedId=row.dataset.id;renderTable();renderDetail(products.find(p=>p.id===selectedId));$("#detail").scrollIntoView({behavior:'smooth',block:'start'});});
+$("#detail").addEventListener("click",async e=>{
+ const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act,p=products.find(x=>x.id===selectedId);if(!p)return;
+ if(act==='variant-inc'||act==='variant-dec'){await stock(p.id,{color:b.dataset.color,size:b.dataset.size,delta:act==='variant-inc'?1:-1});return}
+ if(act==='close'){selectedId=null;$("#detail").classList.remove('open');renderTable()}
+ if(act==='edit')openForm(p);
+ if(act==='del'){if(!confirm(`Delete "${p.name}"? This also removes its photos and can't be undone.`))return;try{await api(`/api/admin/products/${p.id}`,{method:'DELETE'});products=products.filter(x=>x.id!==p.id);selectedId=null;render();toast('Deleted')}catch(err){toast(err.message,true)}}
+ if(act==='receive'){$("#history").innerHTML=`<form id="receiveForm" class="row" style="margin-top:14px"><label style="margin:0">Color<select name="color">${(p.colors||['Standard']).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></label><label style="margin:0">Size<select name="size">${Array.from({length:p.sizeMax-p.sizeMin+1},(_,i)=>String(p.sizeMin+i)).map(s=>`<option value="${s}">${s}</option>`).join('')}</select></label><label style="margin:0">Pairs received<input name="amount" type="number" min="1" step="1" required placeholder="e.g. 5"></label><button class="btn dark" type="submit">Add stock</button></form>`}
+ if(act==='history'){const h=p.stockHistory||[];$("#history").innerHTML=h.length?`<b>Recent stock changes</b><br>${h.slice().reverse().slice(0,12).map(x=>`${esc(x.color||'Legacy')} · size ${esc(x.size)} · ${x.quantity>0?'+':''}${x.quantity} (${esc(x.reason||'stock change')}) · ${new Date(x.createdAt).toLocaleString()}`).join('<br>')}`:'No stock changes recorded yet.'}
 });
-$("#list").addEventListener("change", e => {
-  const b = e.target.closest("[data-act]"); if (!b) return;
-  const id = b.closest(".item").dataset.id;
-  if (b.dataset.act === "qty") stock(id, { quantity: Math.max(0, parseInt(b.value, 10) || 0) });
-  if (b.dataset.act === "avail") stock(id, { available: b.checked });
-});
-
+$("#detail").addEventListener("submit",async e=>{if(e.target.id!=='receiveForm')return;e.preventDefault();const data=new FormData(e.target);await stock(selectedId,{color:data.get('color'),size:data.get('size'),delta:Number(data.get('amount'))})});
+async function stock(id,body){try{const p=await api(`/api/admin/products/${id}/stock`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});products=products.map(x=>x.id===id?p:x);render();toast('Stock saved')}catch(err){toast(err.message,true);load()}}
 function clearPreviewUrls() {
   previewUrls.forEach(URL.revokeObjectURL);
   previewUrls = [];
@@ -266,7 +252,7 @@ function openForm(p) {
   editingId = p ? p.id : null;
   clearPreviewUrls();
   $("#form").reset(); $("#formErr").textContent = "";
-  $("#formTitle").textContent = p ? "Edit palm" : "Add palm";
+  $("#formTitle").textContent = p ? "Edit product" : "Add product";
   $("#name").value = p ? p.name : ""; $("#type").value = p ? p.type : "";
   $("#price").value = p && p.price != null ? p.price : ""; $("#desc").value = p ? p.desc : "";
   $("#colors").value = p ? p.colors.join(", ") : "";
@@ -292,7 +278,7 @@ async function saveProduct(e) {
     await api(editingId ? `/api/admin/products/${editingId}` : "/api/admin/products", { method: editingId ? "PUT" : "POST", body: fd });
     closeForm(); await load(); toast("Saved");
   } catch (err) { $("#formErr").textContent = err.message; }
-  finally { btn.disabled = false; btn.textContent = "Save palm"; }
+  finally { btn.disabled = false; btn.textContent = "Save product"; }
 }
 
 (async () => { try { await api("/api/admin/me"); if (showApp()) load(); } catch { showLogin(); } })();

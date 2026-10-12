@@ -2170,6 +2170,28 @@
     let selectedProduct = null;
     let selectedSize = "43";
     let selectedColor = null;
+    function variantKey(color, size) { return `${encodeURIComponent(String(color)).replace(/\./g, "%2E")}__${size}`; }
+    function variantInventory(product) {
+      const saved = product.stockByVariant || {};
+      if (Object.keys(saved).length) return saved;
+      const colors = product.colors && product.colors.length ? product.colors : ["Standard"];
+      const sizes = product.sizes || Array.from({ length: product.sizeMax - product.sizeMin + 1 }, (_, i) => String(product.sizeMin + i));
+      const legacy = product.stockBySize || {}, inventory = {};
+      if (Object.keys(legacy).length) {
+        sizes.forEach(size => {
+          const count = Number(legacy[size] || 0);
+          colors.forEach((color, i) => inventory[variantKey(color, size)] = Math.floor(count / colors.length) + (i < count % colors.length ? 1 : 0));
+        });
+      } else {
+        const combinations = colors.length * sizes.length, each = Math.floor((product.quantity || 0) / combinations), remainder = (product.quantity || 0) % combinations;
+        let i = 0;
+        colors.forEach(color => sizes.forEach(size => inventory[variantKey(color, size)] = each + (i++ < remainder ? 1 : 0)));
+      }
+      return inventory;
+    }
+    function variantStock(product, color, size) {
+      return Number(variantInventory(product)[variantKey(color, size)] || 0);
+    }
 
     const $ = s => document.querySelector(s);
 
@@ -2295,30 +2317,19 @@
       const match = location.pathname.match(/^\/product\/([^/]+)\/?$/);
       if (!match) return;
       let productId;
-      try {
-        productId = decodeURIComponent(match[1]);
-      } catch (error) {
-        $("#productPageDetail").innerHTML = `
-          <div class="product-page-empty">
-            <h2>Product not found</h2>
-            <a class="btn btn-gold" href="/shop">Browse footwear</a>
-          </div>`;
-        $("#productPageDetail").setAttribute("aria-busy", "false");
-        return;
+      try { productId = decodeURIComponent(match[1]); }
+      catch (error) {
+        $("#productPageDetail").innerHTML = `<div class="product-page-empty"><h2>Product not found</h2><a class="btn btn-gold" href="/shop">Browse footwear</a></div>`;
+        $("#productPageDetail").setAttribute("aria-busy", "false"); return;
       }
       selectedProduct = PRODUCTS.find(product => product.id === productId);
       if (!selectedProduct) {
-        $("#productPageDetail").innerHTML = `
-          <div class="product-page-empty">
-            <h2>Product not found</h2>
-            <p>This pair may no longer be available.</p>
-            <a class="btn btn-gold" href="/shop">Browse footwear</a>
-          </div>`;
-        $("#productPageDetail").setAttribute("aria-busy", "false");
-        return;
+        $("#productPageDetail").innerHTML = `<div class="product-page-empty"><h2>Product not found</h2><p>This pair may no longer be available.</p><a class="btn btn-gold" href="/shop">Browse footwear</a></div>`;
+        $("#productPageDetail").setAttribute("aria-busy", "false"); return;
       }
-      selectedSize = selectedProduct.sizes[0];
-      selectedColor = selectedProduct.colors[0];
+      const sizesInStock = selectedProduct.sizes.filter(size => selectedProduct.colors.some(color => variantStock(selectedProduct, color, size) > 0));
+      selectedSize = sizesInStock[0] || null;
+      selectedColor = selectedProduct.colors.find(color => variantStock(selectedProduct, color, selectedSize) > 0) || null;
       document.title = `${selectedProduct.name} — PALMZ`;
       $("#productPageDetail").innerHTML = `
     ${galleryMarkup(selectedProduct, "detail-img")}
@@ -2327,43 +2338,61 @@
       <h3>${esc(selectedProduct.name)}</h3>
       <div class="desc">${esc(selectedProduct.desc)}</div>
       <div class="label">SIZE</div>
-      <div class="options" id="sizeOptions">${selectedProduct.sizes.map(s=>`<button class="option ${s===selectedSize?"selected":""}" onclick="chooseSize('${s}')">${s}</button>`).join("")}</div>
+      <div class="options" id="sizeOptions">${sizesInStock.map(s=>`<button class="option ${s===selectedSize?"selected":""}" onclick="chooseSize('${s}')">${s}</button>`).join("") || '<span class="desc">No sizes currently in stock.</span>'}</div>
       <div class="label">COLOUR / VARIANT</div>
-      <div class="options" id="colorOptions">${selectedProduct.colors.map(c=>`<button class="option ${c===selectedColor?"selected":""}" data-v="${esc(c)}" onclick="chooseColor(this.dataset.v)">${esc(c)}</button>`).join("")}</div>
+      <div class="options" id="colorOptions">${availableColorsMarkup(selectedProduct, selectedSize)}</div>
       <div class="label">PRICE</div>
       <div style="font-size:13px;color:var(--gold);font-weight:900">${selectedProduct.price!=null?money(selectedProduct.price):"Confirmed on WhatsApp"}</div>
-      ${selectedProduct.inStock
-        ? `<button class="btn btn-gold full" style="margin-top:22px" onclick="addSelected()">Add to bag →</button>`
-        : `<button class="btn btn-gold full" style="margin-top:22px" disabled>Sold out</button>`}
+      <div class="desc" id="variantAvailability" aria-live="polite"></div>
+      <button id="addSelectedButton" class="btn btn-gold full" style="margin-top:22px" onclick="addSelected()">Add to bag &#8594;</button>
     </div>`;
       $("#productPageDetail").setAttribute("aria-busy", "false");
+      updateVariantButton();
+    }
+
+    function availableColorsMarkup(product, size) {
+      if (!size) return '<span class="desc">No colors currently in stock.</span>';
+      return product.colors.filter(color => variantStock(product, color, size) > 0).map(color =>
+        `<button class="option ${color===selectedColor?"selected":""}" data-v="${esc(color)}" onclick="chooseColor(this.dataset.v)">${esc(color)}</button>`
+      ).join("") || '<span class="desc">No colors in this size are currently in stock.</span>';
+    }
+
+    function updateVariantButton() {
+      if (!selectedProduct || !document.getElementById("addSelectedButton")) return;
+      const available = selectedColor ? variantStock(selectedProduct, selectedColor, selectedSize) : 0;
+      const inCart = cart.filter(item => item.id === selectedProduct.id && item.size === selectedSize && item.color === selectedColor).reduce((n, item) => n + item.qty, 0);
+      const button = $("#addSelectedButton");
+      button.disabled = available <= inCart;
+      button.textContent = available <= inCart ? (available ? "Max in bag" : "Unavailable") : "Add to bag →";
+      $("#variantAvailability").textContent = available ? `${available - inCart} pair${available - inCart === 1 ? "" : "s"} available in this color and size.` : "This color and size is currently unavailable.";
     }
 
     function chooseSize(s) {
       selectedSize = s;
-      document.querySelectorAll("#sizeOptions .option").forEach(x => x.classList
-        .toggle("selected", x.textContent === s));
+      document.querySelectorAll("#sizeOptions .option").forEach(x => x.classList.toggle("selected", x.textContent === s));
+      if (!selectedColor || variantStock(selectedProduct, selectedColor, s) < 1) selectedColor = selectedProduct.colors.find(color => variantStock(selectedProduct, color, s) > 0) || null;
+      $("#colorOptions").innerHTML = availableColorsMarkup(selectedProduct, selectedSize);
+      updateVariantButton();
     }
 
     function chooseColor(c) {
       selectedColor = c;
-      document.querySelectorAll("#colorOptions .option").forEach(x => x
-        .classList.toggle("selected", x.textContent === c));
+      document.querySelectorAll("#colorOptions .option").forEach(x => x.classList.toggle("selected", x.textContent === c));
+      updateVariantButton();
     }
-
     function closeProduct() {
       $("#productModal").classList.remove("open");
     }
 
     function addSelected() {
-      if (!selectedProduct || !selectedProduct.inStock) {
-        showToast("This style is currently sold out");
+      if (!selectedProduct || !selectedColor || !selectedSize) {
+        showToast("Choose an available color and size first");
         return;
       }
-      const inCart = cart.filter(x => x.id === selectedProduct.id).reduce((n,
-        x) => n + x.qty, 0);
-      if (inCart >= selectedProduct.quantity) {
-        showToast("No more stock available for this style");
+      const available = variantStock(selectedProduct, selectedColor, selectedSize);
+      const inCart = cart.filter(x => x.id === selectedProduct.id && x.size === selectedSize && x.color === selectedColor).reduce((n, x) => n + x.qty, 0);
+      if (!available || inCart >= available) {
+        showToast("That color and size is out of stock");
         return;
       }
       const key = `${selectedProduct.id}|${selectedSize}|${selectedColor}`;
@@ -2380,6 +2409,7 @@
       });
       save();
       updateCart();
+      updateVariantButton();
       closeProduct();
       showToast("Added to your bag");
     }
@@ -2403,10 +2433,9 @@
     function changeQty(i, d) {
       if (d > 0) {
         const p = PRODUCTS.find(z => z.id === cart[i].id);
-        const t = cart.filter(x => x.id === cart[i].id).reduce((n, x) => n + x
-          .qty, 0);
-        if (p && t >= p.quantity) {
-          showToast("That is all we have in stock");
+        const t = cart.filter(x => x.id === cart[i].id && x.size === cart[i].size && x.color === cart[i].color).reduce((n, x) => n + x.qty, 0);
+        if (p && t >= variantStock(p, cart[i].color, cart[i].size)) {
+          showToast("No more stock in this color and size");
           return;
         }
       }
@@ -2753,7 +2782,13 @@ Please confirm the total price, availability and delivery/payment details. Thank
       }
       productsLoading = false;
       $("#products").setAttribute("aria-busy", "false");
-      cart = cart.filter(x => PRODUCTS.some(p => p.id === x.id && p.inStock));
+      cart = cart.flatMap(item => {
+        const product = PRODUCTS.find(p => p.id === item.id);
+        const available = product ? variantStock(product, item.color, item.size) : 0;
+        if (!available) return [];
+        item.qty = Math.min(item.qty, available);
+        return [item];
+      });
       save();
       render();
       refreshCheckoutPage();

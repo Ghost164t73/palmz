@@ -203,6 +203,30 @@ app.get('/api/customer/orders', requireCustomer, async (req, res) => {
   res.json({ orders });
 });
 const guestOrderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
+function variantStockKey(color, size) {
+  return `${encodeURIComponent(String(color)).replace(/\./g, '%2E')}__${String(size)}`;
+}
+function completeVariantStock(product) {
+  const saved = product.stockByVariant;
+  if (saved && saved.size) return saved;
+  const colors = product.colors.length ? product.colors : ['Standard'];
+  const sizes = product.sizes;
+  const stock = new Map();
+  const bySize = product.stockBySize;
+  if (bySize && bySize.size) {
+    sizes.forEach((size) => {
+      const count = bySize.get(size) || 0;
+      colors.forEach((color, index) => stock.set(variantStockKey(color, size), Math.floor(count / colors.length) + (index < count % colors.length ? 1 : 0)));
+    });
+  } else {
+    const combinations = colors.length * sizes.length;
+    const each = Math.floor(product.quantity / combinations), remainder = product.quantity % combinations;
+    let index = 0;
+    colors.forEach((color) => sizes.forEach((size) => stock.set(variantStockKey(color, size), each + (index++ < remainder ? 1 : 0))));
+  }
+  return stock;
+}
+
 async function orderContact(body, account = null) {
   const customerName = String(body.customerName || (account && account.name) || '').trim();
   const email = String((account && account.email) || body.email || '').trim().toLowerCase();
@@ -227,6 +251,7 @@ async function orderContact(body, account = null) {
   const products = await Product.find({ _id: { $in: productIds } });
   const productsById = new Map(products.map((product) => [String(product._id), product]));
   const quantities = new Map();
+  const quantitiesByVariant = new Map();
   const items = body.items.map((item) => {
     const productId = String(item.productId);
     const product = productsById.get(productId);
@@ -239,6 +264,10 @@ async function orderContact(body, account = null) {
     if (!product.sizes.includes(size) || !product.colors.includes(color)) {
       throw bad('A size or colour in your bag is no longer available');
     }
+    const variantKey = variantStockKey(color, size);
+    const stockKey = `${productId}:${variantKey}`;
+    quantitiesByVariant.set(stockKey, (quantitiesByVariant.get(stockKey) || 0) + quantity);
+    if (completeVariantStock(product).get(variantKey) < quantitiesByVariant.get(stockKey)) throw bad(`There is not enough stock for ${color}, size ${size}`);
     quantities.set(productId, (quantities.get(productId) || 0) + quantity);
     return {
       productId,
@@ -291,13 +320,84 @@ app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Order not found' });
   const status = req.body && req.body.status;
   if (!Order.ORDER_STATUSES.includes(status)) throw bad('Choose a valid order status');
-  const order = await Order.findByIdAndUpdate(
-    req.params.id,
-    { $set: { status } },
-    { new: true, runValidators: true }
-  ).lean();
+  const order = await Order.findById(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
-  res.json({ order });
+  const approved = ['confirmed', 'fulfilled'].includes(status);
+  const applied = [];
+
+  if (approved && !order.inventoryDeducted) {
+    const grouped = new Map();
+    for (const item of order.items) {
+      const key = `${item.productId}:${variantStockKey(item.color, item.size)}`;
+      const current = grouped.get(key) || { productId: item.productId, color: item.color, size: item.size, quantity: 0 };
+      current.quantity += item.quantity;
+      grouped.set(key, current);
+    }
+    const claimed = await Order.findOneAndUpdate(
+      { _id: order._id, inventoryDeducted: { $ne: true } },
+      { $set: { inventoryDeducted: true } },
+      { new: true }
+    );
+    if (claimed) {
+      order.inventoryDeducted = true;
+      try {
+        for (const item of grouped.values()) {
+          const product = await Product.findById(item.productId);
+          if (!product) throw bad(`Product "${item.productId}" in this order no longer exists`);
+          const inventory = completeVariantStock(product);
+          product.stockByVariant = inventory;
+          product.stockBySize = {};
+          product.quantity = [...inventory.values()].reduce((sum, count) => sum + count, 0);
+          await product.save();
+          const key = variantStockKey(item.color, item.size);
+          const result = await Product.updateOne(
+            { _id: product._id, [`stockByVariant.${key}`]: { $gte: item.quantity } },
+            {
+              $inc: { [`stockByVariant.${key}`]: -item.quantity, quantity: -item.quantity },
+              $push: { stockHistory: { color: item.color, size: item.size, quantity: -item.quantity, reason: 'confirmed order' } },
+            }
+          );
+          if (!result.modifiedCount) throw bad(`Not enough stock for ${product.name}, ${item.color}, size ${item.size}`);
+          applied.push({ productId: product._id, color: item.color, size: item.size, key, quantity: item.quantity });
+        }
+      } catch (error) {
+        for (const item of applied) {
+          await Product.updateOne({ _id: item.productId }, {
+            $inc: { [`stockByVariant.${item.key}`]: item.quantity, quantity: item.quantity },
+            $push: { stockHistory: { color: item.color, size: item.size, quantity: item.quantity, reason: 'order deduction reversed' } },
+          });
+        }
+        await Order.updateOne({ _id: order._id }, { $set: { inventoryDeducted: false } });
+        throw error;
+      }
+    }
+  } else if (!approved && order.inventoryDeducted) {
+    const claimed = await Order.findOneAndUpdate(
+      { _id: order._id, inventoryDeducted: true },
+      { $set: { inventoryDeducted: false } },
+      { new: true }
+    );
+    if (claimed) {
+      order.inventoryDeducted = false;
+      for (const item of order.items) {
+        const product = await Product.findById(item.productId);
+        if (!product) continue;
+        const inventory = completeVariantStock(product);
+        product.stockByVariant = inventory;
+        product.stockBySize = {};
+        const key = variantStockKey(item.color, item.size);
+        inventory.set(key, (inventory.get(key) || 0) + item.quantity);
+        product.stockByVariant = inventory;
+        product.quantity = [...inventory.values()].reduce((sum, count) => sum + count, 0);
+        product.stockHistory.push({ color: item.color, size: item.size, quantity: item.quantity, reason: 'cancelled order returned', createdAt: new Date() });
+        await product.save();
+      }
+    }
+  }
+
+  order.status = status;
+  await order.save();
+  res.json({ order: order.toObject() });
 });
 
 // ---------- Validation ----------
@@ -361,6 +461,9 @@ app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, a
   const p = await Product.findById(req.params.id);
   if (!p) return res.status(404).json({ error: 'Product not found' });
   const data = readFields(req.body);
+  const sameVariants = p.sizeMin === data.sizeMin && p.sizeMax === data.sizeMax && JSON.stringify(p.colors) === JSON.stringify(data.colors);
+  data.stockByVariant = sameVariants ? p.stockByVariant : {};
+  data.stockBySize = sameVariants ? p.stockBySize : {};
   const files = productImageFiles(req);
   const oldIds = productImagePublicIds(p);
   if (files.length) {
@@ -387,6 +490,23 @@ app.patch('/api/admin/products/:id/stock', requireAdmin, validId, async (req, re
   const p = await Product.findById(req.params.id);
   if (!p) return res.status(404).json({ error: 'Product not found' });
   const b = req.body || {};
+  if (b.size !== undefined || b.color !== undefined) {
+    const size = String(b.size);
+    const color = String(b.color);
+    if (!p.sizes.includes(size)) throw bad('Choose a size within this product range');
+    if (!p.colors.includes(color)) throw bad('Choose a color for this product');
+    const amount = int(b.delta, -100000, 100000, 'Stock change');
+    if (!amount) throw bad('Stock change cannot be zero');
+    const map = completeVariantStock(p);
+    const key = variantStockKey(color, size);
+    const next = (map.get(key) || 0) + amount;
+    if (next < 0) throw bad('Stock cannot be reduced below zero');
+    map.set(key, next);
+    p.stockByVariant = map;
+    p.stockBySize = {};
+    p.stockHistory.push({ color, size, quantity: amount, reason: amount > 0 ? 'stock received' : 'manual adjustment', createdAt: new Date() });
+    p.quantity = [...map.values()].reduce((sum, n) => sum + n, 0);
+  }
   if (b.quantity !== undefined) p.quantity = int(b.quantity, 0, 100000, 'Quantity');
   if (b.delta !== undefined) p.quantity = Math.max(0, p.quantity + int(b.delta, -1000, 1000, 'Change'));
   if (b.available !== undefined) p.available = b.available === true || b.available === 'true';

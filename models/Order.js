@@ -26,6 +26,7 @@ const OrderSchema = new mongoose.Schema(
     note: { type: String, trim: true, maxlength: 500, default: '' },
     items: { type: [OrderItemSchema], required: true },
     status: { type: String, enum: ORDER_STATUSES, default: 'pending_confirmation' },
+    inventoryDeducted: { type: Boolean, default: false },
     paymentProvider: { type: String, enum: ['whatsapp', 'paystack'], default: 'whatsapp' },
     paymentStatus: { type: String, enum: ['not_started', 'pending', 'paid', 'failed', 'refunded'], default: 'not_started' },
   },
