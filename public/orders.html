@@ -40,8 +40,21 @@
       gap: 16px
     }
     .brand { font-weight: 900; letter-spacing: .2em }
-    .top-actions { display: flex; align-items: center; gap: 12px; font-size: 13px }
-    .top-actions button { border: 1px solid rgba(255,255,255,.2); background: none; color: #fff; padding: 8px 12px }
+    .menu-toggle { width: 42px; height: 42px; padding: 10px; display: grid; align-content: center; gap: 5px; border: 1px solid rgba(255,255,255,.2); border-radius: 12px; background: none; color: #fff }
+    .menu-toggle span { height: 2px; background: currentColor; border-radius: 2px }
+    .drawer-backdrop { position: fixed; inset: 0; z-index: 60; border: 0; background: rgba(5,9,20,.5); opacity: 0; visibility: hidden; transition: opacity .22s,visibility .22s }
+    .drawer-backdrop.open { opacity: 1; visibility: visible }
+    .admin-drawer { position: fixed; z-index: 61; inset: 0 0 0 auto; width: min(330px,86vw); padding: 22px; background: var(--navy); color: #fff; transform: translateX(102%); transition: transform .25s ease; box-shadow: -14px 0 40px rgba(0,0,0,.2) }
+    .admin-drawer.open { transform: translateX(0) }
+    .drawer-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 22px; border-bottom: 1px solid rgba(255,255,255,.14) }
+    .drawer-title { font-weight: 900; letter-spacing: .18em }
+    .drawer-title small { display: block; margin-top: 5px; color: var(--gold); font-size: 10px; letter-spacing: .14em }
+    .drawer-close { width: 38px; height: 38px; border: 1px solid rgba(255,255,255,.2); border-radius: 50%; background: none; color: #fff; font-size: 23px }
+    .drawer-links { display: grid; gap: 8px; padding: 20px 0 }
+    .drawer-links a,.drawer-links button { display: block; width: 100%; padding: 13px 14px; border: 0; border-radius: 11px; background: transparent; color: #eeece5; text-align: left; font-size: 14px }
+    .drawer-links a:hover,.drawer-links a[aria-current="page"],.drawer-links button:hover { background: rgba(255,255,255,.09) }
+    .drawer-links a[aria-current="page"] { color: var(--gold); font-weight: 800 }
+    body.menu-open { overflow: hidden }
     main { padding: 28px 0 60px }
     .heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap }
     h1 { margin: 0; font: 700 32px Georgia, serif }
@@ -88,13 +101,14 @@
   <header class="top">
     <div class="wrap">
       <a href="/admin" class="brand">PALMZ ADMIN</a>
-      <div class="top-actions">
-        <a href="/admin">Products</a>
-        <a href="/admin/sales">Sales history</a>
-        <button type="button" onclick="logout()">Sign out</button>
-      </div>
+      <button class="menu-toggle" type="button" aria-label="Open admin navigation" aria-expanded="false" aria-controls="adminDrawer" onclick="toggleAdminMenu(true)"><span></span><span></span><span></span></button>
     </div>
   </header>
+  <button class="drawer-backdrop" id="drawerBackdrop" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)"></button>
+  <aside class="admin-drawer" id="adminDrawer" aria-label="Admin navigation" aria-hidden="true" inert>
+    <div class="drawer-head"><div class="drawer-title">PALMZ<small>ADMIN MENU</small></div><button class="drawer-close" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)">×</button></div>
+    <nav class="drawer-links"><a href="/admin">Inventory</a><a href="/admin/orders" aria-current="page">Orders</a><a href="/admin/sales">Sales history</a><a href="/" target="_blank" rel="noopener">View store ↗</a><button type="button" onclick="logout()">Sign out</button></nav>
+  </aside>
   <main class="wrap">
     <div class="heading">
       <div><h1>Orders</h1><div class="muted">Confirming or fulfilling an order deducts its color and size stock. Cancelling returns the stock.</div></div>
@@ -117,6 +131,14 @@
   <div class="toast" id="toast" role="status"></div>
   <script>
     const $ = selector => document.querySelector(selector);
+    function toggleAdminMenu(open) {
+      const drawer = $("#adminDrawer"), backdrop = $("#drawerBackdrop"), toggle = $(".menu-toggle");
+      drawer.classList.toggle("open", open); backdrop.classList.toggle("open", open);
+      drawer.setAttribute("aria-hidden", String(!open)); drawer.inert = !open; toggle.setAttribute("aria-expanded", String(open));
+      document.body.classList.toggle("menu-open", open);
+      if (open) $(".drawer-close").focus(); else toggle.focus();
+    }
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && $("#adminDrawer").classList.contains("open")) toggleAdminMenu(false); });
     const STATUS_LABELS = {
       pending_confirmation: "Pending confirmation",
       confirmed: "Confirmed",
