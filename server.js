@@ -12,6 +12,12 @@ const Product = require('./models/Product');
 const Customer = require('./models/Customer');
 const Order = require('./models/Order');
 
+const PICKUP_BRANCHES = {
+  'shop-1': { name: 'Shop 1', address: 'Genesis Plaza, NTA Roundabout', city: 'Lokoja, Kogi State', available: true },
+  'shop-2': { name: 'Shop 2', address: 'Location to be confirmed', city: '', available: false },
+  'shop-3': { name: 'Shop 3', address: 'Location to be confirmed', city: '', available: false },
+};
+
 const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '100kb' }));
@@ -231,14 +237,24 @@ async function orderContact(body, account = null) {
   const customerName = String(body.customerName || (account && account.name) || '').trim();
   const email = String((account && account.email) || body.email || '').trim().toLowerCase();
   const phone = String(body.phone || '').trim();
-  const address = String(body.address || '').trim();
-  const city = String(body.city || '').trim();
+  const fulfillmentMethod = String(body.fulfillmentMethod || 'delivery');
+  let address = String(body.address || '').trim();
+  let city = String(body.city || '').trim();
+  let pickupBranch = null;
   const note = String(body.note || '').trim();
   if (!customerName || customerName.length > 80) throw bad('Enter a name of 1 to 80 characters');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw bad('Enter a valid email address');
   if (!phone || phone.length > 40) throw bad('Enter a phone number of 1 to 40 characters');
-  if (!address || address.length > 300) throw bad('Enter a delivery address of 1 to 300 characters');
-  if (!city || city.length > 120) throw bad('Enter a city and state of 1 to 120 characters');
+  if (!['delivery', 'pickup'].includes(fulfillmentMethod)) throw bad('Choose delivery or branch pickup');
+  if (fulfillmentMethod === 'pickup') {
+    pickupBranch = PICKUP_BRANCHES[String(body.pickupBranchId || '')];
+    if (!pickupBranch || !pickupBranch.available) throw bad('Choose an available pickup branch');
+    address = `${pickupBranch.name}: ${pickupBranch.address}`;
+    city = pickupBranch.city;
+  } else {
+    if (!address || address.length > 300) throw bad('Enter a delivery address of 1 to 300 characters');
+    if (!city || city.length > 120) throw bad('Enter a city and state of 1 to 120 characters');
+  }
   if (note.length > 500) throw bad('Order note must be 500 characters or fewer');
   if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 50) {
     throw bad('An order must contain between 1 and 50 items');
@@ -289,6 +305,10 @@ async function orderContact(body, account = null) {
     phone,
     address,
     city,
+    fulfillmentMethod,
+    pickupBranchId: pickupBranch ? String(body.pickupBranchId) : '',
+    pickupBranchName: pickupBranch ? pickupBranch.name : '',
+    pickupBranchAddress: pickupBranch ? pickupBranch.address : '',
     note,
     items,
     paymentProvider: 'whatsapp',
@@ -565,7 +585,7 @@ const pub = path.join(__dirname, 'public');
 app.get('/admin', (req, res) => res.sendFile(path.join(pub, 'admin.html')));
 app.get('/admin/orders', (req, res) => res.sendFile(path.join(pub, 'orders.html')));
 app.get('/admin/sales', (req, res) => res.sendFile(path.join(pub, 'sales.html')));
-app.get(['/shop', '/cart', '/checkout', '/about', '/product/:id'], (req, res) =>
+app.get(['/shop', '/cart', '/checkout', '/about', '/contact', '/product/:id'], (req, res) =>
   res.sendFile(path.join(pub, 'index.html')));
 app.use(express.static(pub));
 
