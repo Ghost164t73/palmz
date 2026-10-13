@@ -11,6 +11,11 @@ const { OAuth2Client } = require('google-auth-library');
 const Product = require('./models/Product');
 const Customer = require('./models/Customer');
 const Order = require('./models/Order');
+const { DELIVERY_TIERS, deliveryQuote, calculateOrderTotal } = require('./lib/delivery');
+const {
+  paystackTransactionMismatches,
+  paymentAmountMismatchDetails,
+} = require('./lib/paystack');
 
 const PICKUP_BRANCHES = {
   'shop-1': { name: 'Shop 1', address: 'Genesis Plaza, NTA Roundabout', city: 'Lokoja, Kogi State', available: true },
@@ -20,7 +25,13 @@ const PICKUP_BRANCHES = {
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({
+  limit: '100kb',
+  verify(req, res, buffer) {
+    if (req.originalUrl === '/api/paystack/webhook') req.rawBody = Buffer.from(buffer);
+  },
+}));
+app.get('/delivery-options', (req, res) => res.json({ tiers: DELIVERY_TIERS }));
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -209,6 +220,7 @@ app.get('/api/customer/orders', requireCustomer, async (req, res) => {
   res.json({ orders });
 });
 const guestOrderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
+const paystackOrderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
 function variantStockKey(color, size) {
   return `${encodeURIComponent(String(color)).replace(/\./g, '%2E')}__${String(size)}`;
 }
@@ -233,13 +245,16 @@ function completeVariantStock(product) {
   return stock;
 }
 
-async function orderContact(body, account = null) {
+async function orderContact(body, account = null, paymentProvider = 'whatsapp') {
   const customerName = String(body.customerName || (account && account.name) || '').trim();
   const email = String((account && account.email) || body.email || '').trim().toLowerCase();
   const phone = String(body.phone || '').trim();
   const fulfillmentMethod = String(body.fulfillmentMethod || 'delivery');
   let address = String(body.address || '').trim();
   let city = String(body.city || '').trim();
+  let deliveryState = '';
+  let deliveryFee = 0;
+  let deliveryEstimate = '';
   let pickupBranch = null;
   const note = String(body.note || '').trim();
   if (!customerName || customerName.length > 80) throw bad('Enter a name of 1 to 80 characters');
@@ -253,7 +268,13 @@ async function orderContact(body, account = null) {
     city = pickupBranch.city;
   } else {
     if (!address || address.length > 300) throw bad('Enter a delivery address of 1 to 300 characters');
-    if (!city || city.length > 120) throw bad('Enter a city and state of 1 to 120 characters');
+    if (!city || city.length > 80) throw bad('Enter a city of 1 to 80 characters');
+    deliveryState = String(body.state || '').trim();
+    const quote = deliveryQuote(deliveryState);
+    if (!quote) throw bad('Choose a valid delivery state');
+    deliveryFee = quote.fee;
+    deliveryEstimate = quote.estimate;
+    city = `${city}, ${deliveryState}`;
   }
   if (note.length > 500) throw bad('Order note must be 500 characters or fewer');
   if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 50) {
@@ -294,6 +315,7 @@ async function orderContact(body, account = null) {
       unitPrice: product.price,
     };
   });
+  const totalAmount = calculateOrderTotal(items, deliveryFee);
   for (const [productId, quantity] of quantities) {
     if (quantity > productsById.get(productId).quantity) throw bad('There is not enough stock for an item in your bag');
   }
@@ -306,13 +328,17 @@ async function orderContact(body, account = null) {
     address,
     city,
     fulfillmentMethod,
+    deliveryState,
+    deliveryFee,
+    deliveryEstimate,
+    totalAmount,
     pickupBranchId: pickupBranch ? String(body.pickupBranchId) : '',
     pickupBranchName: pickupBranch ? pickupBranch.name : '',
     pickupBranchAddress: pickupBranch ? pickupBranch.address : '',
     note,
     items,
-    paymentProvider: 'whatsapp',
-    paymentStatus: 'not_started',
+    paymentProvider,
+    paymentStatus: paymentProvider === 'paystack' ? 'pending' : 'not_started',
   };
 }
 app.post('/api/orders', guestOrderLimiter, async (req, res) => {
@@ -324,6 +350,194 @@ app.post('/api/customer/orders', requireCustomer, async (req, res) => {
   if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
   const order = await Order.create(await orderContact(req.body || {}, customer));
   res.status(201).json({ order });
+});
+
+async function createPaystackOrder(req, account = null) {
+  if (!process.env.PAYSTACK_SECRET_KEY || !process.env.APP_URL) {
+    throw Object.assign(new Error('Online payment is not configured. Choose WhatsApp checkout or contact PALMZ.'), {
+      status: 503,
+      expose: true,
+    });
+  }
+  if (process.env.NODE_ENV === 'production' && !process.env.PAYSTACK_SECRET_KEY.startsWith('sk_live_')) {
+    throw Object.assign(new Error('Live Paystack payments require a live secret key. Update PAYSTACK_SECRET_KEY in the server environment.'), {
+      status: 503,
+      expose: true,
+    });
+  }
+  let appUrl;
+  try {
+    appUrl = new URL(process.env.APP_URL);
+  } catch {
+    throw Object.assign(new Error('Online payment is not configured correctly. Contact PALMZ.'), {
+      status: 503,
+      expose: true,
+    });
+  }
+  if (!['https:', 'http:'].includes(appUrl.protocol) ||
+      (process.env.NODE_ENV === 'production' && appUrl.protocol !== 'https:')) {
+    throw Object.assign(new Error('Online payment requires a valid secure APP_URL.'), {
+      status: 503,
+      expose: true,
+    });
+  }
+
+  const orderData = await orderContact(req.body || {}, account, 'paystack');
+  if (orderData.items.some((item) => item.unitPrice == null)) {
+    throw bad('Online payment is unavailable for an item without a set price. Choose WhatsApp checkout instead.');
+  }
+  const amountKobo = Math.round(orderData.totalAmount * 100);
+  if (!Number.isSafeInteger(amountKobo) || amountKobo <= 0 ||
+      Math.abs(amountKobo / 100 - orderData.totalAmount) > 1e-7) {
+    throw bad('The order total cannot be processed online. Choose WhatsApp checkout instead.');
+  }
+
+  const order = await Order.create({
+    ...orderData,
+    paymentAmountKobo: amountKobo,
+  });
+  const reference = `palmz-${order._id}-${crypto.randomBytes(8).toString('hex')}`;
+  order.paystackReference = reference;
+  await order.save();
+
+  try {
+    const response = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: order.email,
+        amount: amountKobo,
+        currency: 'NGN',
+        reference,
+        callback_url: new URL('/paystack/callback', appUrl).toString(),
+        metadata: { orderId: String(order._id) },
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data || data.status !== true || !data.data?.authorization_url) {
+      throw new Error(data && data.message ? data.message : 'Paystack did not return a checkout link');
+    }
+    const authorizationUrl = new URL(data.data.authorization_url);
+    if (authorizationUrl.protocol !== 'https:' || authorizationUrl.hostname !== 'checkout.paystack.com') {
+      throw new Error('Paystack returned an invalid checkout URL');
+    }
+    return authorizationUrl.toString();
+  } catch (error) {
+    order.paymentStatus = 'failed';
+    await order.save();
+    console.error('Paystack initialization failed:', error.message);
+    throw Object.assign(new Error('Could not start Paystack checkout. Please try again or choose WhatsApp checkout.'), {
+      status: 502,
+      expose: true,
+    });
+  }
+}
+
+app.post('/api/orders/paystack', guestOrderLimiter, paystackOrderLimiter, async (req, res) => {
+  const authorizationUrl = await createPaystackOrder(req);
+  res.status(201).json({ authorizationUrl });
+});
+app.post('/api/customer/orders/paystack', requireCustomer, paystackOrderLimiter, async (req, res) => {
+  const customer = await Customer.findById(req.customerId);
+  if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
+  const authorizationUrl = await createPaystackOrder(req, customer);
+  res.status(201).json({ authorizationUrl });
+});
+
+async function verifyPaystackTransaction(reference) {
+  if (!process.env.PAYSTACK_SECRET_KEY) throw new Error('PAYSTACK_SECRET_KEY is not configured');
+  if (process.env.NODE_ENV === 'production' && !process.env.PAYSTACK_SECRET_KEY.startsWith('sk_live_')) {
+    throw new Error('Live Paystack payment verification requires a live secret key');
+  }
+  const order = await Order.findOne({ paystackReference: reference });
+  if (!order) throw new Error('Paystack reference does not match an order');
+  if (order.paymentStatus === 'paid' || order.paymentStatus === 'refunded') return order.paymentStatus;
+
+  const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+    headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+    signal: AbortSignal.timeout(15000),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result || result.status !== true || !result.data) {
+    throw new Error(result && result.message ? result.message : 'Paystack could not verify the transaction');
+  }
+  const transaction = result.data;
+  const mismatches = paystackTransactionMismatches(order, transaction, reference);
+  if (mismatches.length) {
+    const details = mismatches.includes('amount')
+      ? paymentAmountMismatchDetails(order, transaction)
+      : null;
+    throw new Error(`Paystack transaction ${mismatches.join(', ')} did not match order ${order._id}${details ? ` (expected ${details.expectedKobo} kobo, received ${details.receivedKobo} kobo)` : ''}`);
+  }
+  if (transaction.status === 'success') {
+    order.paymentStatus = 'paid';
+    order.paidAmountKobo = Number(transaction.amount);
+  }
+  else if (['failed', 'abandoned'].includes(transaction.status)) order.paymentStatus = 'failed';
+  await order.save();
+  return order.paymentStatus;
+}
+
+app.get('/paystack/callback', async (req, res) => {
+  const reference = typeof req.query.reference === 'string' ? req.query.reference : '';
+  if (!/^[A-Za-z0-9_-]{1,100}$/.test(reference)) {
+    return res.redirect('/checkout?payment=unverified');
+  }
+  try {
+    await connectDb();
+    const paymentStatus = await verifyPaystackTransaction(reference);
+    if (paymentStatus === 'paid') {
+      return res.redirect(`/checkout?payment=success&reference=${encodeURIComponent(reference)}`);
+    }
+    if (paymentStatus === 'failed') return res.redirect('/checkout?payment=failed');
+    return res.redirect('/checkout?payment=pending');
+  } catch (error) {
+    console.error('Paystack callback verification failed:', error.message);
+    return res.redirect('/checkout?payment=unverified');
+  }
+});
+
+app.post('/api/paystack/webhook', async (req, res) => {
+  const signature = req.get('x-paystack-signature') || '';
+  const rawBody = req.rawBody;
+  if (!process.env.PAYSTACK_SECRET_KEY || !rawBody ||
+      !/^[a-f0-9]{128}$/i.test(signature)) {
+    return res.status(401).json({ error: 'Invalid Paystack signature' });
+  }
+  if (process.env.NODE_ENV === 'production' && !process.env.PAYSTACK_SECRET_KEY.startsWith('sk_live_')) {
+    return res.status(503).json({ error: 'Live Paystack webhook verification requires a live secret key' });
+  }
+  const expected = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY).update(rawBody).digest();
+  const supplied = Buffer.from(signature, 'hex');
+  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) {
+    return res.status(401).json({ error: 'Invalid Paystack signature' });
+  }
+  if (!req.body || req.body.event !== 'charge.success') return res.json({ received: true });
+
+  const transaction = req.body.data;
+  if (!transaction || typeof transaction.reference !== 'string') {
+    return res.status(400).json({ error: 'Invalid Paystack transaction' });
+  }
+  const order = await Order.findOne({ paystackReference: transaction.reference });
+  if (!order) return res.json({ received: true });
+  const mismatches = paystackTransactionMismatches(order, transaction, order.paystackReference);
+  if (transaction.status !== 'success' || mismatches.length) {
+    const details = mismatches.includes('amount')
+      ? paymentAmountMismatchDetails(order, transaction)
+      : null;
+    console.error(`Paystack webhook transaction ${mismatches.join(', ') || 'status'} did not match order ${order._id}${details ? ` (expected ${details.expectedKobo} kobo, received ${details.receivedKobo} kobo)` : ''}`);
+    return res.status(400).json({ error: 'Paystack transaction does not match the order' });
+  }
+  if (order.paymentStatus !== 'paid' && order.paymentStatus !== 'refunded') {
+    order.paymentStatus = 'paid';
+    order.paidAmountKobo = Number(transaction.amount);
+    await order.save();
+  }
+  res.json({ received: true });
 });
 
 // ---------- Admin order management ----------

@@ -117,8 +117,9 @@
     }
 
     .logo img {
-      width: 60px;
-      height: 60px;
+      width: 42px;
+      height: 42px;
+      clip-path: circle(50%);
     }
 
     .navlinks {
@@ -817,13 +818,40 @@
       letter-spacing: .17em
     }
 
-    .fulfillment-options{grid-column:1/-1;margin:0;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
-    .fulfillment-options legend{padding:0 7px;color:var(--text);font-size:13px;font-weight:800}
-    .fulfillment-choice{display:flex;align-items:flex-start;gap:11px;margin:5px 0;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);cursor:pointer}
+    .fulfillment-options,.payment-options{grid-column:1/-1;margin:0;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+    .fulfillment-options legend,.payment-options legend{padding:0 7px;color:var(--text);font-size:13px;font-weight:800}
+    .fulfillment-choice,.payment-choice{display:flex;align-items:flex-start;gap:11px;margin:5px 0;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);cursor:pointer}
+    .payment-choice:first-of-type{border-color:var(--gold);box-shadow:inset 3px 0 var(--gold)}
     .form .fulfillment-choice input{flex:0 0 17px;width:17px;height:17px;margin:2px 0 0;padding:0;border:0;border-radius:50%;background:transparent;accent-color:var(--gold)}
-    .fulfillment-choice span{display:grid;gap:3px;color:var(--text);font-size:13px;font-weight:750}
-    .fulfillment-choice small{color:var(--muted);font-size:11px;font-weight:400;line-height:1.5}
-    .fulfillment-options select{width:100%;margin-top:6px;padding:13px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--text);font:inherit}
+    .form .payment-choice input{flex:0 0 17px;width:17px;height:17px;margin:2px 0 0;padding:0;border:0;border-radius:50%;background:transparent;accent-color:var(--gold)}
+    .fulfillment-choice span,.payment-choice span{display:grid;gap:3px;color:var(--text);font-size:13px;font-weight:750}
+    .fulfillment-choice small,.payment-choice small{color:var(--muted);font-size:11px;font-weight:400;line-height:1.5}
+    .fulfillment-options select,.delivery-fields select{width:100%;margin-top:6px;padding:13px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--text);font:inherit}
+    .delivery-fields{display:grid;grid-template-columns:1fr 1fr;gap:7px 16px;align-content:start}
+    .delivery-fields label{margin:0}
+    .delivery-fields input,.delivery-fields select{margin:6px 0 0}
+    .delivery-estimate{grid-column:1/-1;margin-top:0;color:var(--muted);font-size:11px;font-weight:400}
+    #paymentResult{margin-bottom:20px;padding:16px;border:1px solid var(--line);background:var(--surface2);color:var(--text);line-height:1.6}
+    #paymentResult[data-status="success"]{border-color:rgba(201,163,74,.4)}
+    #paymentResult[data-status="failed"],#paymentResult[data-status="unverified"]{border-color:#b3261e}
+    #paymentResult[data-status="success"]{margin:0 auto;padding:clamp(28px,6vw,52px);border:1px solid rgba(201,163,74,.4);border-radius:24px;background:linear-gradient(145deg,color-mix(in srgb,var(--surface) 95%,var(--gold)),var(--surface) 72%);box-shadow:0 18px 48px rgba(12,18,39,.09);text-align:center}
+    .payment-success-icon{position:relative;width:clamp(96px,16vw,124px);height:clamp(96px,16vw,124px);display:grid;place-items:center;margin:0 auto 24px;border:1px solid rgba(201,163,74,.45);border-radius:50%;background:radial-gradient(circle at 35% 28%,#fffdf8 0%,#f5e9c8 58%,#e7d39b 100%);box-shadow:0 0 0 8px rgba(201,163,74,.08),0 12px 28px rgba(12,18,39,.12),inset 0 1px 0 rgba(255,255,255,.9);animation:payment-success-pop .55s cubic-bezier(.2,.8,.2,1) both}
+    .payment-success-icon::before{content:"";position:absolute;inset:8px;border:1px solid rgba(201,163,74,.42);border-radius:50%}
+    .payment-success-icon svg{position:relative;width:64%;height:64%;overflow:visible;fill:none;stroke:#0c1227;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+    .payment-success-icon .mark-ring{stroke:#b18a35;stroke-width:1.35;opacity:.75}
+    .payment-success-icon .mark-check{stroke-dasharray:38;stroke-dashoffset:38;animation:payment-check-draw .55s .14s ease-out forwards}
+    @keyframes payment-success-pop{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
+    @keyframes payment-check-draw{to{stroke-dashoffset:0}}
+    .payment-success-kicker{margin:0 0 8px;color:#168344;font-size:11px;font-weight:850;letter-spacing:.18em;text-transform:uppercase}
+    .payment-success-title{margin:0;color:var(--text);font:700 clamp(30px,5vw,44px)/1.08 Georgia,serif;letter-spacing:-.035em}
+    .payment-success-copy{max-width:470px;margin:14px auto 0;color:var(--muted);font-size:14px;line-height:1.75}
+    .payment-success-thanks{margin-top:8px!important;color:var(--text)!important;font-weight:700}
+    .payment-success-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:28px}
+    .payment-success-actions .btn{min-width:190px;border-radius:999px!important}
+    .payment-success-actions .btn-whatsapp{background:#168344;color:#fff}
+    .payment-success-actions .btn-whatsapp:hover{background:#116c37}
+    @media(max-width:520px){.payment-success-actions{display:grid}.payment-success-actions .btn{width:100%}}
+    @media(prefers-reduced-motion:reduce){.payment-success-icon,.payment-success-icon .mark-check{animation:none;stroke-dashoffset:0}}
     .checkout-wide{grid-column:1/-1}
     [hidden]{display:none!important}
     #contactPage{display:none;padding:clamp(34px,6vw,68px) 0 76px}
@@ -1433,6 +1461,7 @@
 
     .checkout-layout .form .checkout-wide,
     .checkout-layout .form .fulfillment-options,
+    .checkout-layout .form .payment-options,
     .checkout-layout .form .note,
     .checkout-layout .form button {
       grid-column: 1 / -1
@@ -1894,7 +1923,7 @@
     </div>
     <header class="header">
       <div class="container nav">
-        <a href="/" class="logo"><img src="/palmz-logo.jpeg" alt=""></a>
+        <a href="/" class="logo">PALMZ</a>
     
         <nav class="navlinks" id="mainNav">
           <a href="/shop">Shop</a>
@@ -2150,9 +2179,10 @@
         <p>Your bag is empty.</p>
         <a class="btn btn-gold" href="/shop">Browse footwear</a>
       </div>
+      <div id="paymentResult" role="status" aria-live="polite" hidden></div>
       <div class="checkout-layout" id="checkoutContent">
         <div class="summary" id="summary"></div>
-        <form class="form" onsubmit="sendOrder(event)">
+        <form class="form" onsubmit="submitOrder(event)">
         <label>Full name
           <input id="customerName" required placeholder="Your full name">
         </label>
@@ -2164,6 +2194,11 @@
           <input id="customerEmail" required type="email"
             placeholder="you@example.com">
         </label>
+        <fieldset class="payment-options">
+          <legend>How would you like to order?</legend>
+          <label class="payment-choice"><input type="radio" name="paymentMethod" value="paystack" checked onchange="updateCheckoutSummary()"><span>Pay online with Paystack<small>Secure payment by card, bank transfer, or another available Paystack method. Preferred.</small></span></label>
+          <label class="payment-choice"><input type="radio" name="paymentMethod" value="whatsapp" onchange="updateCheckoutSummary()"><span>Order through WhatsApp<small>Send your order to PALMZ and confirm payment with the team.</small></span></label>
+        </fieldset>
         <fieldset class="fulfillment-options">
           <legend>How would you like to receive your order?</legend>
           <label class="fulfillment-choice"><input type="radio" name="fulfillmentMethod" value="delivery" checked onchange="updateFulfillmentFields()"><span>Deliver to me<small>Enter the address where you’d like your order delivered.</small></span></label>
@@ -2173,9 +2208,17 @@
           <textarea id="customerAddress" required
             placeholder="House / office address"></textarea>
         </label>
-        <label id="deliveryCityField">City and state
-          <input id="customerCity" required placeholder="e.g. Kano, Kano State">
-        </label>
+        <div id="deliveryCityField" class="delivery-fields checkout-wide">
+          <label>City
+            <input id="customerCity" required maxlength="80" placeholder="e.g. Kano">
+          </label>
+          <label>State
+            <select id="deliveryState" required disabled onchange="updateCheckoutSummary()">
+              <option value="">Loading delivery states…</option>
+            </select>
+          </label>
+          <div class="delivery-estimate" id="deliveryEstimate" aria-live="polite">Delivery fees are calculated by state.</div>
+        </div>
         <label id="pickupBranchField" class="checkout-wide" hidden>Choose a pickup branch
           <select id="pickupBranch">
             <option value="shop-1">Shop 1 — Genesis Plaza, NTA Roundabout, Lokoja</option>
@@ -2188,11 +2231,8 @@
             placeholder="Anything PALMZ should know?"></textarea>
         </label>
         <div class="note" id="checkoutAccountMessage">Guest checkout is available. Use the account icon to sign in with Google and save your order history.</div>
-        <button class="btn whatsapp full" type="submit">Send order to PALMZ
-          WhatsApp →</button>
-        <div class="note">WhatsApp will open with your order details already
-          filled in. PALMZ can then confirm availability, price and
-          delivery/payment details.</div>
+        <button id="submitOrderButton" class="btn btn-gold full" type="submit">Pay securely with Paystack →</button>
+        <div class="note" id="orderMethodNote">You’ll be redirected to Paystack to complete payment. Your delivery fee and total are shown in the order summary.</div>
         </form>
       </div>
     </div>
@@ -2231,6 +2271,10 @@
     let orderSubmitting = false;
     let googleSignInReady = false;
     let WHATSAPP_NUMBER = "";
+    let DELIVERY_TIERS = [];
+    let deliveryOptionsPromise = Promise.resolve(false);
+    let paymentReturnStatus = new URLSearchParams(location.search).get("payment");
+    let paymentSuccessReference = new URLSearchParams(location.search).get("reference") || "";
     let filter = "All";
     let cart = [];
     try {
@@ -2285,6 +2329,99 @@
 
     function money(n) {
       return "₦" + Number(n).toLocaleString("en-NG");
+    }
+
+    async function loadDeliveryOptions() {
+      try {
+        const response = await fetch("/delivery-options");
+        if (!response.ok) throw new Error("Could not load delivery prices");
+        const data = await response.json();
+        if (!Array.isArray(data.tiers) || !data.tiers.length) {
+          throw new Error("Delivery prices are unavailable");
+        }
+        DELIVERY_TIERS = data.tiers;
+        $("#deliveryState").innerHTML = `<option value="">Choose your state</option>` +
+          DELIVERY_TIERS.flatMap(tier => tier.states.map(state =>
+            `<option value="${esc(state)}">${esc(state)} — ${money(tier.fee)} · ${esc(tier.estimate)}</option>`)).join("");
+        $("#deliveryState").disabled = false;
+        updateCheckoutSummary();
+        return true;
+      } catch (error) {
+        console.error("Could not load delivery options:", error);
+        $("#deliveryState").innerHTML = `<option value="">Delivery prices unavailable</option>`;
+        $("#deliveryEstimate").textContent = "Delivery prices could not be loaded. Refresh the page to try again.";
+        return false;
+      }
+    }
+
+    function deliveryQuoteFor(state) {
+      return DELIVERY_TIERS.find(tier => tier.states.includes(state)) || null;
+    }
+
+    function orderPayload() {
+      const fulfillmentMethod = document.querySelector('input[name="fulfillmentMethod"]:checked').value;
+      return {
+        customerName: $("#customerName").value.trim(),
+        email: $("#customerEmail").value.trim(),
+        phone: $("#customerPhone").value.trim(),
+        address: $("#customerAddress").value.trim(),
+        city: $("#customerCity").value.trim(),
+        state: $("#deliveryState").value,
+        fulfillmentMethod,
+        pickupBranchId: fulfillmentMethod === "pickup" ? $("#pickupBranch").value : "",
+        note: $("#customerNote").value.trim(),
+        items: cart.map(item => ({
+          productId: item.id,
+          size: item.size,
+          color: item.color,
+          quantity: item.qty
+        }))
+      };
+    }
+
+    function updateCheckoutSummary() {
+      if (!$("#summary")) return;
+      const method = document.querySelector('input[name="paymentMethod"]:checked')?.value || "paystack";
+      const fulfillmentMethod = document.querySelector('input[name="fulfillmentMethod"]:checked')?.value || "delivery";
+      const lines = cart.map(item => {
+        const product = PRODUCTS.find(candidate => candidate.id === item.id);
+        const itemTotal = product && product.price != null ? money(product.price * item.qty) : "Price via WhatsApp";
+        return `${item.qty} × ${esc(item.name)} — size ${esc(item.size)} — ${esc(item.color)} · ${itemTotal}`;
+      });
+      let deliveryLine = "Delivery: choose a state to see the delivery fee.";
+      let deliveryFee = 0;
+      if (fulfillmentMethod === "pickup") {
+        deliveryLine = "Branch pickup — no delivery fee.";
+      } else {
+        const state = $("#deliveryState").value;
+        const quote = deliveryQuoteFor(state);
+        if (quote) {
+          deliveryFee = quote.fee;
+          deliveryLine = `Delivery to ${esc(state)} — ${money(quote.fee)} (${esc(quote.estimate)})`;
+        }
+      }
+      const allPricesKnown = cart.every(item => {
+        const product = PRODUCTS.find(candidate => candidate.id === item.id);
+        return product && product.price != null;
+      });
+      const itemTotal = allPricesKnown ? cart.reduce((total, item) =>
+        total + PRODUCTS.find(product => product.id === item.id).price * item.qty, 0) : null;
+      const orderTotal = itemTotal == null ? "PALMZ to confirm item prices" :
+        (fulfillmentMethod === "delivery" && !deliveryQuoteFor($("#deliveryState").value)
+          ? "Choose a delivery state"
+          : money(itemTotal + deliveryFee));
+      $("#summary").innerHTML = `<strong>Your order</strong><br>${lines.join("<br>")}` +
+        `<br><br>${deliveryLine}<br><strong>Total: ${orderTotal}</strong>`;
+      $("#deliveryEstimate").textContent = fulfillmentMethod === "pickup"
+        ? "No delivery fee for branch pickup."
+        : (deliveryQuoteFor($("#deliveryState").value)?.estimate || "Choose a state to see its fee and delivery estimate.");
+      const button = $("#submitOrderButton");
+      button.classList.toggle("whatsapp", method === "whatsapp");
+      button.classList.toggle("btn-gold", method === "paystack");
+      button.textContent = method === "paystack" ? "Pay securely with Paystack →" : "Send order to PALMZ WhatsApp →";
+      $("#orderMethodNote").textContent = method === "paystack"
+        ? "You’ll be redirected to Paystack to complete payment. Your delivery fee and total are shown in the order summary."
+        : "WhatsApp will open with your order and delivery estimate. PALMZ will confirm your item prices and payment details.";
     }
 
     function save() {
@@ -2537,8 +2674,10 @@
       $("#deliveryCityField").hidden = pickup;
       $("#customerAddress").required = !pickup;
       $("#customerCity").required = !pickup;
+      $("#deliveryState").required = !pickup;
       $("#pickupBranchField").hidden = !pickup;
       $("#pickupBranch").required = pickup;
+      updateCheckoutSummary();
     }
     updateFulfillmentFields();
 
@@ -2575,17 +2714,55 @@
 
     function refreshCheckoutPage() {
       if (location.pathname.replace(/\/+$/, "") !== "/checkout") return;
-      const isEmpty = cart.length === 0;
-      $("#checkoutEmpty").hidden = !isEmpty;
-      $("#checkoutContent").hidden = isEmpty;
-      $("#checkoutModal").classList.add("open");
-      if (!isEmpty) {
-        $("#summary").innerHTML = `<strong>Your order</strong><br>` +
-          cart.map(x =>
-            `${x.qty} × ${esc(x.name)} — size ${x.size} — ${esc(x.color)}`).join(
-            "<br>") +
-          `<br><br><strong>Price: to be confirmed by PALMZ on WhatsApp</strong>`;
+      const paymentResult = paymentReturnStatus;
+      if (paymentResult === "success") {
+        cart = [];
+        save();
+        updateCart();
       }
+      const isEmpty = cart.length === 0;
+      $("#checkoutEmpty").hidden = !isEmpty || paymentResult === "success";
+      $("#checkoutContent").hidden = isEmpty;
+      const paymentMessages = {
+        failed: ["failed", "Payment was not completed. You can try Paystack again or choose WhatsApp checkout."],
+        pending: ["pending", "Payment is still being confirmed. Please wait a moment or contact PALMZ before retrying."],
+        unverified: ["unverified", "We could not confirm the payment yet. Please contact PALMZ with your payment reference before retrying."]
+      };
+      const result = paymentMessages[paymentResult];
+      if (paymentResult === "success") {
+        $("#paymentResult").dataset.status = "success";
+        $("#paymentResult").innerHTML = `
+          <div class="payment-success-icon" aria-hidden="true">
+            <svg viewBox="0 0 64 64"><circle class="mark-ring" cx="32" cy="32" r="23.5"></circle><path class="mark-check" d="m20 32.5 8.2 8.2L44.5 24"></path></svg>
+          </div>
+          <p class="payment-success-kicker">Payment successful</p>
+          <h2 class="payment-success-title">Thank you for your order.</h2>
+          <p class="payment-success-copy">Your payment has been confirmed securely by Paystack. We’ll contact you shortly on the phone number you provided to coordinate your order.</p>
+          <p class="payment-success-copy payment-success-thanks">Thank you for shopping with PALMZ.</p>
+          <div class="payment-success-actions">
+            <button class="btn btn-whatsapp" type="button" onclick="confirmPaidOrderOnWhatsApp()">Confirm my order on WhatsApp</button>
+            <a class="btn btn-gold" href="/shop">Back to shop</a>
+          </div>`;
+        $("#paymentResult").hidden = false;
+        history.replaceState(null, "", location.pathname);
+      } else if (result) {
+        $("#paymentResult").dataset.status = result[0];
+        $("#paymentResult").textContent = result[1];
+        $("#paymentResult").hidden = false;
+        history.replaceState(null, "", location.pathname);
+      } else {
+        $("#paymentResult").hidden = true;
+      }
+      $("#checkoutModal").classList.add("open");
+      if (!isEmpty && paymentResult !== "success") {
+        updateCheckoutSummary();
+      }
+    }
+
+    function confirmPaidOrderOnWhatsApp() {
+      const reference = paymentSuccessReference;
+      const message = `Hello PALMZ, my Paystack payment was successful and I'd like to confirm my order.${reference ? `\nPayment reference: ${reference}` : ""}\nPlease contact me on the phone number I provided. Thank you.`;
+      openWhatsApp(message);
     }
 
     function customerRequest(url, options = {}) {
@@ -2702,16 +2879,58 @@
       }
     }
 
-    async function sendOrder(e) {
+    async function submitOrder(e) {
       e.preventDefault();
       if (orderSubmitting) return;
-      if (!WHATSAPP_NUMBER) {
-        showToast("WhatsApp number not set yet");
-        return;
-      }
       orderSubmitting = true;
       const submitButton = e.submitter;
-      if (submitButton) submitButton.disabled = true;
+      const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+      const originalButtonText = submitButton ? submitButton.textContent : "";
+      if (submitButton) {
+        submitButton.disabled = true;
+        if (paymentMethod === "paystack") submitButton.textContent = "Starting your payment…";
+      }
+      try {
+        if (document.querySelector('input[name="fulfillmentMethod"]:checked').value === "delivery" &&
+            !await deliveryOptionsPromise) {
+          throw new Error("Delivery fees are unavailable. Refresh the page before placing your order.");
+        }
+        await customerSessionPromise;
+        const payload = orderPayload();
+        if (paymentMethod === "paystack") {
+          const response = await customerRequest(customer
+            ? "/api/customer/orders/paystack"
+            : "/api/orders/paystack", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          if (typeof response.authorizationUrl !== "string" ||
+              !response.authorizationUrl.startsWith("https://")) {
+            throw new Error("Paystack did not return a secure checkout link. Please try again or choose WhatsApp checkout.");
+          }
+          location.assign(response.authorizationUrl);
+          return;
+        }
+        if (!WHATSAPP_NUMBER) throw new Error("WhatsApp ordering is not available right now.");
+        await sendWhatsAppOrder(payload);
+      } catch (error) {
+        if (error.status === 401) {
+          setCustomer(null);
+          showToast("Your sign-in expired. Sign in again or retry as a guest.");
+        } else {
+          showToast(error.message);
+        }
+      } finally {
+        orderSubmitting = false;
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = originalButtonText;
+        }
+      }
+    }
+
+    async function sendWhatsAppOrder(payload) {
       const fulfillmentMethod = document.querySelector('input[name="fulfillmentMethod"]:checked').value;
       const pickupBranchId = fulfillmentMethod === "pickup" ? $("#pickupBranch").value : "";
       const pickupBranchLabel = fulfillmentMethod === "pickup" ? $("#pickupBranch").selectedOptions[0].textContent : "";
@@ -2719,72 +2938,49 @@
         const p = PRODUCTS.find(z => z.id === x.id);
         return `• ${x.qty} × ${x.name} | Size ${x.size} | ${x.color}${p&&p.price!=null?` | ${money(p.price)} each`:""}`;
       }).join("\n");
+      const deliveryQuote = fulfillmentMethod === "delivery" ? deliveryQuoteFor($("#deliveryState").value) : null;
+      const deliverySummary = fulfillmentMethod === "pickup"
+        ? `Pickup branch: ${pickupBranchLabel}`
+        : `Delivery state: ${payload.state}
+Delivery fee: ${deliveryQuote ? `${money(deliveryQuote.fee)} (${deliveryQuote.estimate})` : "To be confirmed"}`;
       const whatsappWindow = window.open("about:blank", "_blank");
       if (!whatsappWindow) {
-        orderSubmitting = false;
-        if (submitButton) submitButton.disabled = false;
-        showToast("Allow pop-ups to continue to WhatsApp");
-        return;
+        throw new Error("Allow pop-ups to continue to WhatsApp.");
       }
       try {
         whatsappWindow.opener = null;
-        await customerSessionPromise;
         const msg =
           `Hello PALMZ 👋
 
 I'd like to place an order.
 
 CUSTOMER DETAILS
-Full name: ${$("#customerName").value.trim()}
-Phone: ${$("#customerPhone").value.trim()}
-Email: ${$("#customerEmail").value.trim()}
-${fulfillmentMethod === "pickup" ? `Pickup branch: ${pickupBranchLabel}` : `Delivery address: ${$("#customerAddress").value.trim()}
-City & state: ${$("#customerCity").value.trim()}`}
+Full name: ${payload.customerName}
+Phone: ${payload.phone}
+Email: ${payload.email}
+${fulfillmentMethod === "pickup" ? deliverySummary : `Delivery address: ${payload.address}
+City & state: ${payload.city}, ${payload.state}
+${deliverySummary}`}
 ${$("#customerNote").value.trim()?`Order note: ${$("#customerNote").value.trim()}`: ""}
 
 ORDER
 ${lines}
 
-Please confirm the total price, availability and delivery/payment details. Thank you!`;
+Please confirm item availability and payment details. Thank you!`;
         await customerRequest(customer ? "/api/customer/orders" : "/api/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            customerName: $("#customerName").value.trim(),
-            email: $("#customerEmail").value.trim(),
-            phone: $("#customerPhone").value.trim(),
-            address: $("#customerAddress").value.trim(),
-            city: $("#customerCity").value.trim(),
-            fulfillmentMethod,
-            pickupBranchId,
-            note: $("#customerNote").value.trim(),
-            items: cart.map(item => ({
-              productId: item.id,
-              size: item.size,
-              color: item.color,
-              quantity: item.qty
-            }))
-          })
+          body: JSON.stringify(payload)
         });
         whatsappWindow.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
       } catch (error) {
         whatsappWindow.close();
-        orderSubmitting = false;
-        if (submitButton) submitButton.disabled = false;
-        if (error.status === 401) {
-          setCustomer(null);
-          showToast("Your sign-in expired. Sign in again or retry as a guest.");
-        } else {
-          showToast(error.message);
-        }
-        return;
+        throw error;
       }
       cart = [];
       save();
       updateCart();
       closeCheckout();
-      orderSubmitting = false;
-      if (submitButton) submitButton.disabled = false;
       showToast(customer ? "Order request saved to your account" : "Order request sent to PALMZ");
     }
 
@@ -2882,6 +3078,7 @@ Please confirm the total price, availability and delivery/payment details. Thank
       renderProductPage();
     }
     loadProducts();
+    deliveryOptionsPromise = loadDeliveryOptions();
     customerSessionPromise = restoreCustomerSession();
     if (location.pathname.replace(/\/+$/, "") === "/checkout") {
       refreshCheckoutPage();
