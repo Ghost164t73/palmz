@@ -11,7 +11,7 @@ page at `/about`. Admin panel at `/admin`.
 4. `npm run dev` then open http://localhost:3000 and http://localhost:3000/admin
 
 ## Deploy on Vercel
-- Push to GitHub, import the repo, and add every variable from `.env.example` under Project Settings > Environment Variables
+- Push to GitHub, import the repo, and add every variable from `.env` under Project Settings > Environment Variables
 - `MONGODB_URI` must be set there too (a missing or badly-encoded connection string is the usual first-deploy error)
 - In MongoDB Atlas > Network Access, allow `0.0.0.0/0` (Vercel's IPs change)
 - Run `npm run seed` once from your own computer (with the same `.env`) to load the starter palms
