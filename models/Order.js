@@ -54,6 +54,7 @@ const OrderSchema = new mongoose.Schema(
     paystackFeeKobo: { type: Number, min: 0, default: null },
     paymentReference: { type: String, trim: true, maxlength: 120, default: '' },
     paystackReference: { type: String, default: undefined },
+    emailNotifications: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
   },
   { timestamps: true }
 );

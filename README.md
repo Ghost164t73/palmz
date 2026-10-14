@@ -13,6 +13,7 @@ page at `/about`. Admin panel at `/admin`.
 ## Deploy on Vercel
 - Push to GitHub, import the repo, and add every variable from `.env` under Project Settings > Environment Variables
 - `MONGODB_URI` must be set there too (a missing or badly-encoded connection string is the usual first-deploy error)
+- In production, use an `ADMIN_PASSWORD` of at least 16 characters and a randomly generated `JWT_SECRET` of at least 32 bytes; authentication fails closed if either is weaker. Keep `.env` out of Git.
 - In MongoDB Atlas > Network Access, allow `0.0.0.0/0` (Vercel's IPs change)
 - Run `npm run seed` once from your own computer (with the same `.env`) to load the starter palms
 
@@ -20,6 +21,15 @@ page at `/about`. Admin panel at `/admin`.
 Guest and Google-account checkouts can be paid online with Paystack or sent to PALMZ through WhatsApp. Manage requests at `/admin/orders`; statuses are Pending confirmation, Confirmed, Fulfilled, or Cancelled. Updating an order status does not reserve or reduce stock. After you confirm a sale, lower the quantity in `/admin` (the − button, or type the number). The store hides "Choose size" and shows "Sold out" at 0 or when Available is off, and stops customers adding more than the quantity left.
 
 Payment state is stored separately from order status. Set `PAYSTACK_SECRET_KEY` to the Paystack secret key and `APP_URL` to the canonical storefront URL (for example `https://your-domain.example`) to enable online checkout. Use a Paystack **live** secret key (`sk_live_...`) for production; test keys (`sk_test_...`) only work with sandbox transactions and are rejected in production. Configure the Paystack dashboard webhook URL as `https://your-domain.example/api/paystack/webhook`. Online payment is verified server-to-server before an order is marked paid. If Paystack charges the customer more than the order total, verification accepts the difference only when Paystack's `requested_amount` exactly matches PALMZ's server-calculated order total; the extra is separately recorded as a Paystack checkout charge. For WhatsApp orders, open the order in `/admin/orders` and record the amount received and optional payment reference after verifying the payment manually. Items need prices set in `/admin`; unpriced products remain available through WhatsApp checkout.
+
+## Order emails
+Transactional emails are sent through Resend. Verify your sending domain with Resend and publish the SPF/DKIM DNS records it provides before sending live mail. In Vercel Project Settings > Environment Variables, add these for Production:
+
+- `RESEND_API_KEY`: a Resend API key; keep it server-side and never add it to frontend code.
+- `EMAIL_FROM`: a sender on the verified domain, for example `PALMZ <orders@yourdomain.com>`.
+- `ADMIN_EMAIL`: the address that receives new-order alerts.
+
+Redeploy after adding or changing variables. Submitted WhatsApp orders alert the admin address; Paystack orders alert the admin after payment is verified, so abandoned checkouts do not generate paid-order alerts. A verified successful Paystack payment emails the customer, and changing an order to Confirmed or Fulfilled emails the address saved on that order. Email delivery failures do not roll back orders or payments; they are recorded on the order and logged. There is no background retry queue, so monitor Resend delivery and Vercel function logs. The sender is `EMAIL_FROM`; customer-provided values are escaped in the HTML templates.
 
 Delivery prices and estimated times follow the selected destination: Kano ₦2,000 (1–2 working days); FCT (Abuja) ₦2,000 (3–4 working days); Lokoja, Kogi ₦2,000 (4–5 working days); Jigawa, Katsina, Kaduna, and Bauchi ₦3,500 (2–3 days); Plateau, Gombe, Zamfara, and Yobe ₦5,000 (3–4 days); Nasarawa, Niger, Kebbi, Sokoto, other Kogi destinations, Benue, Adamawa, Taraba, and Borno ₦7,000 (4–5 days); Kwara, Enugu, Ebonyi, Anambra, Edo, Ekiti, Osun, Oyo, and Ondo ₦9,000 (5–6 days); Lagos, Ogun, Delta, Imo, Abia, Rivers, Bayelsa, Akwa Ibom, and Cross River ₦11,000 (5–7 days). The state dropdown shows state names only. Pickup has no delivery charge. Delivery prices are maintained in `lib/delivery.js`.
 

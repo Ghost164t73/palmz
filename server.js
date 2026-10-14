@@ -17,6 +17,50 @@ const {
   paystackTransactionMismatches,
   paymentAmountMismatchDetails,
 } = require('./lib/paystack');
+const { sendOrderEmail } = require('./lib/email');
+
+const ORDER_EMAIL_EVENTS = new Set([
+  'admin_new_order',
+  'paystack_receipt',
+  'status_confirmed',
+  'status_fulfilled',
+]);
+async function notifyOrderEmail(order, event) {
+  if (!ORDER_EMAIL_EVENTS.has(event)) return;
+  const eventPath = `emailNotifications.${event}`;
+  const statusPath = `${eventPath}.status`;
+  const attemptPath = `${eventPath}.attemptedAt`;
+  const staleBefore = new Date(Date.now() - 5 * 60 * 1000);
+  let claimed;
+  try {
+    claimed = await Order.findOneAndUpdate({
+      _id: order._id,
+      $or: [
+        { [statusPath]: { $exists: false } },
+        { [statusPath]: { $in: ['pending', 'failed'] } },
+        { [statusPath]: 'sending', [attemptPath]: { $lt: staleBefore } },
+      ],
+    }, {
+      $set: { [statusPath]: 'sending', [attemptPath]: new Date() },
+    }, { new: true });
+  } catch {
+    console.error('Could not claim order email notification', { event, orderId: String(order._id) });
+    return;
+  }
+  if (!claimed) return;
+
+  try {
+    await sendOrderEmail(event, claimed);
+    await Order.updateOne({ _id: claimed._id, [statusPath]: 'sending' }, {
+      $set: { [statusPath]: 'sent', [`${eventPath}.sentAt`]: new Date() },
+    });
+  } catch {
+    await Order.updateOne({ _id: claimed._id, [statusPath]: 'sending' }, {
+      $set: { [statusPath]: 'failed' },
+    }).catch(() => {});
+    console.error('Order email notification failed', { event, orderId: String(order._id) });
+  }
+}
 
 const PICKUP_BRANCHES = {
   'shop-1': { name: 'Shop 1', address: 'Genesis Plaza, NTA Roundabout', city: 'Lokoja, Kogi State', available: true },
@@ -26,6 +70,13 @@ const PICKUP_BRANCHES = {
 
 const app = express();
 app.set('trust proxy', 1);
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
 app.use(express.json({
   limit: '100kb',
   verify(req, res, buffer) {
@@ -117,6 +168,12 @@ function productImagePublicIds(product) {
 // ---------- Admin auth (single password, signed cookie) ----------
 const COOKIE = 'palmz_admin';
 const CUSTOMER_COOKIE = 'palmz_customer';
+function productionAuthConfigReady() {
+  return process.env.NODE_ENV !== 'production' || (
+    Buffer.byteLength(process.env.JWT_SECRET || '', 'utf8') >= 32 &&
+    Buffer.byteLength(process.env.ADMIN_PASSWORD || '', 'utf8') >= 16
+  );
+}
 const readCookie = (req) => {
   const m = (req.headers.cookie || '').match(new RegExp('(?:^|;\\s*)' + COOKIE + '=([^;]+)'));
   return m ? m[1] : null;
@@ -127,6 +184,7 @@ const readCustomerCookie = (req) => {
 };
 const googleClient = new OAuth2Client();
 function requireAdmin(req, res, next) {
+  if (!productionAuthConfigReady()) return res.status(503).json({ error: 'Production authentication secrets are not securely configured' });
   try {
     const claims = jwt.verify(readCookie(req) || '', process.env.JWT_SECRET || '');
     if (typeof claims !== 'object' || claims.admin !== true) return res.status(401).json({ error: 'Not signed in' });
@@ -136,6 +194,7 @@ function requireAdmin(req, res, next) {
   }
 }
 function requireCustomer(req, res, next) {
+  if (!productionAuthConfigReady()) return res.status(503).json({ error: 'Production authentication secrets are not securely configured' });
   try {
     const claims = jwt.verify(readCustomerCookie(req) || '', process.env.JWT_SECRET || '');
     if (typeof claims !== 'object' || claims.scope !== 'customer' || !mongoose.isValidObjectId(claims.customer)) {
@@ -151,7 +210,9 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHe
 const sha = (v) => crypto.createHash('sha256').update(String(v)).digest();
 
 app.post('/api/admin/login', loginLimiter, (req, res) => {
-  if (!process.env.ADMIN_PASSWORD || !process.env.JWT_SECRET) return res.status(500).json({ error: 'ADMIN_PASSWORD and JWT_SECRET must be set on the server' });
+  if (!process.env.ADMIN_PASSWORD || !process.env.JWT_SECRET || !productionAuthConfigReady()) {
+    return res.status(500).json({ error: 'Set ADMIN_PASSWORD and JWT_SECRET; in production use a 16-character admin password and a JWT_SECRET of at least 32 bytes' });
+  }
   if (!crypto.timingSafeEqual(sha(req.body.password || ''), sha(process.env.ADMIN_PASSWORD))) return res.status(401).json({ error: 'Wrong password' });
   const token = jwt.sign({ admin: true }, process.env.JWT_SECRET, { expiresIn: '7d' });
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
@@ -159,7 +220,8 @@ app.post('/api/admin/login', loginLimiter, (req, res) => {
   res.json({ ok: true });
 });
 app.post('/api/admin/logout', (req, res) => {
-  res.setHeader('Set-Cookie', `${COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict`);
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict${secure}`);
   res.json({ ok: true });
 });
 app.get('/api/admin/me', requireAdmin, (req, res) => res.json({ ok: true }));
@@ -171,7 +233,7 @@ app.get('/api/customer/google-config', (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID || '' });
 });
 app.post('/api/customer/google', customerLoginLimiter, async (req, res) => {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.JWT_SECRET) {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.JWT_SECRET || !productionAuthConfigReady()) {
     return res.status(503).json({ error: 'Google sign-in is not configured yet' });
   }
   const credential = req.body && typeof req.body.credential === 'string' ? req.body.credential : '';
@@ -213,11 +275,13 @@ app.get('/api/customer/me', requireCustomer, async (req, res) => {
   res.json({ customer });
 });
 app.post('/api/customer/logout', (req, res) => {
-  res.setHeader('Set-Cookie', `${CUSTOMER_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`);
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${CUSTOMER_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax${secure}`);
   res.json({ ok: true });
 });
 app.get('/api/customer/orders', requireCustomer, async (req, res) => {
-  const orders = await Order.find({ customer: req.customerId }).sort({ createdAt: -1 }).limit(50).lean();
+  res.set('Cache-Control', 'no-store');
+  const orders = await Order.find({ customer: req.customerId }).select('-emailNotifications').sort({ createdAt: -1 }).limit(50).lean();
   res.json({ orders });
 });
 const guestOrderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
@@ -344,12 +408,14 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
 }
 app.post('/api/orders', guestOrderLimiter, async (req, res) => {
   const order = await Order.create(await orderContact(req.body || {}));
+  await notifyOrderEmail(order, 'admin_new_order');
   res.status(201).json({ order: { id: String(order._id), status: order.status } });
 });
 app.post('/api/customer/orders', requireCustomer, async (req, res) => {
   const customer = await Customer.findById(req.customerId);
   if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
   const order = await Order.create(await orderContact(req.body || {}, customer));
+  await notifyOrderEmail(order, 'admin_new_order');
   res.status(201).json({ order });
 });
 
@@ -456,7 +522,14 @@ async function verifyPaystackTransaction(reference) {
   }
   const order = await Order.findOne({ paystackReference: reference });
   if (!order) throw new Error('Paystack reference does not match an order');
-  if (order.paymentStatus === 'paid' || order.paymentStatus === 'refunded') return order.paymentStatus;
+  if (order.paymentStatus === 'refunded') return order.paymentStatus;
+  if (order.paymentStatus === 'paid') {
+    await Promise.all([
+      notifyOrderEmail(order, 'admin_new_order'),
+      notifyOrderEmail(order, 'paystack_receipt'),
+    ]);
+    return order.paymentStatus;
+  }
 
   const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
     headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
@@ -466,21 +539,46 @@ async function verifyPaystackTransaction(reference) {
   if (!response.ok || !result || result.status !== true || !result.data) {
     throw new Error(result && result.message ? result.message : 'Paystack could not verify the transaction');
   }
-  const transaction = result.data;
+  return applyPaystackTransaction(order, result.data, reference);
+}
+
+async function applyPaystackTransaction(order, transaction, reference) {
   const mismatches = paystackTransactionMismatches(order, transaction, reference);
   if (mismatches.length) {
     const details = mismatches.includes('amount')
       ? paymentAmountMismatchDetails(order, transaction)
       : null;
-    throw new Error(`Paystack transaction ${mismatches.join(', ')} did not match order ${order._id}${details ? ` (order requested ${details.expectedKobo} kobo, Paystack requested ${details.requestedKobo} kobo, customer charged ${details.receivedKobo} kobo)` : ''}`);
+    throw Object.assign(new Error(`Paystack transaction ${mismatches.join(', ')} did not match order ${order._id}${details ? ` (order requested ${details.expectedKobo} kobo, Paystack requested ${details.requestedKobo} kobo, customer charged ${details.receivedKobo} kobo)` : ''}`), { code: 'PAYSTACK_TRANSACTION_MISMATCH' });
   }
   if (transaction.status === 'success') {
-    order.paymentStatus = 'paid';
-    order.paidAmountKobo = Number(transaction.amount);
-    order.paystackFeeKobo = Number(transaction.amount) - expectedPaymentAmountKobo(order);
+    const paidOrder = await Order.findOneAndUpdate({
+      _id: order._id,
+      paymentStatus: { $nin: ['paid', 'refunded'] },
+    }, {
+      $set: {
+        paymentStatus: 'paid',
+        paidAmountKobo: Number(transaction.amount),
+        paystackFeeKobo: Number(transaction.amount) - expectedPaymentAmountKobo(order),
+      },
+    }, { new: true });
+    const currentOrder = paidOrder || await Order.findById(order._id);
+    if (currentOrder && currentOrder.paymentStatus === 'paid') {
+      await Promise.all([
+        notifyOrderEmail(currentOrder, 'admin_new_order'),
+        notifyOrderEmail(currentOrder, 'paystack_receipt'),
+      ]);
+      return 'paid';
+    }
+    return currentOrder ? currentOrder.paymentStatus : 'pending';
   }
-  else if (['failed', 'abandoned'].includes(transaction.status)) order.paymentStatus = 'failed';
-  await order.save();
+  if (['failed', 'abandoned'].includes(transaction.status)) {
+    await Order.updateOne({
+      _id: order._id,
+      paymentStatus: { $nin: ['paid', 'refunded'] },
+    }, { $set: { paymentStatus: 'failed' } });
+    const currentOrder = await Order.findById(order._id);
+    return currentOrder ? currentOrder.paymentStatus : 'failed';
+  }
   return order.paymentStatus;
 }
 
@@ -526,19 +624,19 @@ app.post('/api/paystack/webhook', async (req, res) => {
   }
   const order = await Order.findOne({ paystackReference: transaction.reference });
   if (!order) return res.json({ received: true });
-  const mismatches = paystackTransactionMismatches(order, transaction, order.paystackReference);
-  if (transaction.status !== 'success' || mismatches.length) {
-    const details = mismatches.includes('amount')
-      ? paymentAmountMismatchDetails(order, transaction)
-      : null;
-    console.error(`Paystack webhook transaction ${mismatches.join(', ') || 'status'} did not match order ${order._id}${details ? ` (order requested ${details.expectedKobo} kobo, Paystack requested ${details.requestedKobo} kobo, customer charged ${details.receivedKobo} kobo)` : ''}`);
+  if (transaction.status !== 'success') {
+    console.error('Paystack webhook received a non-success charge event', { orderId: String(order._id) });
     return res.status(400).json({ error: 'Paystack transaction does not match the order' });
   }
-  if (order.paymentStatus !== 'paid' && order.paymentStatus !== 'refunded') {
-    order.paymentStatus = 'paid';
-    order.paidAmountKobo = Number(transaction.amount);
-    order.paystackFeeKobo = Number(transaction.amount) - expectedPaymentAmountKobo(order);
-    await order.save();
+  try {
+    await applyPaystackTransaction(order, transaction, order.paystackReference);
+  } catch (error) {
+    if (error.code === 'PAYSTACK_TRANSACTION_MISMATCH') {
+      console.error('Paystack webhook transaction did not match its order', { orderId: String(order._id) });
+      return res.status(400).json({ error: 'Paystack transaction does not match the order' });
+    }
+    console.error('Paystack webhook settlement failed', { orderId: String(order._id) });
+    return res.status(500).json({ error: 'Could not process Paystack transaction' });
   }
   res.json({ received: true });
 });
@@ -708,6 +806,9 @@ app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
 
   order.status = status;
   await order.save();
+  if (status === 'confirmed' || status === 'fulfilled') {
+    await notifyOrderEmail(order, `status_${status}`);
+  }
   res.json({ order: order.toObject() });
 });
 
