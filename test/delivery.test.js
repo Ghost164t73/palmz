@@ -11,8 +11,9 @@ test('delivery tiers cover each Nigerian state and the FCT exactly once', () => 
 test('delivery quotes use the supplied fees and delivery estimates', () => {
   const expected = [
     { fee: 2000, estimate: '1-2 working days', states: ['Kano'] },
+    { fee: 2000, estimate: '3-4 working days', states: ['FCT (Abuja)'] },
     { fee: 3500, estimate: '2-3 working days', states: ['Jigawa', 'Katsina', 'Kaduna', 'Bauchi'] },
-    { fee: 5000, estimate: '3-4 working days', states: ['FCT (Abuja)', 'Plateau', 'Gombe', 'Zamfara', 'Yobe'] },
+    { fee: 5000, estimate: '3-4 working days', states: ['Plateau', 'Gombe', 'Zamfara', 'Yobe'] },
     { fee: 7000, estimate: '4-5 working days', states: ['Nasarawa', 'Niger', 'Kebbi', 'Sokoto', 'Kogi', 'Benue', 'Adamawa', 'Taraba', 'Borno'] },
     { fee: 9000, estimate: '5-6 working days', states: ['Kwara', 'Enugu', 'Ebonyi', 'Anambra', 'Edo', 'Ekiti', 'Osun', 'Oyo', 'Ondo'] },
     { fee: 11000, estimate: '5-7 working days', states: ['Lagos', 'Ogun', 'Delta', 'Imo', 'Abia', 'Rivers', 'Bayelsa', 'Akwa Ibom', 'Cross River'] },
@@ -25,6 +26,10 @@ test('delivery quotes use the supplied fees and delivery estimates', () => {
     }
   }
   assert.equal(deliveryQuote('Unknown'), null);
+  assert.equal(deliveryQuote('Kogi', 'Lokoja').fee, 2000);
+  assert.equal(deliveryQuote('Kogi', 'lokoja').fee, 2000);
+  assert.equal(deliveryQuote('Kogi', 'Anyigba').fee, 7000);
+  assert.equal(deliveryQuote('FCT (Abuja)').fee, 2000);
 });
 
 test('order totals add authoritative item prices and the selected state delivery fee', () => {

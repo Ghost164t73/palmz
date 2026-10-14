@@ -68,7 +68,15 @@
     .toolbar select { min-width: 210px; padding: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text) }
     .orders { display: grid; gap: 12px }
     .order { border: 1px solid var(--line); background: var(--surface) }
-    .order-top { display: flex; justify-content: space-between; gap: 16px; padding: 16px; border-bottom: 1px solid var(--line) }
+    .order-details > summary { display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;cursor:pointer;list-style:none }
+    .order-details > summary::-webkit-details-marker { display:none }
+    .order-details > summary::after { content:"+";flex:0 0 30px;width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;color:var(--muted);font-size:20px;transition:transform .18s }
+    .order-details[open] > summary::after { content:"−";color:var(--text) }
+    .order-details[open] > summary { border-bottom:1px solid var(--line) }
+    .order-summary-main { min-width:0 }
+    .order-summary-meta { display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;text-align:right }
+    .order-badge { padding:6px 9px;border-radius:999px;background:var(--surface2);font-size:11px;font-weight:750;white-space:nowrap }
+    .order-badge.payment-paid { background:#e3f4e9;color:#176b38 }
     .order-id { font-size: 11px; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere }
     .order-content { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 18px; padding: 16px }
     .label { margin-bottom: 5px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase }
@@ -80,6 +88,11 @@
     .order-manage { display: grid; align-content: start; gap: 10px }
     .order-manage select { width: 100%; padding: 10px; border: 1px solid var(--line); background: var(--surface2); color: var(--text) }
     .payment { font-size: 12px; color: var(--muted); line-height: 1.5 }
+    .payment-form { display:grid;gap:8px;margin-top:10px;padding:12px;border:1px solid var(--line);background:var(--surface2) }
+    .payment-form label { display:grid;gap:5px;color:var(--text);font-size:11px;font-weight:700 }
+    .payment-form input { width:100%;min-width:0;padding:9px;border:1px solid var(--line);background:var(--surface);color:var(--text) }
+    .payment-form button { padding:10px;border:0;background:var(--green);color:#fff;font-weight:800 }
+    .payment-form button:disabled { opacity:.6;cursor:wait }
     .message { padding: 42px 14px; border: 1px dashed var(--line); background: var(--surface); text-align: center; color: var(--muted) }
     .toast { position: fixed; left: 50%; bottom: 20px; padding: 11px 16px; background: var(--navy); color: #fff; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; transition: .2s }
     .toast.show { transform: translate(-50%, 0); opacity: 1 }
@@ -191,16 +204,22 @@
       const phoneDigits = order.phone.replace(/\D/g, "");
       const whatsappNumber = phoneDigits.startsWith("0") ? `234${phoneDigits.slice(1)}` : phoneDigits;
       const items = order.items.map(item => `<li>${item.quantity} × ${escapeHtml(item.name)} — size ${escapeHtml(item.size)}, ${escapeHtml(item.color)}${item.unitPrice != null ? ` — ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}</li>`).join("");
+      const paymentStatus = PAYMENT_LABELS[order.paymentStatus] || "Not started";
+      const paymentIsPaid = order.paymentStatus === "paid";
       return `<article class="order" data-id="${escapeHtml(order._id)}">
-        <header class="order-top">
-          <div><strong>${escapeHtml(order.customerName)}</strong><div class="order-id">Order ${escapeHtml(order._id)} · ${date} · ${order.source === "account" ? "Customer account" : "Guest"}</div></div>
-          <strong>${escapeHtml(STATUS_LABELS[order.status] || order.status)}</strong>
-        </header>
-        <div class="order-content">
+        <details class="order-details">
+          <summary>
+            <div class="order-summary-main"><strong>${escapeHtml(order.customerName)}</strong><div class="order-id">Order ${escapeHtml(order._id)} · ${date}</div></div>
+            <div class="order-summary-meta"><span class="order-badge">${escapeHtml(STATUS_LABELS[order.status] || order.status)}</span><span class="order-badge${paymentIsPaid ? " payment-paid" : ""}">${escapeHtml(paymentStatus)}</span></div>
+          </summary>
+          <div class="order-content">
           <section><div class="label">Customer</div><div class="customer-name">${escapeHtml(order.customerName)}</div><div class="contact"><a href="mailto:${encodeURIComponent(order.email)}">${escapeHtml(order.email)}</a><br><a href="tel:${encodeURIComponent(order.phone)}">${escapeHtml(order.phone)}</a>${whatsappNumber ? `<br><a target="_blank" rel="noopener noreferrer" href="https://wa.me/${encodeURIComponent(whatsappNumber)}">Message on WhatsApp</a>` : ""}<br>${order.fulfillmentMethod === "pickup" ? `Pickup: ${escapeHtml(order.pickupBranchName || "Branch")}<br>${escapeHtml(order.pickupBranchAddress || order.address)}<br>${escapeHtml(order.city)}` : `Delivery: ${escapeHtml(order.address)}<br>${escapeHtml(order.city)}${order.deliveryFee ? `<br>Delivery fee: ₦${Number(order.deliveryFee).toLocaleString("en-NG")}${order.deliveryEstimate ? ` · ${escapeHtml(order.deliveryEstimate)}` : ""}` : ""}`}${order.totalAmount != null ? `<br>Order total: ₦${Number(order.totalAmount).toLocaleString("en-NG")}` : ""}</div></section>
           <section><div class="label">Items</div><ul class="items">${items}</ul>${order.note ? `<div class="order-note"><strong>Note:</strong> ${escapeHtml(order.note)}</div>` : ""}</section>
-          <section class="order-manage"><div class="label">Order status</div><select aria-label="Update order status" onchange="updateStatus('${escapeHtml(order._id)}', this.value, this)">${Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${order.status === value ? "selected" : ""}>${label}</option>`).join("")}</select><div class="payment"><strong>Payment:</strong> ${escapeHtml(order.paymentProvider || "whatsapp")} · ${escapeHtml(PAYMENT_LABELS[order.paymentStatus] || "Not started")}${Number.isSafeInteger(order.paidAmountKobo) ? `<br>Amount received: ₦${(order.paidAmountKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}${order.paystackReference ? `<br>Paystack reference: ${escapeHtml(order.paystackReference)}` : ""}<br>Payment tracking is separate from order status.</div></section>
-        </div>
+          <section class="order-manage"><div class="label">Order status</div><select aria-label="Update order status" onchange="updateStatus('${escapeHtml(order._id)}', this.value, this)">${Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${order.status === value ? "selected" : ""}>${label}</option>`).join("")}</select><div class="payment"><strong>Payment:</strong> ${escapeHtml(order.paymentProvider || "whatsapp")} · ${escapeHtml(paymentStatus)}${Number.isSafeInteger(order.paidAmountKobo) ? `<br>Amount received: ₦${(order.paidAmountKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}${Number.isSafeInteger(order.paystackFeeKobo) && order.paystackFeeKobo > 0 ? `<br>Paystack checkout charge: ₦${(order.paystackFeeKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (not added by PALMZ)` : ""}${order.paystackReference ? `<br>Paystack reference: ${escapeHtml(order.paystackReference)}` : ""}${order.paymentReference ? `<br>Payment reference: ${escapeHtml(order.paymentReference)}` : ""}<br>Payment tracking is separate from order status.</div>
+            ${order.paymentProvider === "whatsapp" && !paymentIsPaid ? `<form class="payment-form" onsubmit="recordManualPayment(event, '${escapeHtml(order._id)}')"><label>Amount received (₦)<input name="amount" type="number" min="${order.totalAmount != null ? Number(order.totalAmount).toFixed(2) : "0.01"}" step="0.01" required></label><label>Payment reference <span class="muted">(optional)</span><input name="reference" type="text" maxlength="120" placeholder="Bank transfer reference"></label><button type="submit">Record payment received</button></form>` : ""}
+          </section>
+          </div>
+        </details>
       </article>`;
     }
 
@@ -230,6 +249,30 @@
       } catch (error) {
         toast(error.message, true);
         await loadOrders();
+      }
+    }
+
+    async function recordManualPayment(event, id) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const button = form.querySelector("button[type=submit]");
+      button.disabled = true;
+      button.textContent = "Recording payment…";
+      try {
+        await request(`/api/admin/orders/${encodeURIComponent(id)}/payment`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: form.elements.amount.value,
+            reference: form.elements.reference.value
+          })
+        });
+        toast("WhatsApp payment recorded");
+        await loadOrders();
+      } catch (error) {
+        toast(error.message, true);
+        button.disabled = false;
+        button.textContent = "Record payment received";
       }
     }
 

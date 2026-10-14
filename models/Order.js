@@ -51,6 +51,8 @@ const OrderSchema = new mongoose.Schema(
     paymentStatus: { type: String, enum: ['not_started', 'pending', 'paid', 'failed', 'refunded'], default: 'not_started' },
     paymentAmountKobo: { type: Number, min: 1, default: null },
     paidAmountKobo: { type: Number, min: 1, default: null },
+    paystackFeeKobo: { type: Number, min: 0, default: null },
+    paymentReference: { type: String, trim: true, maxlength: 120, default: '' },
     paystackReference: { type: String, default: undefined },
   },
   { timestamps: true }

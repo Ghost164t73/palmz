@@ -835,10 +835,10 @@
     #paymentResult[data-status="success"]{border-color:rgba(201,163,74,.4)}
     #paymentResult[data-status="failed"],#paymentResult[data-status="unverified"]{border-color:#b3261e}
     #paymentResult[data-status="success"]{margin:0 auto;padding:clamp(28px,6vw,52px);border:1px solid rgba(201,163,74,.4);border-radius:24px;background:linear-gradient(145deg,color-mix(in srgb,var(--surface) 95%,var(--gold)),var(--surface) 72%);box-shadow:0 18px 48px rgba(12,18,39,.09);text-align:center}
-    .payment-success-icon{position:relative;width:clamp(96px,16vw,124px);height:clamp(96px,16vw,124px);display:grid;place-items:center;margin:0 auto 24px;border:1px solid rgba(201,163,74,.45);border-radius:50%;background:radial-gradient(circle at 35% 28%,#fffdf8 0%,#f5e9c8 58%,#e7d39b 100%);box-shadow:0 0 0 8px rgba(201,163,74,.08),0 12px 28px rgba(12,18,39,.12),inset 0 1px 0 rgba(255,255,255,.9);animation:payment-success-pop .55s cubic-bezier(.2,.8,.2,1) both}
-    .payment-success-icon::before{content:"";position:absolute;inset:8px;border:1px solid rgba(201,163,74,.42);border-radius:50%}
-    .payment-success-icon svg{position:relative;width:64%;height:64%;overflow:visible;fill:none;stroke:#0c1227;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
-    .payment-success-icon .mark-ring{stroke:#b18a35;stroke-width:1.35;opacity:.75}
+    .payment-success-icon{position:relative;width:clamp(96px,16vw,124px);height:clamp(96px,16vw,124px);display:grid;place-items:center;margin:0 auto 24px;background:transparent;animation:payment-success-pop .55s cubic-bezier(.2,.8,.2,1) both}
+    .payment-success-icon::before{display:none}
+    .payment-success-icon svg{position:relative;width:72%;height:72%;overflow:visible;fill:none;stroke:#168344;stroke-width:3.8;stroke-linecap:round;stroke-linejoin:round}
+    .payment-success-icon .mark-ring{stroke:#168344;stroke-width:2.2;opacity:1}
     .payment-success-icon .mark-check{stroke-dasharray:38;stroke-dashoffset:38;animation:payment-check-draw .55s .14s ease-out forwards}
     @keyframes payment-success-pop{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
     @keyframes payment-check-draw{to{stroke-dashoffset:0}}
@@ -1842,13 +1842,13 @@
 
       .checkout-layout .summary {
         grid-column: 1;
-        grid-row: 1;
+        grid-row: 2;
         position: static
       }
 
       .checkout-layout .form {
         grid-column: 1;
-        grid-row: 2;
+        grid-row: 1;
         grid-template-columns: 1fr
       }
 
@@ -2138,7 +2138,6 @@
   </main>
 
   <main class="container commerce-heading" id="checkoutPageHeading">
-    <div class="eyebrow">Almost yours</div>
     <!-- <h1>Checkout</h1>
     <p>Share your delivery details and PALMZ will confirm your order on WhatsApp.</p> -->
   </main>
@@ -2210,7 +2209,7 @@
         </label>
         <div id="deliveryCityField" class="delivery-fields checkout-wide">
           <label>City
-            <input id="customerCity" required maxlength="80" placeholder="e.g. Kano">
+            <input id="customerCity" required maxlength="80" placeholder="e.g. Kano" oninput="updateCheckoutSummary()">
           </label>
           <label>State
             <select id="deliveryState" required disabled onchange="updateCheckoutSummary()">
@@ -2342,7 +2341,7 @@
         DELIVERY_TIERS = data.tiers;
         $("#deliveryState").innerHTML = `<option value="">Choose your state</option>` +
           DELIVERY_TIERS.flatMap(tier => tier.states.map(state =>
-            `<option value="${esc(state)}">${esc(state)} — ${money(tier.fee)} · ${esc(tier.estimate)}</option>`)).join("");
+            `<option value="${esc(state)}">${esc(state)}</option>`)).join("");
         $("#deliveryState").disabled = false;
         updateCheckoutSummary();
         return true;
@@ -2354,8 +2353,13 @@
       }
     }
 
-    function deliveryQuoteFor(state) {
-      return DELIVERY_TIERS.find(tier => tier.states.includes(state)) || null;
+    function deliveryQuoteFor(state, city = "") {
+      const tier = DELIVERY_TIERS.find(candidate => candidate.states.includes(state));
+      if (!tier) return null;
+      if (state === "Kogi" && String(city).trim().toLocaleLowerCase("en") === "lokoja") {
+        return { ...tier, fee: 2000 };
+      }
+      return tier;
     }
 
     function orderPayload() {
@@ -2394,7 +2398,7 @@
         deliveryLine = "Branch pickup — no delivery fee.";
       } else {
         const state = $("#deliveryState").value;
-        const quote = deliveryQuoteFor(state);
+        const quote = deliveryQuoteFor(state, $("#customerCity").value);
         if (quote) {
           deliveryFee = quote.fee;
           deliveryLine = `Delivery to ${esc(state)} — ${money(quote.fee)} (${esc(quote.estimate)})`;
@@ -2414,7 +2418,7 @@
         `<br><br>${deliveryLine}<br><strong>Total: ${orderTotal}</strong>`;
       $("#deliveryEstimate").textContent = fulfillmentMethod === "pickup"
         ? "No delivery fee for branch pickup."
-        : (deliveryQuoteFor($("#deliveryState").value)?.estimate || "Choose a state to see its fee and delivery estimate.");
+        : (deliveryQuoteFor($("#deliveryState").value, $("#customerCity").value)?.estimate || "Choose a state to see its fee and delivery estimate.");
       const button = $("#submitOrderButton");
       button.classList.toggle("whatsapp", method === "whatsapp");
       button.classList.toggle("btn-gold", method === "paystack");
@@ -2938,7 +2942,7 @@
         const p = PRODUCTS.find(z => z.id === x.id);
         return `• ${x.qty} × ${x.name} | Size ${x.size} | ${x.color}${p&&p.price!=null?` | ${money(p.price)} each`:""}`;
       }).join("\n");
-      const deliveryQuote = fulfillmentMethod === "delivery" ? deliveryQuoteFor($("#deliveryState").value) : null;
+      const deliveryQuote = fulfillmentMethod === "delivery" ? deliveryQuoteFor($("#deliveryState").value, payload.city) : null;
       const deliverySummary = fulfillmentMethod === "pickup"
         ? `Pickup branch: ${pickupBranchLabel}`
         : `Delivery state: ${payload.state}

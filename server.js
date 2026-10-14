@@ -13,6 +13,7 @@ const Customer = require('./models/Customer');
 const Order = require('./models/Order');
 const { DELIVERY_TIERS, deliveryQuote, calculateOrderTotal } = require('./lib/delivery');
 const {
+  expectedPaymentAmountKobo,
   paystackTransactionMismatches,
   paymentAmountMismatchDetails,
 } = require('./lib/paystack');
@@ -270,7 +271,7 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
     if (!address || address.length > 300) throw bad('Enter a delivery address of 1 to 300 characters');
     if (!city || city.length > 80) throw bad('Enter a city of 1 to 80 characters');
     deliveryState = String(body.state || '').trim();
-    const quote = deliveryQuote(deliveryState);
+    const quote = deliveryQuote(deliveryState, city);
     if (!quote) throw bad('Choose a valid delivery state');
     deliveryFee = quote.fee;
     deliveryEstimate = quote.estimate;
@@ -471,11 +472,12 @@ async function verifyPaystackTransaction(reference) {
     const details = mismatches.includes('amount')
       ? paymentAmountMismatchDetails(order, transaction)
       : null;
-    throw new Error(`Paystack transaction ${mismatches.join(', ')} did not match order ${order._id}${details ? ` (expected ${details.expectedKobo} kobo, received ${details.receivedKobo} kobo)` : ''}`);
+    throw new Error(`Paystack transaction ${mismatches.join(', ')} did not match order ${order._id}${details ? ` (order requested ${details.expectedKobo} kobo, Paystack requested ${details.requestedKobo} kobo, customer charged ${details.receivedKobo} kobo)` : ''}`);
   }
   if (transaction.status === 'success') {
     order.paymentStatus = 'paid';
     order.paidAmountKobo = Number(transaction.amount);
+    order.paystackFeeKobo = Number(transaction.amount) - expectedPaymentAmountKobo(order);
   }
   else if (['failed', 'abandoned'].includes(transaction.status)) order.paymentStatus = 'failed';
   await order.save();
@@ -529,12 +531,13 @@ app.post('/api/paystack/webhook', async (req, res) => {
     const details = mismatches.includes('amount')
       ? paymentAmountMismatchDetails(order, transaction)
       : null;
-    console.error(`Paystack webhook transaction ${mismatches.join(', ') || 'status'} did not match order ${order._id}${details ? ` (expected ${details.expectedKobo} kobo, received ${details.receivedKobo} kobo)` : ''}`);
+    console.error(`Paystack webhook transaction ${mismatches.join(', ') || 'status'} did not match order ${order._id}${details ? ` (order requested ${details.expectedKobo} kobo, Paystack requested ${details.requestedKobo} kobo, customer charged ${details.receivedKobo} kobo)` : ''}`);
     return res.status(400).json({ error: 'Paystack transaction does not match the order' });
   }
   if (order.paymentStatus !== 'paid' && order.paymentStatus !== 'refunded') {
     order.paymentStatus = 'paid';
     order.paidAmountKobo = Number(transaction.amount);
+    order.paystackFeeKobo = Number(transaction.amount) - expectedPaymentAmountKobo(order);
     await order.save();
   }
   res.json({ received: true });
@@ -549,6 +552,41 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   }
   const orders = await Order.find(filter).sort({ createdAt: -1 }).limit(200).lean();
   res.json({ orders, statuses: Order.ORDER_STATUSES });
+});
+app.patch('/api/admin/orders/:id/payment', requireAdmin, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Order not found' });
+  const order = await Order.findById(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  if (order.paymentProvider !== 'whatsapp') {
+    throw bad('Manual payment recording is only available for WhatsApp orders');
+  }
+  if (order.paymentStatus === 'paid') throw bad('This order is already marked as paid');
+
+  const rawAmount = req.body && req.body.amount;
+  if (typeof rawAmount !== 'string' && typeof rawAmount !== 'number') {
+    throw bad('Enter the received amount in naira, up to two decimal places');
+  }
+  const amount = Number(rawAmount);
+  const amountKobo = Math.round(amount * 100);
+  if (!Number.isFinite(amount) || amount <= 0 || !Number.isSafeInteger(amountKobo) ||
+      Math.abs(amountKobo / 100 - amount) > 1e-7) {
+    throw bad('Enter the received amount in naira, up to two decimal places');
+  }
+  if (order.totalAmount != null && amountKobo < Math.round(order.totalAmount * 100)) {
+    throw bad('The received amount cannot be less than the order total');
+  }
+  const rawReference = req.body && req.body.reference;
+  if (rawReference != null && typeof rawReference !== 'string') {
+    throw bad('Payment reference must be text');
+  }
+  const paymentReference = String(rawReference || '').trim();
+  if (paymentReference.length > 120) throw bad('Payment reference must be 120 characters or fewer');
+
+  order.paymentStatus = 'paid';
+  order.paidAmountKobo = amountKobo;
+  order.paymentReference = paymentReference;
+  await order.save();
+  res.json({ order: order.toObject() });
 });
 app.get('/api/admin/sales', requireAdmin, async (req, res) => {
   const orders = await Order.find({

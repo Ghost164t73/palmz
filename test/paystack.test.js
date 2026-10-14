@@ -19,6 +19,7 @@ test('Paystack transaction comparisons accept numeric string amounts and identif
   assert.deepEqual(paystackTransactionMismatches(order, {
     reference: 'palmz-reference',
     amount: '1250000',
+    requested_amount: 1250000,
     currency: 'NGN',
   }, 'palmz-reference'), []);
   assert.deepEqual(paystackTransactionMismatches(order, {
@@ -33,13 +34,31 @@ test('Paystack transaction comparisons accept numeric string amounts and identif
   ), ['amount']);
 });
 
-test('Paystack accepts a verified fee-inclusive payment but rejects underpayment', () => {
+test('Paystack accepts an overcharge only when Paystack confirms the requested order amount', () => {
   const order = { paymentAmountKobo: 2700000, totalAmount: 27000 };
   assert.deepEqual(paystackTransactionMismatches(order, {
     reference: 'palmz-reference',
     amount: 2751270,
+    requested_amount: 2700000,
     currency: 'NGN',
   }, 'palmz-reference'), []);
+  assert.deepEqual(paystackTransactionMismatches(order, {
+    reference: 'palmz-reference',
+    amount: 2751270,
+    requested_amount: 2751270,
+    currency: 'NGN',
+  }, 'palmz-reference'), ['amount', 'requested_amount']);
+  assert.deepEqual(paystackTransactionMismatches(order, {
+    reference: 'palmz-reference',
+    amount: 2751270,
+    requested_amount: 2600000,
+    currency: 'NGN',
+  }, 'palmz-reference'), ['amount', 'requested_amount']);
+  assert.deepEqual(paystackTransactionMismatches(order, {
+    reference: 'palmz-reference',
+    amount: 2751270,
+    currency: 'NGN',
+  }, 'palmz-reference'), ['amount']);
   assert.deepEqual(paystackTransactionMismatches(order, {
     reference: 'palmz-reference',
     amount: 2699999,
