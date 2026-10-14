@@ -67,6 +67,8 @@ label input,label textarea,label select{margin-top:5px;font-weight:400;color:var
 .small{padding:7px 12px;font-size:12px;border-radius:999px;border:1px solid var(--line);background:var(--surface2)}
 .small.del{color:var(--red)}
 .empty{text-align:center;color:var(--muted);padding:60px 10px;background:var(--surface);border:1px dashed var(--line);border-radius:18px}
+.loading-state{display:flex;align-items:center;justify-content:center;gap:10px;padding:18px;color:var(--muted);font-size:13px}.spinner{width:16px;height:16px;flex:0 0 16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.loading-row td{padding:12px 16px}.loading-bar{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--surface2) 25%,#e5e1d6 42%,var(--surface2) 63%);background-size:300% 100%;animation:shimmer 1.3s ease-in-out infinite}.loading-bar.short{width:45%}@keyframes shimmer{to{background-position:-150% 0}}button.is-loading{position:relative;color:transparent!important;pointer-events:none}button.is-loading::after{content:"";position:absolute;left:50%;top:50%;width:15px;height:15px;margin:-8px;border:2px solid var(--navy);border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}.btn.dark.is-loading::after{border-color:#fff;border-right-color:transparent}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;padding:16px;z-index:50}
 .modal.open{display:grid}
 .box{width:min(620px,100%);max-height:94vh;overflow:auto;background:var(--surface);border-radius:22px;padding:22px}
@@ -91,6 +93,7 @@ table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;
 </style>
 </head>
 <body>
+<div class="loading-state" id="bootView" role="status"><span class="spinner" aria-hidden="true"></span><span>Checking admin session…</span></div>
 
 <div id="loginView" style="display:none">
   <form class="login" onsubmit="login(event)">
@@ -162,13 +165,13 @@ let products = [], editingId = null, selectedId = null;
 let previewUrls = [];
 
 function toast(t, bad) { const el = $("#toast"); el.textContent = t; el.className = "toast show" + (bad ? " bad" : ""); clearTimeout(window.__t); window.__t = setTimeout(() => el.classList.remove("show"), 2200); }
-function showLogin() { $("#appView").style.display = "none"; $("#loginView").style.display = "block"; }
+function showLogin() { $("#bootView").style.display = "none"; $("#appView").style.display = "none"; $("#loginView").style.display = "block"; }
 function showApp() {
   if (new URLSearchParams(location.search).get("next") === "orders") {
     location.replace("/admin/orders");
     return false;
   }
-  $("#loginView").style.display = "none"; $("#appView").style.display = "block";
+  $("#bootView").style.display = "none"; $("#loginView").style.display = "none"; $("#appView").style.display = "block";
   return true;
 }
 
@@ -182,10 +185,13 @@ async function api(url, opts = {}) {
 
 async function login(e) {
   e.preventDefault(); $("#loginErr").textContent = "";
+  const button = e.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true; button.classList.add("is-loading"); button.textContent = "Signing in…";
   try {
     await api("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: $("#pw").value }) });
     $("#pw").value = ""; if (showApp()) load();
   } catch (err) { $("#loginErr").textContent = err.message; }
+  finally { button.disabled = false; button.classList.remove("is-loading"); button.textContent = "Sign in"; }
 }
 async function logout() { toggleAdminMenu(false); await fetch("/api/admin/logout", { method: "POST" }); showLogin(); }
 function toggleAdminMenu(open) {
@@ -198,8 +204,10 @@ function toggleAdminMenu(open) {
 document.addEventListener("keydown", event => { if (event.key === "Escape" && $("#adminDrawer").classList.contains("open")) toggleAdminMenu(false); });
 
 async function load() {
-  try { products = (await api("/api/products")).products; render(); }
-  catch (err) { toast(err.message, true); }
+  $("#list").setAttribute("aria-busy", "true");
+  $("#list").innerHTML = Array.from({length: 4}, () => '<tr class="loading-row" aria-hidden="true"><td><div class="loading-bar"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td></tr>').join("");
+  try { products = (await api("/api/products")).products; $("#list").setAttribute("aria-busy", "false"); render(); }
+  catch (err) { $("#list").setAttribute("aria-busy", "false"); $("#list").innerHTML = `<tr><td colspan="5" class="empty">${esc(err.message)}</td></tr>`; toast(err.message, true); }
 }
 
 function variantKey(color,size){return `${encodeURIComponent(String(color)).replace(/\./g,'%2E')}__${size}`}
@@ -230,15 +238,15 @@ function renderDetail(p){
 }$("#list").addEventListener("click",e=>{const row=e.target.closest('tr[data-id]');if(!row)return;selectedId=row.dataset.id;renderTable();renderDetail(products.find(p=>p.id===selectedId));$("#detail").scrollIntoView({behavior:'smooth',block:'start'});});
 $("#detail").addEventListener("click",async e=>{
  const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act,p=products.find(x=>x.id===selectedId);if(!p)return;
- if(act==='variant-inc'||act==='variant-dec'){await stock(p.id,{color:b.dataset.color,size:b.dataset.size,delta:act==='variant-inc'?1:-1});return}
+ if(act==='variant-inc'||act==='variant-dec'){await stock(p.id,{color:b.dataset.color,size:b.dataset.size,delta:act==='variant-inc'?1:-1},b);return}
  if(act==='close'){selectedId=null;$("#detail").classList.remove('open');renderTable()}
  if(act==='edit')openForm(p);
  if(act==='del'){if(!confirm(`Delete "${p.name}"? This also removes its photos and can't be undone.`))return;try{await api(`/api/admin/products/${p.id}`,{method:'DELETE'});products=products.filter(x=>x.id!==p.id);selectedId=null;render();toast('Deleted')}catch(err){toast(err.message,true)}}
  if(act==='receive'){$("#history").innerHTML=`<form id="receiveForm" class="row" style="margin-top:14px"><label style="margin:0">Color<select name="color">${(p.colors||['Standard']).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></label><label style="margin:0">Size<select name="size">${Array.from({length:p.sizeMax-p.sizeMin+1},(_,i)=>String(p.sizeMin+i)).map(s=>`<option value="${s}">${s}</option>`).join('')}</select></label><label style="margin:0">Pairs received<input name="amount" type="number" min="1" step="1" required placeholder="e.g. 5"></label><button class="btn dark" type="submit">Add stock</button></form>`}
  if(act==='history'){const h=p.stockHistory||[];$("#history").innerHTML=h.length?`<b>Recent stock changes</b><br>${h.slice().reverse().slice(0,12).map(x=>`${esc(x.color||'Legacy')} · size ${esc(x.size)} · ${x.quantity>0?'+':''}${x.quantity} (${esc(x.reason||'stock change')}) · ${new Date(x.createdAt).toLocaleString()}`).join('<br>')}`:'No stock changes recorded yet.'}
 });
-$("#detail").addEventListener("submit",async e=>{if(e.target.id!=='receiveForm')return;e.preventDefault();const data=new FormData(e.target);await stock(selectedId,{color:data.get('color'),size:data.get('size'),delta:Number(data.get('amount'))})});
-async function stock(id,body){try{const p=await api(`/api/admin/products/${id}/stock`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});products=products.map(x=>x.id===id?p:x);render();toast('Stock saved')}catch(err){toast(err.message,true);load()}}
+$("#detail").addEventListener("submit",async e=>{if(e.target.id!=='receiveForm')return;e.preventDefault();const data=new FormData(e.target);await stock(selectedId,{color:data.get('color'),size:data.get('size'),delta:Number(data.get('amount'))},e.submitter)});
+async function stock(id,body,button){if(button){button.disabled=true;button.classList.add('is-loading')}try{const p=await api(`/api/admin/products/${id}/stock`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});products=products.map(x=>x.id===id?p:x);render();toast('Stock saved')}catch(err){toast(err.message,true);load()}finally{if(button){button.disabled=false;button.classList.remove('is-loading')}}}
 function clearPreviewUrls() {
   previewUrls.forEach(URL.revokeObjectURL);
   previewUrls = [];
@@ -308,12 +316,12 @@ async function saveProduct(e) {
   for (const k of ["name", "type", "price", "desc", "colors", "sizeMin", "sizeMax", "quantity"]) fd.append(k, $("#" + k).value);
   fd.append("available", $("#available").checked);
   images.forEach(image => fd.append("images", image));
-  const btn = $("#saveBtn"); btn.disabled = true; btn.textContent = "Saving...";
+  const btn = $("#saveBtn"); btn.disabled = true; btn.classList.add("is-loading"); btn.textContent = "Saving…";
   try {
     await api(editingId ? `/api/admin/products/${editingId}` : "/api/admin/products", { method: editingId ? "PUT" : "POST", body: fd });
     closeForm(); await load(); toast("Saved");
   } catch (err) { $("#formErr").textContent = err.message; }
-  finally { btn.disabled = false; btn.textContent = "Save product"; }
+  finally { btn.disabled = false; btn.classList.remove("is-loading"); btn.textContent = "Save product"; }
 }
 
 (async () => { try { await api("/api/admin/me"); if (showApp()) load(); } catch { showLogin(); } })();

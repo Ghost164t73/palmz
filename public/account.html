@@ -79,6 +79,9 @@
     .order-items { margin: 10px 0; color: var(--muted); font-size: 13px; line-height: 1.7 }
     .order-delivery { padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.6 }
     .message { margin-top: 16px; color: var(--muted); font-size: 13px; line-height: 1.6 }
+    .loading-indicator { display: inline-flex; align-items: center; gap: 9px }
+    .spinner { width: 15px; height: 15px; flex: 0 0 15px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite }
+    @keyframes spin { to { transform: rotate(360deg) } }
     [hidden] { display: none !important }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -107,7 +110,7 @@
       <strong>Sign in with Google</strong>
       <p class="muted">Save your checkout details and access your order history on any device. Guest checkout is also available.</p>
       <div id="googleButton"></div>
-      <div class="message" id="status" aria-live="polite">Checking Google sign-in…</div>
+      <div class="message" id="status" aria-live="polite"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Checking Google sign-in…</span></div>
     </section>
     <section class="panel" id="signedIn" hidden>
       <div class="profile">
@@ -158,7 +161,7 @@
     }
 
     async function loadOrders() {
-      $("#orders").innerHTML = '<div class="muted">Loading your orders…</div>';
+      $("#orders").innerHTML = '<div class="muted"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading your orders…</span></div>';
       try {
         const { orders } = await request("/api/customer/orders");
         $("#orders").innerHTML = orders.length ? orders.map(order => `
@@ -182,7 +185,7 @@
     }
 
     async function googleCredential(response) {
-      $("#status").textContent = "Signing in…";
+      $("#status").innerHTML = '<span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Signing in…</span>';
       try {
         const result = await request("/api/customer/google", {
           method: "POST",

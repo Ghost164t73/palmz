@@ -321,6 +321,13 @@
       box-shadow: none
     }
 
+    .btn.is-loading { position: relative; color: transparent !important; cursor: wait }
+    .btn.is-loading::after { content: ""; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px; border: 2px solid var(--navy); border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite }
+    .btn.whatsapp.is-loading::after { border-color: #fff; border-right-color: transparent }
+    .loading-indicator { display: inline-flex; align-items: center; gap: 9px }
+    .spinner { width: 15px; height: 15px; flex: 0 0 15px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite }
+    @keyframes spin { to { transform: rotate(360deg) } }
+
     .btn-gold {
       background: var(--gold);
       color: #111
@@ -2331,6 +2338,7 @@
     }
 
     async function loadDeliveryOptions() {
+      $("#deliveryEstimate").innerHTML = '<span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading delivery options…</span>';
       try {
         const response = await fetch("/delivery-options");
         if (!response.ok) throw new Error("Could not load delivery prices");
@@ -2892,7 +2900,8 @@
       const originalButtonText = submitButton ? submitButton.textContent : "";
       if (submitButton) {
         submitButton.disabled = true;
-        if (paymentMethod === "paystack") submitButton.textContent = "Starting your payment…";
+        submitButton.classList.add("is-loading");
+        submitButton.textContent = paymentMethod === "paystack" ? "Starting your payment…" : "Sending to WhatsApp…";
       }
       try {
         if (document.querySelector('input[name="fulfillmentMethod"]:checked').value === "delivery" &&
@@ -2929,6 +2938,7 @@
         orderSubmitting = false;
         if (submitButton) {
           submitButton.disabled = false;
+          submitButton.classList.remove("is-loading");
           submitButton.textContent = originalButtonText;
         }
       }

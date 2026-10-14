@@ -94,6 +94,12 @@
     .payment-form button { padding:10px;border:0;background:var(--green);color:#fff;font-weight:800 }
     .payment-form button:disabled { opacity:.6;cursor:wait }
     .message { padding: 42px 14px; border: 1px dashed var(--line); background: var(--surface); text-align: center; color: var(--muted) }
+    .loading-indicator { display: inline-flex; align-items: center; gap: 9px }
+    .spinner { width: 15px; height: 15px; flex: 0 0 15px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite }
+    @keyframes spin { to { transform: rotate(360deg) } }
+    button.is-loading { position: relative; color: transparent !important; pointer-events: none }
+    button.is-loading::after { content: ""; position: absolute; left: 50%; top: 50%; width: 15px; height: 15px; margin: -8px; border: 2px solid currentColor; border-color: var(--navy) var(--navy) transparent transparent; border-radius: 50%; animation: spin .7s linear infinite }
+    .payment-form button.is-loading::after { border-color: #fff; border-right-color: transparent }
     .toast { position: fixed; left: 50%; bottom: 20px; padding: 11px 16px; background: var(--navy); color: #fff; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; transition: .2s }
     .toast.show { transform: translate(-50%, 0); opacity: 1 }
     .toast.error { background: var(--red) }
@@ -126,7 +132,7 @@
   <main class="wrap">
     <div class="heading">
       <div><h1>Orders</h1><div class="muted">Confirming or fulfilling an order deducts its color and size stock. Cancelling returns the stock.</div></div>
-      <button type="button" onclick="loadOrders()">Refresh</button>
+      <button id="refreshOrders" type="button" onclick="loadOrders()">Refresh</button>
     </div>
     <section class="stats" id="stats" aria-live="polite"></section>
     <div class="toolbar">
@@ -140,7 +146,7 @@
       </select>
       <span class="muted" id="resultCount"></span>
     </div>
-    <section class="orders" id="orders" aria-live="polite"><div class="message">Loading orders…</div></section>
+    <section class="orders" id="orders" aria-live="polite"><div class="message"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading orders…</span></div></section>
   </main>
   <div class="toast" id="toast" role="status"></div>
   <script>
@@ -184,8 +190,9 @@
       return data;
     }
 
-    function showMessage(message, error = false) {
-      $("#orders").innerHTML = `<div class="message">${escapeHtml(message)}</div>`;
+    function showMessage(message, error = false, loading = false) {
+      const content = loading ? `<span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>${escapeHtml(message)}</span>` : escapeHtml(message);
+      $("#orders").innerHTML = `<div class="message">${content}</div>`;
       $("#resultCount").textContent = "";
       if (error) toast(message, true);
     }
@@ -224,7 +231,10 @@
     }
 
     async function loadOrders() {
-      showMessage("Loading orders…");
+      const refreshButton = $("#refreshOrders");
+      refreshButton.disabled = true;
+      refreshButton.innerHTML = '<span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading</span>';
+      showMessage("Loading orders…", false, true);
       try {
         const status = $("#statusFilter").value;
         const { orders } = await request(`/api/admin/orders?status=${encodeURIComponent(status)}`);
@@ -233,11 +243,19 @@
         $("#orders").innerHTML = orders.length ? orders.map(renderOrder).join("") : '<div class="message">No orders found for this status.</div>';
       } catch (error) {
         if (!/session has expired/.test(error.message)) showMessage(error.message, true);
+      } finally {
+        refreshButton.disabled = false;
+        refreshButton.textContent = "Refresh";
       }
     }
 
     async function updateStatus(id, status, select) {
       select.disabled = true;
+      const loading = document.createElement("span");
+      loading.className = "loading-indicator";
+      loading.setAttribute("role", "status");
+      loading.innerHTML = '<span class="spinner" aria-hidden="true"></span>Updating status…';
+      select.after(loading);
       try {
         await request(`/api/admin/orders/${encodeURIComponent(id)}`, {
           method: "PATCH",
@@ -249,6 +267,8 @@
       } catch (error) {
         toast(error.message, true);
         await loadOrders();
+      } finally {
+        loading.remove();
       }
     }
 
@@ -257,6 +277,7 @@
       const form = event.currentTarget;
       const button = form.querySelector("button[type=submit]");
       button.disabled = true;
+      button.classList.add("is-loading");
       button.textContent = "Recording payment…";
       try {
         await request(`/api/admin/orders/${encodeURIComponent(id)}/payment`, {
@@ -272,6 +293,7 @@
       } catch (error) {
         toast(error.message, true);
         button.disabled = false;
+        button.classList.remove("is-loading");
         button.textContent = "Record payment received";
       }
     }
