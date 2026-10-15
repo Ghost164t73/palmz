@@ -12,6 +12,7 @@ const Product = require('./models/Product');
 const Customer = require('./models/Customer');
 const Order = require('./models/Order');
 const { DELIVERY_TIERS, deliveryQuote, calculateOrderTotal } = require('./lib/delivery');
+const { groupOrderItems, variantStockKey } = require('./lib/inventory');
 const {
   expectedPaymentAmountKobo,
   paystackTransactionMismatches,
@@ -25,6 +26,13 @@ const ORDER_EMAIL_EVENTS = new Set([
   'status_confirmed',
   'status_fulfilled',
 ]);
+function safeEmailError(error) {
+  return String(error && error.message || 'Unknown email error')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
+    .replace(/Bearer\s+\S+/gi, 'Bearer [redacted]')
+    .replace(/\bre_[A-Za-z0-9_-]+\b/g, '[redacted key]')
+    .slice(0, 400);
+}
 async function notifyOrderEmail(order, event) {
   if (!ORDER_EMAIL_EVENTS.has(event)) return;
   const eventPath = `emailNotifications.${event}`;
@@ -54,11 +62,15 @@ async function notifyOrderEmail(order, event) {
     await Order.updateOne({ _id: claimed._id, [statusPath]: 'sending' }, {
       $set: { [statusPath]: 'sent', [`${eventPath}.sentAt`]: new Date() },
     });
-  } catch {
+  } catch (error) {
     await Order.updateOne({ _id: claimed._id, [statusPath]: 'sending' }, {
       $set: { [statusPath]: 'failed' },
     }).catch(() => {});
-    console.error('Order email notification failed', { event, orderId: String(order._id) });
+    console.error('Order email notification failed', {
+      event,
+      orderId: String(order._id),
+      reason: safeEmailError(error),
+    });
   }
 }
 
@@ -286,9 +298,6 @@ app.get('/api/customer/orders', requireCustomer, async (req, res) => {
 });
 const guestOrderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
 const paystackOrderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
-function variantStockKey(color, size) {
-  return `${encodeURIComponent(String(color)).replace(/\./g, '%2E')}__${String(size)}`;
-}
 function completeVariantStock(product) {
   const saved = product.stockByVariant;
   if (saved && saved.size) return saved;
@@ -308,6 +317,91 @@ function completeVariantStock(product) {
     colors.forEach((color) => sizes.forEach((size) => stock.set(variantStockKey(color, size), each + (index++ < remainder ? 1 : 0))));
   }
   return stock;
+}
+
+async function adjustInventoryForOrder(items, delta, reason, session, requireAvailable = false) {
+  for (const item of groupOrderItems(items)) {
+    const product = await Product.findById(item.productId).session(session);
+    if (!product) {
+      if (delta > 0) continue;
+      throw bad(`Product "${item.productId}" in this order no longer exists`);
+    }
+    if (!product.sizes.includes(String(item.size)) || !product.colors.includes(String(item.color))) {
+      throw bad(`Product variants for ${item.name || item.productId} have changed`);
+    }
+
+    const inventory = completeVariantStock(product);
+    const currentTotal = [...inventory.values()].reduce((sum, count) => sum + Number(count || 0), 0);
+    if (!product.stockByVariant || !product.stockByVariant.size || product.quantity !== currentTotal) {
+      product.stockByVariant = inventory;
+      product.stockBySize = {};
+      product.quantity = currentTotal;
+      await product.save({ session });
+    }
+
+    const variantPath = `stockByVariant.${variantStockKey(item.color, item.size)}`;
+    const filter = { _id: product._id };
+    if (delta < 0) {
+      filter[variantPath] = { $gte: item.quantity };
+      filter.quantity = { $gte: item.quantity };
+      if (requireAvailable) filter.available = true;
+    }
+    const result = await Product.updateOne(filter, {
+      $inc: { [variantPath]: delta * item.quantity, quantity: delta * item.quantity },
+      $push: { stockHistory: {
+        color: item.color,
+        size: item.size,
+        quantity: delta * item.quantity,
+        reason,
+        createdAt: new Date(),
+      } },
+    }, { session });
+    if (!result.modifiedCount) {
+      throw bad(`There is not enough stock for ${item.color}, size ${item.size}`);
+    }
+  }
+}
+
+async function createReservedOrder(order) {
+  const legacyPendingOrder = await Order.exists({
+    status: 'pending_confirmation',
+    inventoryReserved: { $ne: true },
+    inventoryDeducted: { $ne: true },
+  });
+  if (legacyPendingOrder) {
+    throw Object.assign(new Error('New orders are temporarily paused while older pending orders are being reconciled. Please try again shortly.'), {
+      status: 503,
+      expose: true,
+    });
+  }
+
+  await mongoose.connection.transaction(async (session) => {
+    await order.save({ session });
+    await adjustInventoryForOrder(order.items, -1, 'order reserved', session, true);
+    order.inventoryReserved = true;
+    await order.save({ session });
+  });
+  return order;
+}
+
+async function releaseOrderReservation(orderId, {
+  paymentStatus,
+  reason = 'order reservation released',
+  onlyUnpaid = false,
+} = {}) {
+  let released = false;
+  await mongoose.connection.transaction(async (session) => {
+    const order = await Order.findById(orderId).session(session);
+    if (!order || !order.inventoryReserved || order.inventoryDeducted) return;
+    if (onlyUnpaid && ['paid', 'refunded'].includes(order.paymentStatus)) return;
+    await adjustInventoryForOrder(order.items, 1, reason, session);
+    order.inventoryReserved = false;
+    if (paymentStatus) order.paymentStatus = paymentStatus;
+    order.status = 'cancelled';
+    await order.save({ session });
+    released = true;
+  });
+  return released;
 }
 
 async function orderContact(body, account = null, paymentProvider = 'whatsapp') {
@@ -407,14 +501,14 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
   };
 }
 app.post('/api/orders', guestOrderLimiter, async (req, res) => {
-  const order = await Order.create(await orderContact(req.body || {}));
+  const order = await createReservedOrder(new Order(await orderContact(req.body || {})));
   await notifyOrderEmail(order, 'admin_new_order');
   res.status(201).json({ order: { id: String(order._id), status: order.status } });
 });
 app.post('/api/customer/orders', requireCustomer, async (req, res) => {
   const customer = await Customer.findById(req.customerId);
   if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
-  const order = await Order.create(await orderContact(req.body || {}, customer));
+  const order = await createReservedOrder(new Order(await orderContact(req.body || {}, customer)));
   await notifyOrderEmail(order, 'admin_new_order');
   res.status(201).json({ order });
 });
@@ -459,13 +553,13 @@ async function createPaystackOrder(req, account = null) {
     throw bad('The order total cannot be processed online. Choose WhatsApp checkout instead.');
   }
 
-  const order = await Order.create({
+  const order = new Order({
     ...orderData,
     paymentAmountKobo: amountKobo,
   });
   const reference = `palmz-${order._id}-${crypto.randomBytes(8).toString('hex')}`;
   order.paystackReference = reference;
-  await order.save();
+  await createReservedOrder(order);
 
   try {
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
@@ -494,8 +588,12 @@ async function createPaystackOrder(req, account = null) {
     }
     return authorizationUrl.toString();
   } catch (error) {
-    order.paymentStatus = 'failed';
-    await order.save();
+    await releaseOrderReservation(order._id, {
+      paymentStatus: 'failed',
+      reason: 'Paystack initialization failed',
+    }).catch((releaseError) => {
+      console.error('Could not release failed Paystack order reservation', { orderId: String(order._id), message: releaseError.message });
+    });
     console.error('Paystack initialization failed:', error.message);
     throw Object.assign(new Error('Could not start Paystack checkout. Please try again or choose WhatsApp checkout.'), {
       status: 502,
@@ -572,10 +670,17 @@ async function applyPaystackTransaction(order, transaction, reference) {
     return currentOrder ? currentOrder.paymentStatus : 'pending';
   }
   if (['failed', 'abandoned'].includes(transaction.status)) {
-    await Order.updateOne({
-      _id: order._id,
-      paymentStatus: { $nin: ['paid', 'refunded'] },
-    }, { $set: { paymentStatus: 'failed' } });
+    const released = await releaseOrderReservation(order._id, {
+      paymentStatus: 'failed',
+      reason: 'Paystack payment failed',
+      onlyUnpaid: true,
+    });
+    if (!released) {
+      await Order.updateOne({
+        _id: order._id,
+        paymentStatus: { $nin: ['paid', 'refunded'] },
+      }, { $set: { paymentStatus: 'failed', status: 'cancelled' } });
+    }
     const currentOrder = await Order.findById(order._id);
     return currentOrder ? currentOrder.paymentStatus : 'failed';
   }
@@ -721,91 +826,41 @@ app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Order not found' });
   const status = req.body && req.body.status;
   if (!Order.ORDER_STATUSES.includes(status)) throw bad('Choose a valid order status');
-  const order = await Order.findById(req.params.id);
-  if (!order) return res.status(404).json({ error: 'Order not found' });
+  let order;
   const approved = ['confirmed', 'fulfilled'].includes(status);
-  const applied = [];
+  await mongoose.connection.transaction(async (session) => {
+    order = await Order.findById(req.params.id).session(session);
+    if (!order) throw Object.assign(new Error('Order not found'), { status: 404, expose: true });
+    if (approved && order.paymentProvider === 'paystack' && order.paymentStatus !== 'paid') {
+      throw bad('A Paystack order must be paid before it can be confirmed or fulfilled');
+    }
 
-  if (approved && !order.inventoryDeducted) {
-    const grouped = new Map();
-    for (const item of order.items) {
-      const key = `${item.productId}:${variantStockKey(item.color, item.size)}`;
-      const current = grouped.get(key) || { productId: item.productId, color: item.color, size: item.size, quantity: 0 };
-      current.quantity += item.quantity;
-      grouped.set(key, current);
-    }
-    const claimed = await Order.findOneAndUpdate(
-      { _id: order._id, inventoryDeducted: { $ne: true } },
-      { $set: { inventoryDeducted: true } },
-      { new: true }
-    );
-    if (claimed) {
+    if (approved && !order.inventoryDeducted) {
+      if (order.inventoryReserved) {
+        order.inventoryReserved = false;
+      } else {
+        await adjustInventoryForOrder(order.items, -1, 'confirmed order', session);
+      }
       order.inventoryDeducted = true;
-      try {
-        for (const item of grouped.values()) {
-          const product = await Product.findById(item.productId);
-          if (!product) throw bad(`Product "${item.productId}" in this order no longer exists`);
-          const inventory = completeVariantStock(product);
-          product.stockByVariant = inventory;
-          product.stockBySize = {};
-          product.quantity = [...inventory.values()].reduce((sum, count) => sum + count, 0);
-          await product.save();
-          const key = variantStockKey(item.color, item.size);
-          const result = await Product.updateOne(
-            { _id: product._id, [`stockByVariant.${key}`]: { $gte: item.quantity } },
-            {
-              $inc: { [`stockByVariant.${key}`]: -item.quantity, quantity: -item.quantity },
-              $push: { stockHistory: { color: item.color, size: item.size, quantity: -item.quantity, reason: 'confirmed order' } },
-            }
-          );
-          if (!result.modifiedCount) throw bad(`Not enough stock for ${product.name}, ${item.color}, size ${item.size}`);
-          applied.push({ productId: product._id, color: item.color, size: item.size, key, quantity: item.quantity });
-        }
-        order.salesHistory.push({
-          type: 'sale',
-          status,
-          items: order.items.map((item) => item.toObject()),
-          createdAt: new Date(),
-        });
-      } catch (error) {
-        for (const item of applied) {
-          await Product.updateOne({ _id: item.productId }, {
-            $inc: { [`stockByVariant.${item.key}`]: item.quantity, quantity: item.quantity },
-            $push: { stockHistory: { color: item.color, size: item.size, quantity: item.quantity, reason: 'order deduction reversed' } },
-          });
-        }
-        await Order.updateOne({ _id: order._id }, { $set: { inventoryDeducted: false } });
-        throw error;
-      }
-    }
-  } else if (!approved && order.inventoryDeducted) {
-    const claimed = await Order.findOneAndUpdate(
-      { _id: order._id, inventoryDeducted: true },
-      { $set: { inventoryDeducted: false } },
-      { new: true }
-    );
-    if (claimed) {
+      order.salesHistory.push({
+        type: 'sale',
+        status,
+        items: order.items.map((item) => item.toObject()),
+        createdAt: new Date(),
+      });
+    } else if (!approved && order.inventoryReserved) {
+      await adjustInventoryForOrder(order.items, 1, 'cancelled order returned', session);
+      order.inventoryReserved = false;
+    } else if (!approved && order.inventoryDeducted) {
+      await adjustInventoryForOrder(order.items, 1, 'cancelled order returned', session);
       order.inventoryDeducted = false;
-      for (const item of order.items) {
-        const product = await Product.findById(item.productId);
-        if (!product) continue;
-        const inventory = completeVariantStock(product);
-        product.stockByVariant = inventory;
-        product.stockBySize = {};
-        const key = variantStockKey(item.color, item.size);
-        inventory.set(key, (inventory.get(key) || 0) + item.quantity);
-        product.stockByVariant = inventory;
-        product.quantity = [...inventory.values()].reduce((sum, count) => sum + count, 0);
-        product.stockHistory.push({ color: item.color, size: item.size, quantity: item.quantity, reason: 'cancelled order returned', createdAt: new Date() });
-        await product.save();
-      }
       const sale = [...order.salesHistory].reverse().find((event) => event.type === 'sale' && !order.salesHistory.some((candidate) => candidate.type === 'reversal' && candidate.reverses === String(event._id)));
       if (sale) order.salesHistory.push({ type: 'reversal', status, reverses: String(sale._id), items: sale.items, createdAt: new Date() });
     }
-  }
 
-  order.status = status;
-  await order.save();
+    order.status = status;
+    await order.save({ session });
+  });
   if (status === 'confirmed' || status === 'fulfilled') {
     await notifyOrderEmail(order, `status_${status}`);
   }
@@ -870,64 +925,82 @@ app.post('/api/admin/products', requireAdmin, uploadProductImages, async (req, r
 });
 
 app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, async (req, res) => {
-  const p = await Product.findById(req.params.id);
-  if (!p) return res.status(404).json({ error: 'Product not found' });
-  const data = readFields(req.body);
-  const sameVariants = p.sizeMin === data.sizeMin && p.sizeMax === data.sizeMax && JSON.stringify(p.colors) === JSON.stringify(data.colors);
-  data.stockByVariant = sameVariants ? p.stockByVariant : {};
-  data.stockBySize = sameVariants ? p.stockBySize : {};
   const files = productImageFiles(req);
-  const oldIds = productImagePublicIds(p);
-  if (files.length) {
-    const images = await uploadProductGallery(files);
-    data.image = images[0];
-    data.images = images;
-    p.set(data);
-    try {
-      await p.save();
-    } catch (err) {
-      await Promise.all(images.map((image) => removeFromCloudinary(image.publicId)));
-      throw err;
-    }
-    await Promise.all(oldIds.map(removeFromCloudinary));
-  } else {
-    p.set(data);
-    await p.save();
+  const images = files.length ? await uploadProductGallery(files) : null;
+  let p;
+  let oldIds = [];
+  try {
+    await mongoose.connection.transaction(async (session) => {
+      p = await Product.findById(req.params.id).session(session);
+      if (!p) throw Object.assign(new Error('Product not found'), { status: 404, expose: true });
+      const hasReservation = await Order.exists({
+        inventoryReserved: true,
+        'items.productId': String(p._id),
+      }).session(session);
+      if (hasReservation) throw bad('This product has an active order reservation. Confirm or cancel that order before editing the product.');
+
+      const data = readFields(req.body);
+      const sameVariants = p.sizeMin === data.sizeMin && p.sizeMax === data.sizeMax && JSON.stringify(p.colors) === JSON.stringify(data.colors);
+      data.stockByVariant = sameVariants ? p.stockByVariant : {};
+      data.stockBySize = sameVariants ? p.stockBySize : {};
+      oldIds = productImagePublicIds(p);
+      if (images) {
+        data.image = images[0];
+        data.images = images;
+      }
+      p.set(data);
+      await p.save({ session });
+    });
+  } catch (error) {
+    if (images) await Promise.all(images.map((image) => removeFromCloudinary(image.publicId)));
+    throw error;
   }
+  if (images) await Promise.all(oldIds.map(removeFromCloudinary));
   res.json(p);
 });
 
 // quick stock edits: { quantity } or { delta } and/or { available }
 app.patch('/api/admin/products/:id/stock', requireAdmin, validId, async (req, res) => {
-  const p = await Product.findById(req.params.id);
-  if (!p) return res.status(404).json({ error: 'Product not found' });
-  const b = req.body || {};
-  if (b.size !== undefined || b.color !== undefined) {
-    const size = String(b.size);
-    const color = String(b.color);
-    if (!p.sizes.includes(size)) throw bad('Choose a size within this product range');
-    if (!p.colors.includes(color)) throw bad('Choose a color for this product');
-    const amount = int(b.delta, -100000, 100000, 'Stock change');
-    if (!amount) throw bad('Stock change cannot be zero');
-    const map = completeVariantStock(p);
-    const key = variantStockKey(color, size);
-    const next = (map.get(key) || 0) + amount;
-    if (next < 0) throw bad('Stock cannot be reduced below zero');
-    map.set(key, next);
-    p.stockByVariant = map;
-    p.stockBySize = {};
-    p.stockHistory.push({ color, size, quantity: amount, reason: amount > 0 ? 'stock received' : 'manual adjustment', createdAt: new Date() });
-    p.quantity = [...map.values()].reduce((sum, n) => sum + n, 0);
-  }
-  if (b.quantity !== undefined) p.quantity = int(b.quantity, 0, 100000, 'Quantity');
-  if (b.delta !== undefined) p.quantity = Math.max(0, p.quantity + int(b.delta, -1000, 1000, 'Change'));
-  if (b.available !== undefined) p.available = b.available === true || b.available === 'true';
-  await p.save();
+  let p;
+  await mongoose.connection.transaction(async (session) => {
+    p = await Product.findById(req.params.id).session(session);
+    if (!p) throw Object.assign(new Error('Product not found'), { status: 404, expose: true });
+    const b = req.body || {};
+    if (b.size !== undefined || b.color !== undefined) {
+      const size = String(b.size);
+      const color = String(b.color);
+      if (!p.sizes.includes(size)) throw bad('Choose a size within this product range');
+      if (!p.colors.includes(color)) throw bad('Choose a color for this product');
+      const amount = int(b.delta, -100000, 100000, 'Stock change');
+      if (!amount) throw bad('Stock change cannot be zero');
+      const map = completeVariantStock(p);
+      const key = variantStockKey(color, size);
+      const next = (map.get(key) || 0) + amount;
+      if (next < 0) throw bad('Stock cannot be reduced below zero');
+      map.set(key, next);
+      p.stockByVariant = map;
+      p.stockBySize = {};
+      p.stockHistory.push({ color, size, quantity: amount, reason: amount > 0 ? 'stock received' : 'manual adjustment', createdAt: new Date() });
+      p.quantity = [...map.values()].reduce((sum, n) => sum + n, 0);
+    }
+    if (b.quantity !== undefined) p.quantity = int(b.quantity, 0, 100000, 'Quantity');
+    if (b.delta !== undefined) p.quantity = Math.max(0, p.quantity + int(b.delta, -1000, 1000, 'Change'));
+    if (b.available !== undefined) p.available = b.available === true || b.available === 'true';
+    await p.save({ session });
+  });
   res.json(p);
 });
 
 app.delete('/api/admin/products/:id', requireAdmin, validId, async (req, res) => {
-  const p = await Product.findByIdAndDelete(req.params.id);
+  let p;
+  await mongoose.connection.transaction(async (session) => {
+    const hasReservation = await Order.exists({
+      inventoryReserved: true,
+      'items.productId': String(req.params.id),
+    }).session(session);
+    if (hasReservation) throw bad('This product has an active order reservation. Confirm or cancel that order before deleting the product.');
+    p = await Product.findByIdAndDelete(req.params.id, { session });
+  });
   if (!p) return res.status(404).json({ error: 'Product not found' });
   await Promise.all(productImagePublicIds(p).map(removeFromCloudinary));
   res.json({ ok: true });

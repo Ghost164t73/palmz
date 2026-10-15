@@ -2291,7 +2291,7 @@
     let selectedProduct = null;
     let selectedSize = "43";
     let selectedColor = null;
-    function variantKey(color, size) { return `${encodeURIComponent(String(color)).replace(/\./g, "%2E")}__${size}`; }
+    function variantKey(color, size) { return `${encodeURIComponent(String(color)).replace(/\./g, "%2E").replace(/\$/g, "%24")}__${size}`; }
     function variantInventory(product) {
       const saved = product.stockByVariant || {};
       if (Object.keys(saved).length) return saved;
@@ -2747,9 +2747,9 @@
           <div class="payment-success-icon" aria-hidden="true">
             <svg viewBox="0 0 64 64"><circle class="mark-ring" cx="32" cy="32" r="23.5"></circle><path class="mark-check" d="m20 32.5 8.2 8.2L44.5 24"></path></svg>
           </div>
-          <p class="payment-success-kicker">Payment successful</p>
+          <p class="payment-success-kicker">Payment successful</p> 
           <h2 class="payment-success-title">Thank you for your order.</h2>
-          <p class="payment-success-copy">Your payment has been confirmed securely by Paystack. We’ll contact you shortly on the phone number you provided to coordinate your order.</p>
+          <p class="payment-success-copy">Your payment has been confirmed securely by Paystack. We’ll contact you shortly on the email you provided to coordinate your order.</p>
           <p class="payment-success-copy payment-success-thanks">Thank you for shopping with PALMZ.</p>
           <div class="payment-success-actions">
             <button class="btn btn-whatsapp" type="button" onclick="confirmPaidOrderOnWhatsApp()">Confirm my order on WhatsApp</button>
