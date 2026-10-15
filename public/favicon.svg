@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect class="tile" x="2" y="2" width="60" height="60" rx="16"/>
+  <g class="mark" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5">
+    <path d="M32 48V28"/>
+    <path d="M32 29C25 18 15 19 12 19c4 8 10 12 20 13M32 29c4-11 14-13 20-12-3 8-9 13-20 15M32 28c-1-10 4-17 8-20 4 7 3 14-5 22"/>
+    <path d="M25 48h14"/>
+  </g>
+  <style>.tile{fill:#0c1227}.mark{color:#e2b63f}@media(prefers-color-scheme:dark){.tile{fill:#e2b63f}.mark{color:#0c1227}}</style>
+</svg>

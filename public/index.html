@@ -7,7 +7,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description"
     content="PALMZ footwear — style and comfort from Kano, Nigeria.">
-  <link rel="icon" type="image/jpeg" href="/palmz-logo.jpeg">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" href="/favicon.ico" sizes="any">
   <title>PALMZ — Footwear</title>
   <script>
     const path = location.pathname.replace(/\/+$/, "") || "/";
@@ -833,7 +834,10 @@
     .form .payment-choice input{flex:0 0 17px;width:17px;height:17px;margin:2px 0 0;padding:0;border:0;border-radius:50%;background:transparent;accent-color:var(--gold)}
     .fulfillment-choice span,.payment-choice span{display:grid;gap:3px;color:var(--text);font-size:13px;font-weight:750}
     .fulfillment-choice small,.payment-choice small{color:var(--muted);font-size:11px;font-weight:400;line-height:1.5}
-    .fulfillment-options select,.delivery-fields select{width:100%;margin-top:6px;padding:13px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--text);font:inherit}
+    .fulfillment-options select,.delivery-fields select,#pickupBranch{width:100%;margin-top:6px;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface2);color:var(--text);font:inherit;box-shadow:0 3px 10px rgba(17,20,28,.045);transition:border-color .18s,box-shadow .18s,background .18s}
+    .fulfillment-options select,#pickupBranch{appearance:none;padding-right:46px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat}
+    .fulfillment-options select:hover,#pickupBranch:hover{border-color:color-mix(in srgb,var(--gold) 70%,var(--line));background-color:var(--surface)}
+    .fulfillment-options select:focus-visible,.delivery-fields select:focus-visible,#pickupBranch:focus-visible{outline:3px solid color-mix(in srgb,var(--gold) 42%,transparent);outline-offset:1px;border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
     .delivery-fields{display:grid;grid-template-columns:1fr 1fr;gap:7px 16px;align-content:start}
     .delivery-fields label{margin:0}
     .delivery-fields input,.delivery-fields select{margin:6px 0 0}
@@ -2208,7 +2212,7 @@
         <fieldset class="fulfillment-options">
           <legend>How would you like to receive your order?</legend>
           <label class="fulfillment-choice"><input type="radio" name="fulfillmentMethod" value="delivery" checked onchange="updateFulfillmentFields()"><span>Deliver to me<small>Enter the address where you’d like your order delivered.</small></span></label>
-          <label class="fulfillment-choice"><input type="radio" name="fulfillmentMethod" value="pickup" onchange="updateFulfillmentFields()"><span>Pick up from one of our 3 branches<small>Choose an available branch below. More pickup locations will be added when their addresses are confirmed.</small></span></label>
+          <label class="fulfillment-choice"><input type="radio" name="fulfillmentMethod" value="pickup" onchange="updateFulfillmentFields()"><span>Pick up from a branch<small>Choose an available branch below.</small></span></label>
         </fieldset>
         <label id="deliveryAddressField" class="checkout-wide">Delivery address
           <textarea id="customerAddress" required
@@ -2228,7 +2232,7 @@
         <label id="pickupBranchField" class="checkout-wide" hidden>Choose a pickup branch
           <select id="pickupBranch">
             <option value="shop-1">Shop 1 — Genesis Plaza, NTA Roundabout, Lokoja</option>
-            <option value="shop-2" disabled>Shop 2 — Location to be confirmed</option>
+            <option value="shop-2">Shop 2 — Dews Plaza, Phase 3, Kubwa, Abuja</option>
             <option value="shop-3" disabled>Shop 3 — Location to be confirmed</option>
           </select>
         </label>
@@ -2364,7 +2368,7 @@
     function deliveryQuoteFor(state, city = "") {
       const tier = DELIVERY_TIERS.find(candidate => candidate.states.includes(state));
       if (!tier) return null;
-      if (state === "Kogi" && String(city).trim().toLocaleLowerCase("en") === "lokoja") {
+      if (state === "Kogi" && String(city).split(",")[0].trim().toLocaleLowerCase("en") === "lokoja") {
         return { ...tier, fee: 2000 };
       }
       return tier;
