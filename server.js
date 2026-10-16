@@ -109,7 +109,13 @@ let cached = global._palmzMongo || (global._palmzMongo = { conn: null, promise: 
 async function connectDb() {
   if (cached.conn) return cached.conn;
   if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI is not set');
-  cached.promise = cached.promise || mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
+  cached.promise = cached.promise || mongoose.connect(process.env.MONGODB_URI, {
+    serverSelectionTimeoutMS: 25000,
+    connectTimeoutMS: 20000,
+    socketTimeoutMS: 45000,
+    retryWrites: true,
+    w: 'majority',
+  });
   try {
     cached.conn = await cached.promise;
   } catch (e) {
@@ -320,8 +326,14 @@ function completeVariantStock(product) {
 }
 
 async function adjustInventoryForOrder(items, delta, reason, session, requireAvailable = false) {
-  for (const item of groupOrderItems(items)) {
-    const product = await Product.findById(item.productId).session(session);
+  const grouped = groupOrderItems(items);
+  const productIds = [...new Set(grouped.map((item) => item.productId))];
+  const products = await Product.find({ _id: { $in: productIds } }).session(session);
+  const productsById = new Map(products.map((product) => [String(product._id), product]));
+  const normalized = new Set();
+
+  for (const item of grouped) {
+    const product = productsById.get(item.productId);
     if (!product) {
       if (delta > 0) continue;
       throw bad(`Product "${item.productId}" in this order no longer exists`);
@@ -332,11 +344,12 @@ async function adjustInventoryForOrder(items, delta, reason, session, requireAva
 
     const inventory = completeVariantStock(product);
     const currentTotal = [...inventory.values()].reduce((sum, count) => sum + Number(count || 0), 0);
-    if (!product.stockByVariant || !product.stockByVariant.size || product.quantity !== currentTotal) {
+    if (!normalized.has(item.productId) && (!product.stockByVariant || !product.stockByVariant.size || product.quantity !== currentTotal)) {
       product.stockByVariant = inventory;
       product.stockBySize = {};
       product.quantity = currentTotal;
       await product.save({ session });
+      normalized.add(item.productId);
     }
 
     const variantPath = `stockByVariant.${variantStockKey(item.color, item.size)}`;

@@ -562,11 +562,11 @@
       overflow: hidden
     }
 
-    .product-image img {
+    .product-image img, .detail-img img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform .35s
+      transition: transform .35s ease, opacity .2s ease
     }
 
     .gallery-nav {
@@ -2467,6 +2467,8 @@
 
     function render() {
       if (productsLoading) return;
+      autoSlideTimers.forEach((timer) => clearInterval(timer));
+      autoSlideTimers.clear();
       if (location.pathname.startsWith("/product/")) {
         renderProductPage();
         updateCart();
@@ -2494,6 +2496,7 @@
         `<div class="empty-state">No PALMZ styles matched that search.</div>`;
       renderFilters();
       updateCart();
+      $("#products").querySelectorAll(".product-image").forEach(attachGallery);
     }
 
     function productImages(product) {
@@ -2512,22 +2515,75 @@
       return `<div class="${className}" data-product-id="${esc(product.id)}" data-image-index="0"><img src="${esc(opt(images[0] || ""))}" alt="${esc(product.name)}" loading="${loading}">${labels}${controls}</div>`;
     }
 
+    const AUTO_SLIDE_INTERVAL = 4000;
+    const autoSlideTimers = new Map();
+
+    function stopAutoSlide(gallery) {
+      const timer = autoSlideTimers.get(gallery);
+      if (timer) { clearInterval(timer); autoSlideTimers.delete(gallery); }
+    }
+    function startAutoSlide(gallery) {
+      stopAutoSlide(gallery);
+      const product = PRODUCTS.find(item => item.id === gallery.dataset.productId);
+      const images = productImages(product);
+      if (!product || images.length < 2) return;
+      autoSlideTimers.set(gallery, setInterval(() => {
+        const next = (Number(gallery.dataset.imageIndex || 0) + 1) % images.length;
+        showGalleryImage(gallery.querySelector(".gallery-dot"), next);
+      }, AUTO_SLIDE_INTERVAL));
+    }
+    function attachGallery(gallery) {
+      const img = gallery.querySelector("img");
+      if (!img) return;
+      gallery.addEventListener("mouseenter", () => stopAutoSlide(gallery));
+      gallery.addEventListener("mouseleave", () => startAutoSlide(gallery));
+      gallery.addEventListener("click", (event) => {
+        const control = event.target.closest(".gallery-nav, .gallery-dot");
+        if (!control) return;
+        stopAutoSlide(gallery);
+        startAutoSlide(gallery);
+      });
+      startAutoSlide(gallery);
+    }
+
     function showGalleryImage(button, index) {
-      const gallery = button.closest("[data-product-id]");
+      const gallery = button && button.closest ? button.closest("[data-product-id]") : null;
+      if (!gallery) return;
       const product = PRODUCTS.find(item => item.id === gallery.dataset.productId);
       const images = productImages(product);
       if (!images.length) return;
+      const current = Number(gallery.dataset.imageIndex || 0);
       const nextIndex = (index + images.length) % images.length;
-      gallery.dataset.imageIndex = nextIndex;
-      gallery.querySelector("img").src = opt(images[nextIndex]);
-      gallery.querySelectorAll(".gallery-dot").forEach((dot, dotIndex) => {
-        dot.setAttribute("aria-current", String(dotIndex === nextIndex));
-      });
+      if (nextIndex === current) return;
+      let direction = nextIndex > current ? 1 : -1;
+      if (current === images.length - 1 && nextIndex === 0) direction = 1;
+      if (current === 0 && nextIndex === images.length - 1) direction = -1;
+      const img = gallery.querySelector("img");
+      const leaveX = direction > 0 ? "-100%" : "100%";
+      const enterX = direction > 0 ? "100%" : "-100%";
+      img.style.transition = "transform .3s ease, opacity .2s ease";
+      img.style.transform = `translateX(${leaveX})`;
+      img.style.opacity = "0";
+      setTimeout(() => {
+        gallery.dataset.imageIndex = nextIndex;
+        img.src = opt(images[nextIndex]);
+        img.style.transition = "none";
+        img.style.transform = `translateX(${enterX})`;
+        img.style.opacity = "0";
+        img.getBoundingClientRect();
+        img.style.transition = "transform .35s ease, opacity .25s ease";
+        img.style.transform = "translateX(0)";
+        img.style.opacity = "1";
+        gallery.querySelectorAll(".gallery-dot").forEach((dot, dotIndex) => {
+          dot.setAttribute("aria-current", String(dotIndex === nextIndex));
+        });
+        setTimeout(() => { img.style.transition = ""; }, 400);
+      }, 300);
     }
 
     function moveGallery(button, direction) {
       const gallery = button.closest("[data-product-id]");
-      const index = Number(gallery.dataset.imageIndex) + direction;
+      const index = (Number(gallery.dataset.imageIndex || 0) + direction);
       showGalleryImage(gallery.querySelector(".gallery-dot"), index);
     }
 
@@ -2570,6 +2626,8 @@
       <div class="desc" id="variantAvailability" aria-live="polite"></div>
       <button id="addSelectedButton" class="btn btn-gold full" style="margin-top:22px" onclick="addSelected()">Add to bag &#8594;</button>
     </div>`;
+      const detailGallery = $("#productPageDetail").querySelector(".detail-img");
+      if (detailGallery) attachGallery(detailGallery);
       $("#productPageDetail").setAttribute("aria-busy", "false");
       updateVariantButton();
     }
@@ -2651,7 +2709,7 @@
       </div>
       <button class="cart-remove" onclick="removeItem(${i})">Remove</button>
     </div>`).join("") :
-        `<div class="empty-cart">Your bag is empty.<br><br>Let's fix that 😌</div>`;
+        `<div class="empty-cart">Your bag is empty.<br><br>Let's fix that</div>`;
     }
 
     function changeQty(i, d) {
