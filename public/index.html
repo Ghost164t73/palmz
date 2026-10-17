@@ -677,6 +677,9 @@
       white-space: nowrap
     }
 
+    .price-original { display:block; color:var(--muted); text-decoration:line-through; font-size:10px; font-weight:600; margin-bottom:3px }
+    .sale-tag { display:inline-block; margin-top:4px; padding:3px 6px; border-radius:3px; background:#b3261e; color:#fff; font-size:9px; letter-spacing:.06em }
+
     .sizes {
       font-size: 11px;
       color: var(--muted);
@@ -2341,6 +2344,15 @@
       return "₦" + Number(n).toLocaleString("en-NG");
     }
 
+    function discountedPrice(price) {
+      return price == null ? null : Math.round(Number(price) * 0.9 * 100) / 100;
+    }
+
+    function salePriceLabel(product) {
+      if (product.price == null) return "Price via WhatsApp";
+      return `<span class="price-original">${money(product.price)}</span>${money(discountedPrice(product.price))}<br><span class="sale-tag">10% OFF</span>`;
+    }
+
     async function loadDeliveryOptions() {
       $("#deliveryEstimate").innerHTML = '<span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading delivery options…</span>';
       try {
@@ -2401,7 +2413,7 @@
       const fulfillmentMethod = document.querySelector('input[name="fulfillmentMethod"]:checked')?.value || "delivery";
       const lines = cart.map(item => {
         const product = PRODUCTS.find(candidate => candidate.id === item.id);
-        const itemTotal = product && product.price != null ? money(product.price * item.qty) : "Price via WhatsApp";
+        const itemTotal = product && product.price != null ? money(discountedPrice(product.price) * item.qty) : "Price via WhatsApp";
         return `${item.qty} × ${esc(item.name)} — size ${esc(item.size)} — ${esc(item.color)} · ${itemTotal}`;
       });
       let deliveryLine = "Delivery: choose a state to see the delivery fee.";
@@ -2421,7 +2433,7 @@
         return product && product.price != null;
       });
       const itemTotal = allPricesKnown ? cart.reduce((total, item) =>
-        total + PRODUCTS.find(product => product.id === item.id).price * item.qty, 0) : null;
+        total + discountedPrice(PRODUCTS.find(product => product.id === item.id).price) * item.qty, 0) : null;
       const orderTotal = itemTotal == null ? "PALMZ to confirm item prices" :
         (fulfillmentMethod === "delivery" && !deliveryQuoteFor($("#deliveryState").value)
           ? "Choose a delivery state"
@@ -2485,7 +2497,7 @@
     <article class="card">
       ${galleryMarkup(p, "product-image")}
       <div class="info">
-        <div class="info-row"><div><div class="name">${esc(p.name)}</div><div class="type">${esc(p.desc)}</div></div><div class="price">${priceLabel(p)}</div></div>
+        <div class="info-row"><div><div class="name">${esc(p.name)}</div><div class="type">${esc(p.desc)}</div></div><div class="price">${salePriceLabel(p)}</div></div>
         <div class="sizes">Sizes ${p.sizeMin}–${p.sizeMax}</div>
         <div class="card-actions">
           <button class="view" onclick="openProduct('${p.id}')">View pair</button>
@@ -2622,7 +2634,7 @@
       <div class="label">COLOUR / VARIANT</div>
       <div class="options" id="colorOptions">${availableColorsMarkup(selectedProduct, selectedSize)}</div>
       <div class="label">PRICE</div>
-      <div style="font-size:13px;color:var(--gold);font-weight:900">${selectedProduct.price!=null?money(selectedProduct.price):"Confirmed on WhatsApp"}</div>
+      <div class="price">${selectedProduct.price!=null?salePriceLabel(selectedProduct):"Confirmed on WhatsApp"}</div>
       <div class="desc" id="variantAvailability" aria-live="polite"></div>
       <button id="addSelectedButton" class="btn btn-gold full" style="margin-top:22px" onclick="addSelected()">Add to bag &#8594;</button>
     </div>`;
@@ -3012,7 +3024,7 @@
       const pickupBranchLabel = fulfillmentMethod === "pickup" ? $("#pickupBranch").selectedOptions[0].textContent : "";
       const lines = cart.map(x => {
         const p = PRODUCTS.find(z => z.id === x.id);
-        return `• ${x.qty} × ${x.name} | Size ${x.size} | ${x.color}${p&&p.price!=null?` | ${money(p.price)} each`:""}`;
+        return `• ${x.qty} × ${x.name} | Size ${x.size} | ${x.color}${p&&p.price!=null?` | ${money(discountedPrice(p.price))} each (10% off ${money(p.price)})`:""}`;
       }).join("\n");
       const deliveryQuote = fulfillmentMethod === "delivery" ? deliveryQuoteFor($("#deliveryState").value, payload.city) : null;
       const deliverySummary = fulfillmentMethod === "pickup"
@@ -3105,7 +3117,7 @@ Please confirm item availability and payment details. Thank you!`;
     }
 
     function priceLabel(p) {
-      return p.price != null ? money(p.price) : "Price via WhatsApp";
+      return p.price != null ? money(discountedPrice(p.price)) : "Price via WhatsApp";
     }
 
     function badge(p) {

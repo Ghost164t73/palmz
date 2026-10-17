@@ -11,7 +11,7 @@ const { OAuth2Client } = require('google-auth-library');
 const Product = require('./models/Product');
 const Customer = require('./models/Customer');
 const Order = require('./models/Order');
-const { DELIVERY_TIERS, deliveryQuote, calculateOrderTotal } = require('./lib/delivery');
+const { DELIVERY_TIERS, deliveryQuote, calculateOrderTotal, discountedPrice } = require('./lib/delivery');
 const { groupOrderItems, variantStockKey } = require('./lib/inventory');
 const {
   expectedPaymentAmountKobo,
@@ -484,7 +484,7 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
       size,
       color,
       quantity,
-      unitPrice: product.price,
+      unitPrice: discountedPrice(product.price),
     };
   });
   const totalAmount = calculateOrderTotal(items, deliveryFee);
