@@ -39,7 +39,8 @@
     }
 
     * {
-      box-sizing: border-box
+      box-sizing: border-box;
+      transition: .2s linear;
     }
 
     html {
@@ -679,6 +680,11 @@
 
     .price-original { display:block; color:var(--muted); text-decoration:line-through; font-size:10px; font-weight:600; margin-bottom:3px }
     .sale-tag { display:inline-block; margin-top:4px; padding:3px 6px; border-radius:3px; background:#b3261e; color:#fff; font-size:9px; letter-spacing:.06em }
+
+    @media (min-width: 621px) {
+      #productPage .detail > .price { font-size: 20px; }
+      #productPage .detail > .price .price-original { font-size: 13px; }
+    }
 
     .sizes {
       font-size: 11px;
@@ -2086,7 +2092,7 @@
         <div>
           <div class="kicker">ABOUT PALMZ • EST. 2020</div>
           <h2>Simple. Distinct.<br>Made to be worn.</h2>
-          <p>PALMZ is a Kano-based footwear brand bringing together pairs with
+          <p>PALMZ is a Nigeria-based footwear brand bringing together pairs with
             a recognizable identity, from clean everyday styles to more
             detailed leather-inspired designs. Based in Karkasara, behind
             AKTH, we make it easy to find your size and order directly with us
@@ -2527,8 +2533,9 @@
       return `<div class="${className}" data-product-id="${esc(product.id)}" data-image-index="0"><img src="${esc(opt(images[0] || ""))}" alt="${esc(product.name)}" loading="${loading}">${labels}${controls}</div>`;
     }
 
-    const AUTO_SLIDE_INTERVAL = 4000;
+    const AUTO_SLIDE_INTERVAL = 5000;
     const autoSlideTimers = new Map();
+    const galleryTransitions = new WeakMap();
 
     function stopAutoSlide(gallery) {
       const timer = autoSlideTimers.get(gallery);
@@ -2564,33 +2571,48 @@
       const product = PRODUCTS.find(item => item.id === gallery.dataset.productId);
       const images = productImages(product);
       if (!images.length) return;
-      const current = Number(gallery.dataset.imageIndex || 0);
       const nextIndex = (index + images.length) % images.length;
+      const transition = galleryTransitions.get(gallery);
+      if (transition) {
+        transition.pendingIndex = nextIndex;
+        return;
+      }
+      const current = Number(gallery.dataset.imageIndex || 0);
       if (nextIndex === current) return;
-      let direction = nextIndex > current ? 1 : -1;
-      if (current === images.length - 1 && nextIndex === 0) direction = 1;
-      if (current === 0 && nextIndex === images.length - 1) direction = -1;
       const img = gallery.querySelector("img");
-      const leaveX = direction > 0 ? "-100%" : "100%";
-      const enterX = direction > 0 ? "100%" : "-100%";
-      img.style.transition = "transform .3s ease, opacity .2s ease";
-      img.style.transform = `translateX(${leaveX})`;
-      img.style.opacity = "0";
-      setTimeout(() => {
-        gallery.dataset.imageIndex = nextIndex;
-        img.src = opt(images[nextIndex]);
-        img.style.transition = "none";
-        img.style.transform = `translateX(${enterX})`;
+      const nextSrc = opt(images[nextIndex]);
+      const preload = new Image();
+      const finish = () => {
+        const state = galleryTransitions.get(gallery);
+        const queuedIndex = state?.pendingIndex;
+        galleryTransitions.delete(gallery);
+        if (queuedIndex != null && queuedIndex !== Number(gallery.dataset.imageIndex)) {
+          showGalleryImage(gallery.querySelector(".gallery-dot"), queuedIndex);
+        }
+      };
+      galleryTransitions.set(gallery, { pendingIndex: null });
+      preload.onload = () => {
+        const state = galleryTransitions.get(gallery);
+        if (!state) return;
+        img.style.transition = "opacity .24s ease";
         img.style.opacity = "0";
-        img.getBoundingClientRect();
-        img.style.transition = "transform .35s ease, opacity .25s ease";
-        img.style.transform = "translateX(0)";
-        img.style.opacity = "1";
-        gallery.querySelectorAll(".gallery-dot").forEach((dot, dotIndex) => {
-          dot.setAttribute("aria-current", String(dotIndex === nextIndex));
-        });
-        setTimeout(() => { img.style.transition = ""; }, 400);
-      }, 300);
+        setTimeout(() => {
+          img.src = nextSrc;
+          gallery.dataset.imageIndex = nextIndex;
+          gallery.querySelectorAll(".gallery-dot").forEach((dot, dotIndex) => {
+            dot.setAttribute("aria-current", String(dotIndex === nextIndex));
+          });
+          img.style.transition = "none";
+          img.getBoundingClientRect();
+          img.style.transition = "opacity .38s ease";
+          img.style.opacity = "1";
+          setTimeout(finish, 400);
+        }, 240);
+      };
+      preload.onerror = () => {
+        galleryTransitions.delete(gallery);
+      };
+      preload.src = nextSrc;
     }
 
     function moveGallery(button, direction) {
