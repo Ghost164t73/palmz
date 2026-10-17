@@ -75,6 +75,7 @@ async function notifyOrderEmail(order, event) {
 }
 
 const PICKUP_BRANCHES = {
+  'shop-tos-06': { name: 'Shop TOS-06', address: 'Block C Plaza, Tarauni shopping complex, along Government House', city: 'Kano', available: true },
   'shop-1': { name: 'Shop 1', address: 'Genesis Plaza, NTA Roundabout', city: 'Lokoja, Kogi State', available: true },
   'shop-2': { name: 'Shop 2', address: 'Dews Plaza, Phase 3', city: 'Kubwa, Abuja', available: true },
   'shop-3': { name: 'Shop 3', address: 'Location to be confirmed', city: '', available: false },
