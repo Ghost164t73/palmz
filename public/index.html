@@ -570,6 +570,10 @@
       transition: transform .35s ease, opacity .2s ease
     }
 
+    .gallery-image-link { display:block; width:100%; height:100%; }
+    .card .name a { color:inherit; text-decoration:none; }
+    .card .name a:hover {  text-decoration-color:var(--gold); text-underline-offset:3px; }
+
     .gallery-nav {
       position: absolute;
       top: 50%;
@@ -680,6 +684,10 @@
 
     .price-original { display:block; color:var(--muted); text-decoration:line-through; font-size:10px; font-weight:600; margin-bottom:3px }
     .sale-tag { display:inline-block; margin-top:4px; padding:3px 6px; border-radius:3px; background:#b3261e; color:#fff; font-size:9px; letter-spacing:.06em }
+
+    .card-price { display:flex; align-items:baseline; flex-wrap:wrap; gap:9px; margin-top:7px; color:var(--gold); font-size:14px; font-weight:900; white-space:normal }
+    .card-price .price-original { display:inline; margin:0; font-size:11px }
+    .card-price .sale-tag { margin:0; font-size:8px }
 
     @media (min-width: 621px) {
       #productPage .detail > .price { font-size: 20px; }
@@ -2359,6 +2367,11 @@
       return `<span class="price-original">${money(product.price)}</span>${money(discountedPrice(product.price))}<br><span class="sale-tag">10% OFF</span>`;
     }
 
+    function cardPriceLabel(product) {
+      if (product.price == null) return "Price via WhatsApp";
+      return `<span class="price-original">${money(product.price)}</span><span>${money(discountedPrice(product.price))}</span><span class="sale-tag">10% OFF</span>`;
+    }
+
     async function loadDeliveryOptions() {
       $("#deliveryEstimate").innerHTML = '<span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading delivery options…</span>';
       try {
@@ -2503,7 +2516,8 @@
     <article class="card">
       ${galleryMarkup(p, "product-image")}
       <div class="info">
-        <div class="info-row"><div><div class="name">${esc(p.name)}</div><div class="type">${esc(p.desc)}</div></div><div class="price">${salePriceLabel(p)}</div></div>
+        <div class="name"><a href="/product/${encodeURIComponent(p.id)}">${esc(p.name)}</a></div>
+        <div class="card-price">${cardPriceLabel(p)}</div>
         <div class="sizes">Sizes ${p.sizeMin}–${p.sizeMax}</div>
         <div class="card-actions">
           <button class="view" onclick="openProduct('${p.id}')">View pair</button>
@@ -2526,11 +2540,14 @@
       const loading = className === "product-image" ? "lazy" : "eager";
       const labels = className === "product-image" ?
         `<span class="tag">${esc(product.type)}</span>${badge(product)}` : "";
+      const image = `<img src="${esc(opt(images[0] || ""))}" alt="${esc(product.name)}" loading="${loading}">`;
+      const linkedImage = className === "product-image" ?
+        `<a class="gallery-image-link" href="/product/${encodeURIComponent(product.id)}" aria-label="View ${esc(product.name)} details">${image}</a>` : image;
       const controls = images.length > 1 ? `
         <button class="gallery-nav gallery-prev" type="button" aria-label="Previous ${esc(product.name)} photo" onclick="moveGallery(this,-1)">&#8249;</button>
         <button class="gallery-nav gallery-next" type="button" aria-label="Next ${esc(product.name)} photo" onclick="moveGallery(this,1)">&#8250;</button>
         <div class="gallery-dots">${images.map((_, index) => `<button class="gallery-dot" type="button" aria-label="Show photo ${index + 1} of ${images.length}" aria-current="${index === 0}" onclick="showGalleryImage(this,${index})"></button>`).join("")}</div>` : "";
-      return `<div class="${className}" data-product-id="${esc(product.id)}" data-image-index="0"><img src="${esc(opt(images[0] || ""))}" alt="${esc(product.name)}" loading="${loading}">${labels}${controls}</div>`;
+      return `<div class="${className}" data-product-id="${esc(product.id)}" data-image-index="0">${linkedImage}${labels}${controls}</div>`;
     }
 
     const AUTO_SLIDE_INTERVAL = 5000;
