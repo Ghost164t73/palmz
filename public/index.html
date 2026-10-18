@@ -19,6 +19,7 @@
       "/checkout": "Checkout — PALMZ",
       "/about": "About PALMZ",
       "/contact": "Contact PALMZ",
+      "/customize": "Customize your shoe — PALMZ",
       "/product": "Product details — PALMZ"
     })[page] || "PALMZ — Footwear";
   </script>
@@ -885,6 +886,28 @@
     #contactPage{display:none;padding:clamp(34px,6vw,68px) 0 76px}
     html[data-page="/contact"] #contactPage{display:block}
     html[data-page="/contact"] .hero,html[data-page="/contact"] #shop,html[data-page="/contact"] #productPage,html[data-page="/contact"] #story,html[data-page="/contact"] #order{display:none}
+    #customizePage{display:none;padding:clamp(34px,6vw,68px) 0 76px}
+    html[data-page="/customize"] #customizePage{display:block}
+    html[data-page="/customize"] .hero,html[data-page="/customize"] #shop,html[data-page="/customize"] #productPage,html[data-page="/customize"] #story,html[data-page="/customize"] #order,html[data-page="/customize"] #contactPage,html[data-page="/customize"] #cartPageHeading,html[data-page="/customize"] footer{display:none}
+    .customize-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.75fr);gap:28px;align-items:start}
+    .customize-panel{padding:clamp(22px,4vw,38px);border:1px solid var(--line);background:var(--surface);box-shadow:0 16px 40px rgba(17,20,28,.07)}
+    .customize-intro{margin-bottom:22px;color:var(--muted);line-height:1.7}
+    .customize-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .customize-fields label{display:block;color:var(--muted);font-size:13px;font-weight:700;line-height:1.5}
+    .customize-fields input,.customize-fields textarea,.customize-fields select{width:100%;margin-top:6px;padding:13px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--text);font:inherit;font-size:15px}
+    .customize-fields textarea{min-height:115px;resize:vertical}
+    .customize-fields .customize-wide{grid-column:1/-1}
+    .customize-trap{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important}
+    .customize-note{color:var(--muted);font-size:12px;line-height:1.6}
+    #customizeStatus{display:none;margin-bottom:16px;padding:13px;border:1px solid var(--line);line-height:1.5}
+    #customizeStatus[data-kind="success"]{display:block;border-color:#287b4b;background:#eff8f1;color:#21663e}
+    #customizeStatus[data-kind="error"]{display:block;border-color:#b3261e;background:#fff1ef;color:#8c2019}
+    #customizePreview{display:none;max-width:100%;max-height:280px;margin-top:12px;object-fit:contain;border:1px solid var(--line)}
+    .customize-aside{padding:26px;background:var(--navy);color:#fff}
+    .customize-aside h2{margin:0 0 12px;color:var(--gold);font:700 26px Georgia,serif}
+    .customize-aside p,.customize-aside li{color:#e2e4e9;font-size:13px;line-height:1.8}
+    @media(max-width:760px){.customize-layout{grid-template-columns:1fr}.customize-aside{order:-1}}
+    @media(max-width:520px){.customize-fields{grid-template-columns:1fr}.customize-fields .customize-wide{grid-column:auto}}
     .contact-intro{position:relative;isolation:isolate;overflow:hidden;min-height:365px;display:flex;flex-direction:column;justify-content:center;margin-bottom:26px;padding:clamp(32px,6vw,68px);border-radius:28px;background:linear-gradient(112deg,#0c1227 0%,#141f3d 62%,#263454 100%);box-shadow:0 24px 60px rgba(12,18,39,.2)}
     .contact-intro::before{content:"P";position:absolute;z-index:-1;right:15%;top:50%;width:210px;height:210px;display:grid;place-items:center;transform:translateY(-50%);border:1px solid rgba(201,163,74,.65);border-radius:50%;color:rgba(201,163,74,.8);font:700 130px/1 Georgia,serif;text-shadow:0 0 40px rgba(201,163,74,.22)}
     .contact-intro::after{content:"";position:absolute;z-index:-2;right:5%;top:50%;width:410px;height:410px;transform:translateY(-50%);border:1px solid rgba(255,255,255,.12);border-radius:50%;box-shadow:0 0 0 34px rgba(255,255,255,.025),0 0 0 78px rgba(255,255,255,.02),inset 0 0 70px rgba(201,163,74,.08)}
@@ -1956,6 +1979,7 @@
         <nav class="navlinks" id="mainNav">
           <a href="/shop">Shop</a>
           <a href="/about">About</a>
+          <a href="/customize">Customize a shoe</a>
           <a href="/contact">Contact</a>
           <a href="/#order">How to order</a>
           <button class="account-menu-button" type="button" onclick="openCustomerAccount()">
@@ -2145,6 +2169,40 @@
         <article class="branch-card"><small>Shop TOS-06</small><h3>Block C Plaza</h3><p>Tarauni shopping complex,<br>along Government House, Kano</p><span class="branch-status">Pickup available</span></article>
         <article class="branch-card"><small>Shop AO2 . Abuja</small><h3>Dews Plaza</h3><p>Phase 3,<br>Kubwa, Abuja</p><span class="branch-status">Pickup available</span></article>
         <article class="branch-card"><small>Shop 1 · Lokoja</small><h3>Genesis Plaza</h3><p>NTA Roundabout,<br>Lokoja, Kogi State, Nigeria</p><span class="branch-status">Pickup available</span></article>
+      </div>
+    </main>
+
+    <main class="container" id="customizePage">
+      <div class="customize-layout">
+        <section class="customize-panel">
+          <div class="kicker">MADE A LITTLE MORE YOU</div>
+          <h1 style="margin:10px 0;font:700 clamp(34px,5vw,48px) Georgia,serif">Customize your shoe</h1>
+          <p class="customize-intro">Tell us what you have in mind. You can attach a reference image, and our team will email you to discuss the design. This is a design request, not an order or payment.</p>
+          <div id="customizeStatus" role="status" aria-live="polite"></div>
+          <form id="customizeForm" class="customize-fields" onsubmit="submitCustomizationRequest(event)">
+            <label>Your name *<input name="name" required maxlength="100" autocomplete="name" placeholder="Full name"></label>
+            <label>Email address *<input name="email" required maxlength="254" type="email" autocomplete="email" placeholder="you@example.com"></label>
+            <label>Phone / WhatsApp *<input name="phone" required maxlength="40" type="tel" autocomplete="tel" placeholder="080..."></label>
+            <label>Shoe style *<input name="shoeStyle" required maxlength="100" placeholder="e.g. slides, sneakers, sandals"></label>
+            <label>Size *<input name="size" required maxlength="40" placeholder="Your size or size range"></label>
+            <label>Preferred colors<input name="colors" maxlength="120" placeholder="e.g. black and cream"></label>
+            <label>Material or finish<input name="material" maxlength="160" placeholder="e.g. leather, suede, matte"></label>
+            <label>Budget range (optional)<input name="budget" maxlength="80" placeholder="Your approximate budget"></label>
+            <label>Date needed by (optional)<input name="neededBy" type="date"></label>
+            <label class="customize-wide">Describe your design *<textarea name="details" required minlength="10" maxlength="3000" placeholder="Describe the shape, colors, sole, patterns, lettering, or other details you want."></textarea></label>
+            <label class="customize-wide">Reference image (optional, JPG, PNG or WebP; up to 3 MB)<input id="customizeImage" name="referenceImage" type="file" accept="image/jpeg,image/png,image/webp"><img id="customizePreview" alt="Preview of your reference image"></label>
+            <label class="customize-wide">What should we notice in the image? (optional)<textarea name="imageDescription" maxlength="500" placeholder="Point out the colors, shape, or details you want us to use."></textarea></label>
+            <label class="customize-trap" aria-hidden="true">Leave this field empty<input name="website" tabindex="-1" autocomplete="off"></label>
+            <p class="customize-note customize-wide">Your reference image and design details will be sent to the PALMZ team by email so they can follow up with you.</p>
+            <button class="btn btn-gold customize-wide" id="customizeSubmit" type="submit">Send customization request</button>
+          </form>
+        </section>
+        <aside class="customize-aside">
+          <h2>What helps us make it right?</h2>
+          <p>Share as much detail as you can. A clear reference image is useful, but it’s optional.</p>
+          <ul><li>Your usual shoe size and fit preference</li><li>Colors, materials, sole, patterns, and placement of details</li><li>A target budget or the date you need it by</li></ul>
+          <p>We’ll review your idea and contact you to discuss availability, timing, and pricing.</p>
+        </aside>
       </div>
     </main>
 
@@ -3110,6 +3168,60 @@ Please confirm item availability and payment details. Thank you!`;
       closeCheckout();
       showToast(customer ? "Order request saved to your account" : "Order request sent to PALMZ");
     }
+
+    async function submitCustomizationRequest(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const status = $("#customizeStatus");
+      const button = $("#customizeSubmit");
+      const file = $("#customizeImage").files[0];
+      if (file && file.size > 3 * 1024 * 1024) {
+        status.dataset.kind = "error";
+        status.textContent = "Reference image must be under 3 MB.";
+        status.style.display = "block";
+        return;
+      }
+      status.style.display = "none";
+      status.textContent = "";
+      button.disabled = true;
+      button.textContent = "Sending request…";
+      try {
+        const response = await fetch("/api/customize", { method: "POST", body: new FormData(form) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || "We could not send your request. Please try again.");
+        status.dataset.kind = "success";
+        status.textContent = "Thanks — your customization request has been sent to PALMZ. The team will contact you to discuss it.";
+        status.style.display = "block";
+        form.reset();
+        $("#customizePreview").removeAttribute("src");
+        $("#customizePreview").style.display = "none";
+      } catch (error) {
+        status.dataset.kind = "error";
+        status.textContent = error.message || "We could not send your request. Please try again.";
+        status.style.display = "block";
+      } finally {
+        button.disabled = false;
+        button.textContent = "Send customization request";
+      }
+    }
+
+    $("#customizeImage").addEventListener("change", event => {
+      const file = event.currentTarget.files[0];
+      const preview = $("#customizePreview");
+      if (!file) { preview.removeAttribute("src"); preview.style.display = "none"; return; }
+      if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
+        event.currentTarget.value = "";
+        showToast("Choose a JPG, PNG, or WebP image");
+        return;
+      }
+      if (file.size > 3 * 1024 * 1024) {
+        event.currentTarget.value = "";
+        showToast("Reference image must be under 3 MB");
+        return;
+      }
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = "block";
+    });
 
     function openWhatsApp(message) {
       if (!WHATSAPP_NUMBER) {
