@@ -1978,6 +1978,7 @@
     
         <nav class="navlinks" id="mainNav">
           <a href="/shop">Shop</a>
+          <a href="/shop?category=Foreign%20Footwear">Foreign footwear</a>
           <a href="/about">About</a>
           <a href="/contact">Contact</a>
           <a href="/#order">How to order</a>
@@ -2360,7 +2361,10 @@
     let deliveryOptionsPromise = Promise.resolve(false);
     let paymentReturnStatus = new URLSearchParams(location.search).get("payment");
     let paymentSuccessReference = new URLSearchParams(location.search).get("reference") || "";
-    let filter = "All";
+    const FOREIGN_FOOTWEAR_CATEGORY = "Foreign Footwear";
+    let filter = new URLSearchParams(location.search).get("category") === FOREIGN_FOOTWEAR_CATEGORY
+      ? FOREIGN_FOOTWEAR_CATEGORY
+      : "All";
     let cart = [];
     try {
       cart = JSON.parse(localStorage.getItem("palmz_cart_v3") || "[]");
@@ -2540,7 +2544,7 @@
     }
 
     function categories() {
-      return ["All", ...new Set(PRODUCTS.map(p => p.type))];
+      return ["All", ...new Set([...PRODUCTS.map(p => p.type), FOREIGN_FOOTWEAR_CATEGORY])];
     }
 
     function renderFilters() {
@@ -2583,7 +2587,9 @@
         </div>
       </div>
     </article>`).join("") :
-        `<div class="empty-state">No PALMZ styles matched that search.</div>`;
+        filter === FOREIGN_FOOTWEAR_CATEGORY && !q
+          ? `<div class="empty-state">Our Foreign Footwear collection is coming soon. Check back for new arrivals.</div>`
+          : `<div class="empty-state">No PALMZ styles matched that search.</div>`;
       renderFilters();
       updateCart();
       $("#products").querySelectorAll(".product-image").forEach(attachGallery);

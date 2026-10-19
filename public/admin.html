@@ -143,7 +143,7 @@ table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;
     </label>
     <label>Name<input id="name" required maxlength="80" placeholder="e.g. Signature Cross"></label>
     <div class="two">
-      <label>Category <span class="hint">(used for the store filters)</span><input id="type" list="types" maxlength="40" placeholder="e.g. Cross Strap"><datalist id="types"></datalist></label>
+      <label>Category <span class="hint">(used for the store filters; choose Foreign Footwear for imported styles)</span><input id="type" list="types" maxlength="40" placeholder="e.g. Cross Strap"><datalist id="types"></datalist></label>
       <label>Price (₦) <span class="hint">(leave empty = "Price via WhatsApp")</span><input id="price" type="number" min="0" step="1"></label>
     </div>
     <label>Description<textarea id="desc" rows="2" maxlength="400"></textarea></label>
@@ -226,8 +226,9 @@ function badge(s){return `<span class="chip ${s==='In stock'?'ok':s==='Low stock
 function render(){
  const sum=products.reduce((a,p)=>a+total(p),0);
  $("#stats").innerHTML=`<div class="stat"><b>${products.length}</b><span>Products</span></div><div class="stat"><b>${sum}</b><span>Pairs available</span></div><div class="stat"><b>${products.filter(p=>stockStatus(p)==='Low stock').length}</b><span>Low stock</span></div><div class="stat"><b>${products.filter(p=>stockStatus(p)==='Sold out').length}</b><span>Sold out</span></div>`;
- $("#types").innerHTML=[...new Set(products.map(p=>p.type))].map(t=>`<option value="${esc(t)}">`).join("");
- const sel=$("#category"), old=sel.value;sel.innerHTML='<option value="">All categories</option>'+[...new Set(products.map(p=>p.type))].map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');sel.value=old;
+ const categories=[...new Set([...products.map(p=>p.type),'Foreign Footwear'])];
+ $("#types").innerHTML=categories.map(t=>`<option value="${esc(t)}">`).join("");
+ const sel=$("#category"), old=sel.value;sel.innerHTML='<option value="">All categories</option>'+categories.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');sel.value=old;
  renderTable(); if(selectedId&&products.some(p=>p.id===selectedId))renderDetail(products.find(p=>p.id===selectedId));else{$("#detail").classList.remove('open');selectedId=null}
 }
 function renderTable(){

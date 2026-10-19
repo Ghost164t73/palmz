@@ -37,6 +37,9 @@ Delivery is ₦5,000 across zones, with ₦2,000 rates for Kano, FCT (Abuja), an
 ## Product photos
 In `/admin`, upload up to 12 JPG, PNG, or WebP photos per product (4 MB total). Photos appear in upload order in the storefront image slider. When editing a product, selecting new photos replaces its current gallery; leaving the photo field empty keeps the existing gallery.
 
+## Foreign footwear
+Add imported pairs in `/admin` and set their category to **Foreign Footwear**. They will appear in the Foreign footwear shop section and category filter; that section is also available before any imported pairs have been added.
+
 ## Customer accounts
 Guest checkout remains available. To enable optional Google sign-in, set `GOOGLE_CLIENT_ID` to a Google OAuth 2.0 web client ID and configure its authorized JavaScript origins for the local site and deployed domain. Keep `JWT_SECRET` set for signed customer sessions. Signed-in customers can see checkout requests in their account; requests are saved as pending confirmation when sent to WhatsApp, and are not confirmed sales or stock reservations.
 
