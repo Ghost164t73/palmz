@@ -44,6 +44,10 @@ body.menu-open{overflow:hidden}
 .login p{color:var(--muted);font-size:13px;margin:0 0 18px}
 input,textarea,select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--surface2);color:var(--text);outline:none}
 input:focus,textarea:focus,select:focus{border-color:var(--gold)}
+input[type="file"]{min-height:52px;padding:7px;border-style:dashed;cursor:pointer;font-size:13px}
+input[type="file"]::file-selector-button{margin-right:12px;padding:10px 14px 10px 36px;border:0;border-radius:8px;background-color:var(--navy);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e5c66f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4m-4 4 4-4 4 4'/%3E%3Cpath d='M20 16v4H4v-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:12px center;background-size:17px;color:#fff;font:700 12px system-ui,sans-serif;cursor:pointer;transition:background-color .18s ease}
+input[type="file"]::file-selector-button:hover{background-color:#202b49}
+input[type="file"]:focus-visible{outline:3px solid rgba(201,163,74,.48);outline-offset:2px}
 label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-top:12px}
 label input,label textarea,label select{margin-top:5px;font-weight:400;color:var(--text)}
 .err{color:var(--red);font-size:12px;min-height:16px;margin-top:10px}

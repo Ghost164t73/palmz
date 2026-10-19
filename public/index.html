@@ -119,6 +119,7 @@
       gap: 10px;
       font-weight: 900;
       letter-spacing: .2em;
+      /* color : var(--gold); */
       font-size: 17px;
       font-family: 'Playfair Display';
     }
@@ -133,8 +134,7 @@
       display: flex;
       gap: 28px;
       font-size: 13px;
-      text-transform: uppercase;
-      color: var(--muted)
+      /* text-transform: uppercase; */
     }
 
     .navlinks a:hover {
@@ -899,6 +899,10 @@
     .customize-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
     .customize-fields label{display:block;color:var(--muted);font-size:13px;font-weight:700;line-height:1.5}
     .customize-fields input,.customize-fields textarea,.customize-fields select{width:100%;margin-top:6px;padding:13px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--text);font:inherit;font-size:15px}
+    .customize-fields input[type="file"]{min-height:54px;padding:7px;border-style:dashed;cursor:pointer;font-size:13px}
+    .customize-fields input[type="file"]::file-selector-button{margin-right:12px;padding:10px 14px 10px 36px;border:0;border-radius:7px;background-color:var(--navy);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e5c66f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4m-4 4 4-4 4 4'/%3E%3Cpath d='M20 16v4H4v-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:12px center;background-size:17px;color:#fff;font:700 12px system-ui,sans-serif;cursor:pointer;transition:background-color .18s ease}
+    .customize-fields input[type="file"]::file-selector-button:hover{background-color:#202b49}
+    .customize-fields input[type="file"]:focus-visible{outline:3px solid color-mix(in srgb,var(--gold) 48%,transparent);outline-offset:2px}
     .customize-fields textarea{min-height:115px;resize:vertical}
     .customize-fields .customize-wide{grid-column:1/-1}
     .customize-trap{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important}
