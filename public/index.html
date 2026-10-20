@@ -1188,7 +1188,7 @@
     .detail-img {
       height: 400px;
       position: relative;
-      border-radius: 0;
+      border-radius: 20px;
       overflow: hidden;
       background: #eeeae1
     }
@@ -2804,7 +2804,9 @@
     }
 
     function categories() {
-      return ["All", ...new Set([...PRODUCTS.map(p => p.type), FOREIGN_FOOTWEAR_CATEGORY])];
+      const productCategories = [...new Set(PRODUCTS.map(p => p.type))]
+        .filter(category => category !== FOREIGN_FOOTWEAR_CATEGORY);
+      return ["All", FOREIGN_FOOTWEAR_CATEGORY, ...productCategories];
     }
 
     function renderFilters() {
