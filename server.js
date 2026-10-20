@@ -24,8 +24,29 @@ const ORDER_EMAIL_EVENTS = new Set([
   'admin_new_order',
   'paystack_receipt',
   'status_confirmed',
+  'status_preparing',
+  'status_dispatched',
+  'status_out_for_delivery',
+  'status_delivered',
   'status_fulfilled',
+  'late_payment_after_cancellation',
+  'admin_late_payment_after_cancellation',
 ]);
+const SALES_STATUSES = ['confirmed', 'preparing', 'dispatched', 'out_for_delivery', 'delivered', 'fulfilled'];
+const NEXT_ORDER_STATUSES = {
+  pending_confirmation: ['confirmed', 'cancelled'],
+  confirmed: ['preparing', 'fulfilled', 'cancelled'],
+  preparing: ['dispatched', 'fulfilled', 'cancelled'],
+  dispatched: ['out_for_delivery'],
+  out_for_delivery: ['delivered'],
+  delivered: [],
+  fulfilled: [],
+  cancelled: [],
+};
+const RESERVATION_HOLD_MS = {
+  paystack: 2 * 60 * 60 * 1000,
+  whatsapp: 24 * 60 * 60 * 1000,
+};
 function safeEmailError(error) {
   return String(error && error.message || 'Unknown email error')
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
@@ -364,7 +385,7 @@ app.get('/api/customer/rewards', requireCustomer, async (req, res) => {
   const orders = await Order.find({
     customer: req.customerId,
     paymentStatus: 'paid',
-    status: { $in: ['confirmed', 'fulfilled'] },
+    status: { $in: SALES_STATUSES },
   }).select('items createdAt').sort({ createdAt: 1 }).lean();
   const pairPrices = [];
   for (const order of orders) {
@@ -398,6 +419,20 @@ app.get('/api/customer/rewards', requireCustomer, async (req, res) => {
     newlyEarned,
     rewardPriceLimit,
   });
+});
+app.get('/api/cron/expire-order-reservations', async (req, res) => {
+  const secret = process.env.CRON_SECRET || '';
+  const authorization = req.get('authorization') || '';
+  const expected = `Bearer ${secret}`;
+  if (!secret) return res.status(503).json({ error: 'CRON_SECRET is not configured' });
+  const providedBuffer = Buffer.from(authorization);
+  const expectedBuffer = Buffer.from(expected);
+  if (providedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(providedBuffer, expectedBuffer)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  res.set('Cache-Control', 'no-store');
+  const expiredReservations = await expireOrderReservations();
+  res.json({ expiredReservations });
 });
 const guestOrderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
 const paystackOrderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
@@ -508,9 +543,50 @@ async function releaseOrderReservation(orderId, {
     order.inventoryReserved = false;
     if (paymentStatus) order.paymentStatus = paymentStatus;
     order.status = 'cancelled';
+    order.statusUpdatedAt = new Date();
     await order.save({ session });
     released = true;
   });
+  return released;
+}
+
+async function expireOrderReservations(now = new Date(), limit = 100) {
+  const reservations = await Order.find({
+    status: 'pending_confirmation',
+    paymentStatus: { $in: ['pending', 'not_started'] },
+    inventoryReserved: true,
+    inventoryDeducted: { $ne: true },
+    reservationExpiresAt: { $lte: now },
+  }).sort({ reservationExpiresAt: 1 }).limit(limit).select('_id').lean();
+  let released = 0;
+  for (const candidate of reservations) {
+    try {
+      const didRelease = await mongoose.connection.transaction(async (session) => {
+        const order = await Order.findOne({
+          _id: candidate._id,
+          status: 'pending_confirmation',
+          paymentStatus: { $in: ['pending', 'not_started'] },
+          inventoryReserved: true,
+          inventoryDeducted: { $ne: true },
+          reservationExpiresAt: { $lte: now },
+        }).session(session);
+        if (!order) return false;
+        await adjustInventoryForOrder(order.items, 1, 'expired order reservation returned', session);
+        order.inventoryReserved = false;
+        order.status = 'cancelled';
+        order.statusUpdatedAt = now;
+        order.cancellationReason = 'reservation_expired';
+        order.reservationExpiresAt = null;
+        await order.save({ session });
+        return true;
+      });
+      if (didRelease) released += 1;
+    } catch (error) {
+      console.error('Could not release expired order reservation', {
+        orderId: String(candidate._id), message: error.message,
+      });
+    }
+  }
   return released;
 }
 
@@ -608,14 +684,17 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
     items,
     paymentProvider,
     paymentStatus: paymentProvider === 'paystack' ? 'pending' : 'not_started',
+    reservationExpiresAt: new Date(Date.now() + RESERVATION_HOLD_MS[paymentProvider]),
   };
 }
 app.post('/api/orders', guestOrderLimiter, async (req, res) => {
+  await expireOrderReservations();
   const order = await createReservedOrder(new Order(await orderContact(req.body || {})));
   await notifyOrderEmail(order, 'admin_new_order');
   res.status(201).json({ order: { id: String(order._id), status: order.status } });
 });
 app.post('/api/customer/orders', requireCustomer, async (req, res) => {
+  await expireOrderReservations();
   const customer = await Customer.findById(req.customerId);
   if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
   const order = await createReservedOrder(new Order(await orderContact(req.body || {}, customer)));
@@ -653,6 +732,7 @@ async function createPaystackOrder(req, account = null) {
     });
   }
 
+  await expireOrderReservations();
   const orderData = await orderContact(req.body || {}, account, 'paystack');
   if (orderData.items.some((item) => item.unitPrice == null)) {
     throw bad('Online payment is unavailable for an item without a set price. Choose WhatsApp checkout instead.');
@@ -732,6 +812,7 @@ async function verifyPaystackTransaction(reference) {
   if (!order) throw new Error('Paystack reference does not match an order');
   if (order.paymentStatus === 'refunded') return order.paymentStatus;
   if (order.paymentStatus === 'paid') {
+    if (order.status === 'cancelled') return 'paid_after_cancellation';
     await Promise.all([
       notifyOrderEmail(order, 'admin_new_order'),
       notifyOrderEmail(order, 'paystack_receipt'),
@@ -761,6 +842,7 @@ async function applyPaystackTransaction(order, transaction, reference) {
   if (transaction.status === 'success') {
     const paidOrder = await Order.findOneAndUpdate({
       _id: order._id,
+      status: { $ne: 'cancelled' },
       paymentStatus: { $nin: ['paid', 'refunded'] },
     }, {
       $set: {
@@ -769,8 +851,30 @@ async function applyPaystackTransaction(order, transaction, reference) {
         paystackFeeKobo: Number(transaction.amount) - expectedPaymentAmountKobo(order),
       },
     }, { new: true });
-    const currentOrder = paidOrder || await Order.findById(order._id);
+    let currentOrder = paidOrder || await Order.findById(order._id);
+    if (!paidOrder && currentOrder && currentOrder.status === 'cancelled' && currentOrder.paymentStatus !== 'paid') {
+      currentOrder = await Order.findOneAndUpdate({
+        _id: currentOrder._id,
+        status: 'cancelled',
+        paymentStatus: { $nin: ['paid', 'refunded'] },
+      }, { $set: {
+        paymentStatus: 'paid',
+        paidAmountKobo: Number(transaction.amount),
+        paystackFeeKobo: Number(transaction.amount) - expectedPaymentAmountKobo(order),
+      } }, { new: true }) || await Order.findById(order._id);
+      if (currentOrder && currentOrder.paymentStatus === 'paid') {
+        console.error('Paystack payment arrived after the order reservation expired; manual follow-up required', {
+          orderId: String(currentOrder._id),
+        });
+        await Promise.all([
+          notifyOrderEmail(currentOrder, 'admin_late_payment_after_cancellation'),
+          notifyOrderEmail(currentOrder, 'late_payment_after_cancellation'),
+        ]);
+        return 'paid_after_cancellation';
+      }
+    }
     if (currentOrder && currentOrder.paymentStatus === 'paid') {
+      if (currentOrder.status === 'cancelled') return 'paid_after_cancellation';
       await Promise.all([
         notifyOrderEmail(currentOrder, 'admin_new_order'),
         notifyOrderEmail(currentOrder, 'paystack_receipt'),
@@ -807,6 +911,9 @@ app.get('/paystack/callback', async (req, res) => {
     const paymentStatus = await verifyPaystackTransaction(reference);
     if (paymentStatus === 'paid') {
       return res.redirect(`/checkout?payment=success&reference=${encodeURIComponent(reference)}`);
+    }
+    if (paymentStatus === 'paid_after_cancellation') {
+      return res.redirect(`/checkout?payment=paid_after_cancellation&reference=${encodeURIComponent(reference)}`);
     }
     if (paymentStatus === 'failed') return res.redirect('/checkout?payment=failed');
     return res.redirect('/checkout?payment=pending');
@@ -858,6 +965,7 @@ app.post('/api/paystack/webhook', async (req, res) => {
 
 // ---------- Admin order management ----------
 app.get('/api/admin/orders', requireAdmin, async (req, res) => {
+  await expireOrderReservations();
   const filter = {};
   if (req.query.status && req.query.status !== 'all') {
     if (!Order.ORDER_STATUSES.includes(req.query.status)) throw bad('Unknown order status');
@@ -867,9 +975,11 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   res.json({ orders, statuses: Order.ORDER_STATUSES });
 });
 app.patch('/api/admin/orders/:id/payment', requireAdmin, async (req, res) => {
+  await expireOrderReservations();
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Order not found' });
   const order = await Order.findById(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
+  if (order.status === 'cancelled') throw bad('A cancelled order cannot be marked as paid');
   if (order.paymentProvider !== 'whatsapp') {
     throw bad('Manual payment recording is only available for WhatsApp orders');
   }
@@ -902,10 +1012,11 @@ app.patch('/api/admin/orders/:id/payment', requireAdmin, async (req, res) => {
   res.json({ order: order.toObject() });
 });
 app.get('/api/admin/sales', requireAdmin, async (req, res) => {
+  await expireOrderReservations();
   const orders = await Order.find({
     $or: [
       { 'salesHistory.0': { $exists: true } },
-      { status: { $in: ['confirmed', 'fulfilled'] } },
+      { status: { $in: SALES_STATUSES } },
     ],
   }).sort({ createdAt: -1 }).select('customerName email status items salesHistory createdAt updatedAt').lean();
   const sales = [];
@@ -921,7 +1032,7 @@ app.get('/api/admin/sales', requireAdmin, async (req, res) => {
         items: event.items, reversed: Boolean(reversal), reversedAt: reversal && reversal.createdAt,
       });
     });
-    if (!recordedSales.length && ['confirmed', 'fulfilled'].includes(order.status)) {
+    if (!recordedSales.length && SALES_STATUSES.includes(order.status)) {
       sales.push({
         id: `legacy-${order._id}`, orderId: String(order._id), customerName: order.customerName,
         email: order.email, status: order.status, soldAt: order.updatedAt || order.createdAt,
@@ -937,12 +1048,18 @@ app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
   const status = req.body && req.body.status;
   if (!Order.ORDER_STATUSES.includes(status)) throw bad('Choose a valid order status');
   let order;
-  const approved = ['confirmed', 'fulfilled'].includes(status);
+  const approved = SALES_STATUSES.includes(status);
   await mongoose.connection.transaction(async (session) => {
     order = await Order.findById(req.params.id).session(session);
     if (!order) throw Object.assign(new Error('Order not found'), { status: 404, expose: true });
+    if (!NEXT_ORDER_STATUSES[order.status]?.includes(status)) {
+      throw bad(`Move this order forward from ${order.status.replaceAll('_', ' ')}; cancelled and completed orders cannot be reopened.`);
+    }
+    if (order.fulfillmentMethod === 'pickup' && ['dispatched', 'out_for_delivery', 'delivered'].includes(status)) {
+      throw bad('Use Preparing and Fulfilled statuses for pickup orders.');
+    }
     if (approved && order.paymentProvider === 'paystack' && order.paymentStatus !== 'paid') {
-      throw bad('A Paystack order must be paid before it can be confirmed or fulfilled');
+      throw bad('A Paystack order must be paid before processing can continue');
     }
 
     if (approved && !order.inventoryDeducted) {
@@ -969,9 +1086,12 @@ app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
     }
 
     order.status = status;
+    order.statusUpdatedAt = new Date();
+    if (status !== 'pending_confirmation') order.reservationExpiresAt = null;
+    order.cancellationReason = '';
     await order.save({ session });
   });
-  if (status === 'confirmed' || status === 'fulfilled') {
+  if (SALES_STATUSES.includes(status)) {
     await notifyOrderEmail(order, `status_${status}`);
   }
   res.json({ order: order.toObject() });
@@ -1014,6 +1134,7 @@ function validId(req, res, next) {
 
 // ---------- Public API ----------
 app.get('/api/products', async (req, res) => {
+  await expireOrderReservations();
   const products = await Product.find().sort({ createdAt: 1 });
   res.set('Cache-Control', 'no-store');
   res.json({ products, whatsapp: process.env.WHATSAPP_NUMBER || '' });

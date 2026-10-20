@@ -126,7 +126,73 @@
       .top-actions { gap: 8px }
     }
   </style>
-</head>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080d19;
+      --surface: #101a2b;
+      --surface2: #172338;
+      --text: #eef3fb;
+      --muted: #91a1b8;
+      --line: rgba(148,163,184,.16);
+      --navy: #0b1322;
+      --gold: #c9a34a;
+      --red: #fb6b73;
+      --green: #23c879
+    }
+    body { background: var(--bg); color: var(--text) }
+    .wrap { width: min(1320px, calc(100% - 48px)) }
+    .top { background: #0d1524; border-bottom: 1px solid var(--line) }
+    .top .wrap { min-height: 72px }
+    .menu-toggle { border-radius: 16px; background: var(--surface); border-color: var(--line) }
+    .admin-drawer { background: #101a2b }
+    .drawer-links a[aria-current="page"] { background: rgba(201,163,74,.16) }
+    main { padding-top: 36px }
+    h1 { color: var(--text) }
+    .muted { color: var(--muted) }
+    .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px }
+    .stat { min-height: 116px; display: flex; flex-direction: column; justify-content: space-between; border-radius: 20px; background: #101a2b }
+    .stat b { color: var(--text); font-size: 28px }
+    .stat span { color: #a6b4c8; font-size: 12px }
+    .stat:nth-child(4n+1) { background: #102622; border-color: rgba(35,200,121,.2) }
+    .stat:nth-child(4n+2) { background: #102438; border-color: rgba(56,189,248,.2) }
+    .stat:nth-child(4n+3) { background: #1a1d3b; border-color: rgba(139,92,246,.22) }
+    .stat:nth-child(4n) { background: #271e2e; border-color: rgba(251,107,115,.2) }
+    #refreshOrders { border-color: var(--gold); background: var(--gold); color: #171208; box-shadow: 0 8px 22px rgba(201,163,74,.16) }
+    #refreshOrders:hover:not(:disabled) { background: #d8b85f; box-shadow: 0 10px 26px rgba(201,163,74,.24) }
+    .toolbar select,.order-manage select,.payment-form input { border-color: var(--line); background: var(--surface2); color: var(--text) }
+    .order { border-color: var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 12px 32px rgba(0,0,0,.14) }
+    .order-details > summary { background: #111c2e }
+    .order-details > summary:hover { background: #17243a }
+    .order-details[open] > summary { border-color: var(--line) }
+    .order-summary-main strong,.customer-name { color: var(--text) }
+    .order-id,.label,.payment { color: var(--muted) }
+    .order-badge { background: #202d42; color: #dce6f3 }
+    .order-badge.payment-paid { background: rgba(35,200,121,.16); color: #59e39c }
+    .order-content > section { padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #0d1727 }
+    .contact a { color: #81b9ff }
+    .order-note { color: #adbbcd }
+    .payment-form { border-color: var(--line); background: #152238 }
+    .payment-form label { color: var(--text) }
+    .payment-form input { border-radius: 12px }
+    .payment-form button { background: var(--gold); color: #171208 }
+    .message { border-color: var(--line); background: var(--surface); color: var(--muted) }
+    .toast { border-radius: 999px; background: #1b2a3e; color: var(--text) }
+    .toast.error { background: #8d2934; color: #fff }
+    @media(max-width:760px) {
+      .wrap { width: calc(100% - 28px) }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+    }
+  </style>
+  <style>
+    @media(min-width:761px){.admin-drawer{inset:0 auto 0 0;width:236px;padding:22px 16px;border-radius:0;transform:none;box-shadow:8px 0 34px rgba(0,0,0,.18);border-right:1px solid var(--line)}.admin-drawer.open{transform:none}.drawer-close,.menu-toggle,.drawer-backdrop{display:none!important}.drawer-head{padding:12px 10px 24px}.drawer-title{font-size:18px}.drawer-title small{color:var(--gold)}.drawer-links{gap:8px;padding-top:22px}.drawer-links a,.drawer-links button{padding:14px 12px;border-radius:14px;color:#aab8cc;transition:background .2s,color .2s,transform .2s}.drawer-links a:hover,.drawer-links button:hover{transform:translateX(3px);background:rgba(255,255,255,.06);color:#fff}.drawer-links a[aria-current="page"]{background:rgba(201,163,74,.16);color:#e6c36e}.top{position:sticky;top:0;z-index:30;margin-left:236px}.top .wrap{width:calc(100% - 48px);margin:0 24px}main.wrap{width:calc(100% - 284px);margin:0 24px 0 260px}}
+    .stats .stat{transition:transform .22s,box-shadow .22s}.stats .stat:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(0,0,0,.22)}.order{transition:transform .2s,border-color .2s,box-shadow .2s;animation:admin-enter .42s both}.order:hover{transform:translateY(-2px);box-shadow:0 18px 38px rgba(0,0,0,.2)}.order-content{animation:admin-enter .24s both}@keyframes admin-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @media(max-width:760px){.admin-drawer{inset:0 0 0 auto;width:min(330px,86vw);border-radius:24px 0 0 24px;transform:translateX(102%)}.admin-drawer.open{transform:translateX(0)}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+  </style>
+<style>
+.pagination{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:14px 0 24px;padding:16px 20px;border:1px solid var(--line);border-radius:20px;background:var(--surface);color:var(--muted);font-size:13px}.pager-pages{display:flex;align-items:center;gap:8px}.pager-pages button,.pager-select{min-width:46px;height:46px;padding:0 13px;border:1px solid var(--line);border-radius:13px;background:transparent;color:var(--text);font-weight:650;transition:background .18s,color .18s,border-color .18s,transform .18s}.pager-pages button:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(201,163,74,.6);background:rgba(201,163,74,.1)}.pager-pages button[aria-current="page"]{border-color:var(--gold);background:var(--gold);color:#171208}.pager-pages button:disabled{opacity:.42;cursor:not-allowed}.pager-ellipsis{padding:0 4px;color:var(--muted)}.pager-summary{white-space:nowrap}.pager-meta,.pager-size{display:flex;align-items:center;gap:12px;color:var(--muted);white-space:nowrap}.pager-select{height:42px;min-width:102px;padding:0 12px;background:var(--surface2);color:var(--text)}
+@media(max-width:640px){.pagination{align-items:stretch;flex-direction:column;gap:14px;padding:14px}.pager-pages{gap:5px;justify-content:center}.pager-pages button{min-width:38px;height:40px;padding:0 9px}.pager-meta{justify-content:space-between;gap:10px}.pager-size{gap:7px}.pager-summary{font-size:12px}}
+</style></head>
 <body>
   <header class="top">
     <div class="wrap">
@@ -135,7 +201,7 @@
     </div>
   </header>
   <button class="drawer-backdrop" id="drawerBackdrop" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)"></button>
-  <aside class="admin-drawer" id="adminDrawer" aria-label="Admin navigation" aria-hidden="true" inert>
+  <aside class="admin-drawer" id="adminDrawer" aria-label="Admin navigation" aria-hidden="false">
     <div class="drawer-head"><div class="drawer-title">PALMZ<small>ADMIN MENU</small></div><button class="drawer-close" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)">×</button></div>
     <nav class="drawer-links"><a href="/admin">Inventory</a><a href="/admin/orders" aria-current="page">Orders <span class="orders-notification" hidden aria-label="Pending orders"></span></a><a href="/admin/sales">Sales history</a><a href="/" target="_blank" rel="noopener">View store ↗</a><button type="button" onclick="logout()">Sign out</button></nav>
   </aside>
@@ -147,20 +213,26 @@
     <section class="stats" id="stats" aria-live="polite"></section>
     <div class="toolbar">
       <label for="statusFilter">Show orders</label>
-      <select id="statusFilter" onchange="loadOrders()">
+      <select id="statusFilter" onchange="ordersPage=1;loadOrders()">
         <option value="all">All statuses</option>
         <option value="pending_confirmation">Pending confirmation</option>
         <option value="confirmed">Confirmed</option>
+        <option value="preparing">Preparing</option>
+        <option value="dispatched">Dispatched</option>
+        <option value="out_for_delivery">Out for delivery</option>
+        <option value="delivered">Delivered</option>
         <option value="fulfilled">Fulfilled</option>
         <option value="cancelled">Cancelled</option>
       </select>
       <span class="muted" id="resultCount"></span>
     </div>
     <section class="orders" id="orders" aria-live="polite"><div class="message"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading orders…</span></div></section>
+    <div class="pagination" id="ordersPagination"></div>
   </main>
   <div class="toast" id="toast" role="status"></div>
   <script>
     const $ = selector => document.querySelector(selector);
+    let ordersCache=[],ordersPage=1,ordersPageSize=8;
     function toggleAdminMenu(open) {
       const drawer = $("#adminDrawer"), backdrop = $("#drawerBackdrop"), toggle = $(".menu-toggle");
       drawer.classList.toggle("open", open); backdrop.classList.toggle("open", open);
@@ -168,10 +240,16 @@
       document.body.classList.toggle("menu-open", open);
       if (open) $(".drawer-close").focus(); else toggle.focus();
     }
+    function syncAdminMenuForViewport(){const drawer=$("#adminDrawer"),desktop=window.matchMedia("(min-width: 761px)").matches;if(desktop){drawer.classList.remove("open");drawer.setAttribute("aria-hidden","false");drawer.inert=false;document.body.classList.remove("menu-open")}else if(!drawer.classList.contains("open")){drawer.setAttribute("aria-hidden","true");drawer.inert=true}}
+    window.addEventListener("resize",syncAdminMenuForViewport);syncAdminMenuForViewport();
     document.addEventListener("keydown", event => { if (event.key === "Escape" && $("#adminDrawer").classList.contains("open")) toggleAdminMenu(false); });
     const STATUS_LABELS = {
       pending_confirmation: "Pending confirmation",
       confirmed: "Confirmed",
+      preparing: "Preparing",
+      dispatched: "Dispatched",
+      out_for_delivery: "Out for delivery",
+      delivered: "Delivered",
       fulfilled: "Fulfilled",
       cancelled: "Cancelled"
     };
@@ -204,6 +282,7 @@
       const content = loading ? `<span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>${escapeHtml(message)}</span>` : escapeHtml(message);
       $("#orders").innerHTML = `<div class="message">${content}</div>`;
       $("#resultCount").textContent = "";
+      $("#ordersPagination").innerHTML = "";
       if (error) toast(message, true);
     }
 
@@ -213,6 +292,10 @@
         <div class="stat"><b>${orders.length}</b><span>Orders shown</span></div>
         <div class="stat"><b>${counts.pending_confirmation}</b><span>Pending confirmation</span></div>
         <div class="stat"><b>${counts.confirmed}</b><span>Confirmed</span></div>
+        <div class="stat"><b>${counts.preparing}</b><span>Preparing</span></div>
+        <div class="stat"><b>${counts.dispatched}</b><span>Dispatched</span></div>
+        <div class="stat"><b>${counts.out_for_delivery}</b><span>Out for delivery</span></div>
+        <div class="stat"><b>${counts.delivered}</b><span>Delivered</span></div>
         <div class="stat"><b>${counts.fulfilled}</b><span>Fulfilled</span></div>`;
     }
 
@@ -240,6 +323,10 @@
       </article>`;
     }
 
+    function renderPager(selector,total,page,pageSize,onPage,onPageSize){const el=$(selector),pages=Math.ceil(total/pageSize),first=total?(page-1)*pageSize+1:0,last=Math.min(page*pageSize,total);if(!pages){el.innerHTML="";return}let nums;if(pages<=3)nums=Array.from({length:pages},(_,i)=>i+1);else if(page<=3)nums=[1,2,3];else if(page>=pages-2)nums=[pages-2,pages-1,pages];else nums=[page-1,page,page+1];const b=(label,target,disabled=false,current=false)=>`<button type="button" data-page="${target}" ${disabled?"disabled":""} ${current?'aria-current="page"':''} aria-label="${typeof label==="number"?`Page ${label}`:label}">${label}</button>`;el.innerHTML=`<div class="pager-pages">${b("‹",page-1,page<=1)}${nums.map(n=>b(n,n,false,n===page)).join("")}${pages>3&&nums[nums.length-1]<pages-1?`<span class="pager-ellipsis" aria-hidden="true">…</span>${b(pages,pages,false,pages===page)}`:""}${b("›",page+1,page>=pages)}</div><div class="pager-meta"><span class="pager-summary">Showing ${first} to ${last} of ${total} entries</span><label class="pager-size">Show <select class="pager-select" aria-label="Rows per page">${[8,16,24,50].map(n=>`<option value="${n}" ${n===pageSize?"selected":""}>${n}</option>`).join("")}</select></label></div>`;el.onclick=e=>{const button=e.target.closest("button[data-page]");if(button&&!button.disabled)onPage(Number(button.dataset.page))};el.onchange=e=>{if(e.target.matches(".pager-select"))onPageSize(Number(e.target.value))}}
+
+    function renderOrderList(){ordersPage=Math.max(1,Math.min(ordersPage,Math.ceil(ordersCache.length/ordersPageSize)||1));const start=(ordersPage-1)*ordersPageSize,shown=ordersCache.slice(start,start+ordersPageSize);renderStats(ordersCache);$("#resultCount").textContent="";$("#orders").innerHTML=shown.length?shown.map(renderOrder).join(""):'<div class="message">No orders found for this status.</div>';renderPager("#ordersPagination",ordersCache.length,ordersPage,ordersPageSize,page=>{ordersPage=page;renderOrderList()},size=>{ordersPageSize=size;ordersPage=1;renderOrderList()})}
+
     async function loadOrders() {
       const refreshButton = $("#refreshOrders");
       refreshButton.disabled = true;
@@ -248,9 +335,7 @@
       try {
         const status = $("#statusFilter").value;
         const { orders } = await request(`/api/admin/orders?status=${encodeURIComponent(status)}`);
-        renderStats(orders);
-        $("#resultCount").textContent = `${orders.length} order${orders.length === 1 ? "" : "s"}`;
-        $("#orders").innerHTML = orders.length ? orders.map(renderOrder).join("") : '<div class="message">No orders found for this status.</div>';
+        ordersCache=orders;renderOrderList();
       } catch (error) {
         if (!/session has expired/.test(error.message)) showMessage(error.message, true);
       } finally {

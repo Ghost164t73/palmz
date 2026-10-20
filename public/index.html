@@ -3212,6 +3212,7 @@
       const paymentMessages = {
         failed: ["failed", "Payment was not completed. You can try Paystack again or choose WhatsApp checkout."],
         pending: ["pending", "Payment is still being confirmed. Please wait a moment or contact PALMZ before retrying."],
+        paid_after_cancellation: ["failed", "Your payment was received after the order was cancelled. It will not be dispatched automatically. Contact PALMZ with your payment reference so the team can help."],
         unverified: ["unverified", "We could not confirm the payment yet. Please contact PALMZ with your payment reference before retrying."]
       };
       const result = paymentMessages[paymentResult];

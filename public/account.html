@@ -419,8 +419,13 @@
     }
 
     .order[data-status="confirmed"] .status,
+    .order[data-status="preparing"] .status,
+    .order[data-status="dispatched"] .status,
+    .order[data-status="out_for_delivery"] .status,
+    .order[data-status="delivered"] .status,
     .order[data-status="fulfilled"] .status { color: #168344 }
     .order[data-status="cancelled"] .status { color: #b3261e }
+    .status-updated { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; font-weight: 500; letter-spacing: 0; text-transform: none }
 
     .chevron {
       width: 28px;
@@ -466,6 +471,7 @@
     }
 
     .empty-orders { color: var(--muted); font-size: 14px; line-height: 1.7 }
+    .order-cancel-note { margin: 12px 0; padding: 10px 12px; border-radius: 10px; background: var(--surface2); color: var(--muted); font-size: 13px; line-height: 1.6 }
     .reward-summary { margin-top: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface2); color: var(--muted); font-size: 14px; line-height: 1.6 }
     .reward-summary strong { color: var(--text) }
     .reward-dialog { width: min(440px, calc(100% - 32px)); padding: 32px; border: 1px solid var(--gold); border-radius: 20px; background: var(--surface); color: var(--text); text-align: center; box-shadow: 0 24px 80px rgba(0,0,0,.35) }
@@ -666,6 +672,10 @@
     const orderStatusLabels = {
       pending_confirmation: "Pending confirmation",
       confirmed: "Confirmed",
+      preparing: "Preparing",
+      dispatched: "Dispatched",
+      out_for_delivery: "Out for delivery",
+      delivered: "Delivered",
       fulfilled: "Fulfilled",
       cancelled: "Cancelled"
     };
@@ -822,11 +832,12 @@
                 <span class="order-preview">${orderPreview(order)}${order.totalAmount != null ? ` · ₦${Number(order.totalAmount).toLocaleString("en-NG")}` : ""}</span>
               </span>
               <span class="order-meta">
-                <span class="status">${escapeHtml(orderStatusLabels[order.status] || order.status)}</span>
+                <span class="status">${escapeHtml(orderStatusLabels[order.status] || order.status)}<small class="status-updated">${order.statusUpdatedAt ? "Updated" : "Placed"} ${new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.statusUpdatedAt || order.createdAt))}</small></span>
                 <span class="chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></span>
               </span>
             </summary>
             <div class="order-body">
+              ${order.cancellationReason === "reservation_expired" ? '<div class="order-cancel-note">This order was cancelled because its unpaid stock hold expired. Please place a new order if you still want these items.</div>' : ""}
               <div class="order-items">${order.items.map(item => `${item.quantity} × ${escapeHtml(item.name)} — size ${escapeHtml(item.size)}, ${escapeHtml(item.color)}${item.unitPrice != null ? ` — ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}`).join("<br>")}</div>
               <div class="order-delivery">${order.fulfillmentMethod === "pickup" ? `Pickup: ${escapeHtml(order.pickupBranchName || "Branch")} — ${escapeHtml(order.pickupBranchAddress || order.address)}, ${escapeHtml(order.city)}` : `${escapeHtml(order.address)}, ${escapeHtml(order.city)}${order.deliveryFee ? `<br>Delivery: ₦${Number(order.deliveryFee).toLocaleString("en-NG")}${order.deliveryEstimate ? ` · ${escapeHtml(order.deliveryEstimate)}` : ""}` : ""}`}${order.totalAmount != null ? `<br>Total: ₦${Number(order.totalAmount).toLocaleString("en-NG")}` : ""}<br>Phone: ${escapeHtml(order.phone)}<br>Payment: ${escapeHtml(order.paymentProvider || "whatsapp")} · ${escapeHtml(order.paymentStatus || "not_started")}${Number.isSafeInteger(order.paidAmountKobo) ? `<br>Amount received: ₦${(order.paidAmountKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}${Number.isSafeInteger(order.paystackFeeKobo) && order.paystackFeeKobo > 0 ? `<br>Paystack checkout charge: ₦${(order.paystackFeeKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (not added by PALMZ)` : ""}</div>
             </div>

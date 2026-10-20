@@ -20,27 +20,80 @@
 .drawer-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:22px;border-bottom:1px solid rgba(255,255,255,.14)}.drawer-title{font-weight:900;letter-spacing:.18em}.drawer-title small{display:block;margin-top:5px;color:var(--gold);font-size:10px;letter-spacing:.14em}
 .drawer-close{width:38px;height:38px;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:none;color:#fff;font-size:23px}.drawer-links{display:grid;gap:8px;padding:20px 0}.drawer-links a,.drawer-links button{display:block;width:100%;padding:13px 14px;border:0;border-radius:11px;background:transparent;color:#eeece5;text-align:left;font-size:14px;text-decoration:none}.drawer-links a:hover,.drawer-links a[aria-current="page"],.drawer-links button:hover{background:rgba(255,255,255,.09)}.drawer-links a[aria-current="page"]{color:var(--gold);font-weight:800}body.menu-open{overflow:hidden}
 </style>
-</head>
+<style>
+:root{color-scheme:dark;--bg:#080d19;--surface:#101a2b;--surface2:#172338;--text:#eef3fb;--muted:#91a1b8;--line:rgba(148,163,184,.16);--navy:#0b1322;--gold:#c9a34a;--red:#fb6b73;--green:#23c879}
+body{background:var(--bg);color:var(--text)}
+.wrap{width:min(1320px,calc(100% - 48px))}
+.top{background:#0d1524;border-bottom:1px solid var(--line)}
+.top .wrap{height:72px}
+.brand{font-size:14px}
+.menu-toggle{border-radius:16px;background:var(--surface);border-color:var(--line)}
+.admin-drawer{background:#101a2b}
+.drawer-links a[aria-current="page"]{background:rgba(201,163,74,.16)}
+main{padding-top:36px}
+.heading h1{color:var(--text)}
+.muted{color:var(--muted)}
+.stats{gap:12px}
+.stat{border-radius:20px;padding:18px 20px;background:#102622;border-color:rgba(35,200,121,.2)}
+.stat:nth-child(2){background:#102438;border-color:rgba(56,189,248,.2)}
+.stat:nth-child(3){background:#1a1d3b;border-color:rgba(139,92,246,.22)}
+.stat b{color:var(--text)}
+.stat span{color:#a6b4c8}
+.toolbar input{border-color:var(--line);border-radius:14px;background:var(--surface);color:var(--text)}
+.toolbar input::placeholder{color:#77869d}
+.table-wrap{border-color:var(--line);border-radius:20px;background:var(--surface)}
+table th{background:#141f31;color:#a8b8ce}
+table td{color:#dce5f2}
+table tr:hover td{background:#17283a}
+.order-id{color:var(--muted)}
+.badge{background:rgba(35,200,121,.16);color:#59e39c}
+.badge.reversed{background:rgba(251,107,115,.16);color:#ff8990}
+.empty,.error{color:var(--muted)}
+.refresh{border-radius:999px;background:var(--gold);color:#171208;border-color:var(--gold);font-weight:800}
+.refresh:hover{background:#d8b85f}
+.toast{background:#1b2a3e;color:var(--text)}
+.drawer-links a,.drawer-links button{border-radius:14px}
+@media(max-width:600px){.wrap{width:calc(100% - 28px)}}
+</style>
+<style>
+@media(min-width:761px){.admin-drawer{inset:0 auto 0 0;width:236px;padding:22px 16px;border-radius:0;transform:none;box-shadow:8px 0 34px rgba(0,0,0,.18);border-right:1px solid var(--line)}.admin-drawer.open{transform:none}.drawer-close,.menu-toggle,.drawer-backdrop{display:none!important}.drawer-head{padding:12px 10px 24px}.drawer-title{font-size:18px}.drawer-title small{color:var(--gold)}.drawer-links{gap:8px;padding-top:22px}.drawer-links a,.drawer-links button{padding:14px 12px;border-radius:14px;color:#aab8cc;transition:background .2s,color .2s,transform .2s}.drawer-links a:hover,.drawer-links button:hover{transform:translateX(3px);background:rgba(255,255,255,.06);color:#fff}.drawer-links a[aria-current="page"]{background:rgba(201,163,74,.16);color:#e6c36e}.top{position:sticky;top:0;z-index:30;margin-left:236px}.top .wrap{width:calc(100% - 48px);margin:0 24px}main.wrap{width:calc(100% - 284px);margin:0 24px 0 260px}}
+.stats .stat{transition:transform .22s,box-shadow .22s}.stats .stat:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(0,0,0,.22)}.table-wrap{animation:admin-enter .42s both}tbody tr{transition:background .18s}tbody tr:hover td{background:#17283a}@keyframes admin-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:760px){.admin-drawer{inset:0 0 0 auto;width:min(330px,86vw);border-radius:24px 0 0 24px;transform:translateX(102%)}.admin-drawer.open{transform:translateX(0)}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+<style>
+.pagination{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 24px;padding:16px 20px;border:1px solid var(--line);border-top:0;border-radius:0 0 20px 20px;background:var(--surface);color:var(--muted);font-size:13px}.pager-pages{display:flex;align-items:center;gap:8px}.pager-pages button,.pager-select{min-width:46px;height:46px;padding:0 13px;border:1px solid var(--line);border-radius:13px;background:transparent;color:var(--text);font-weight:650;transition:background .18s,color .18s,border-color .18s,transform .18s}.pager-pages button:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(201,163,74,.6);background:rgba(201,163,74,.1)}.pager-pages button[aria-current="page"]{border-color:var(--gold);background:var(--gold);color:#171208}.pager-pages button:disabled{opacity:.42;cursor:not-allowed}.pager-ellipsis{padding:0 4px;color:var(--muted)}.pager-summary{white-space:nowrap}.pager-meta,.pager-size{display:flex;align-items:center;gap:12px;color:var(--muted);white-space:nowrap}.pager-select{height:42px;min-width:102px;padding:0 12px;background:var(--surface2);color:var(--text)}
+@media(max-width:640px){.pagination{align-items:stretch;flex-direction:column;gap:14px;padding:14px}.pager-pages{gap:5px;justify-content:center}.pager-pages button{min-width:38px;height:40px;padding:0 9px}.pager-meta{justify-content:space-between;gap:10px}.pager-size{gap:7px}.pager-summary{font-size:12px}}
+</style></head>
 <body>
 <header class="top"><div class="wrap"><a href="/admin" class="brand">PALMZ ADMIN</a><button class="menu-toggle" type="button" aria-label="Open admin navigation" aria-expanded="false" aria-controls="adminDrawer" onclick="toggleAdminMenu(true)"><span></span><span></span><span></span></button></div></header>
 <button class="drawer-backdrop" id="drawerBackdrop" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)"></button>
-<aside class="admin-drawer" id="adminDrawer" aria-label="Admin navigation" aria-hidden="true" inert><div class="drawer-head"><div class="drawer-title">PALMZ<small>ADMIN MENU</small></div><button class="drawer-close" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)">×</button></div><nav class="drawer-links"><a href="/admin">Inventory</a><a href="/admin/orders">Orders <span class="orders-notification" hidden aria-label="Pending orders"></span></a><a href="/admin/sales" aria-current="page">Sales history</a><a href="/" target="_blank" rel="noopener">View store ↗</a><button type="button" onclick="logout()">Sign out</button></nav></aside>
+<aside class="admin-drawer" id="adminDrawer" aria-label="Admin navigation" aria-hidden="false"><div class="drawer-head"><div class="drawer-title">PALMZ<small>ADMIN MENU</small></div><button class="drawer-close" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)">×</button></div><nav class="drawer-links"><a href="/admin">Inventory</a><a href="/admin/orders">Orders <span class="orders-notification" hidden aria-label="Pending orders"></span></a><a href="/admin/sales" aria-current="page">Sales history</a><a href="/" target="_blank" rel="noopener">View store ↗</a><button type="button" onclick="logout()">Sign out</button></nav></aside>
 <main class="wrap">
   <div class="heading"><div><h1>Sales history</h1><div class="muted">Every order confirmed or fulfilled is recorded here. Reversed orders remain visible for reference.</div></div><button class="refresh" type="button" onclick="loadSales()">Refresh</button></div>
   <section class="stats" id="stats" aria-live="polite"></section>
-  <div class="toolbar"><input id="search" type="search" placeholder="Search sales, customers, or products…" oninput="renderSales()"><span class="muted" id="count"></span></div>
-  <div class="table-wrap"><table><thead><tr><th>Sale date</th><th>Order</th><th>Customer</th><th>Items sold</th><th>Value</th><th>Result</th></tr></thead><tbody id="sales"><tr><td colspan="6" class="empty"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading sales…</span></td></tr></tbody></table></div>
+  <div class="toolbar"><input id="search" type="search" placeholder="Search sales, customers, or products…" oninput="salesPage=1;renderSales()"><span class="muted" id="count"></span></div>
+  <div class="table-wrap"><table><thead><tr><th>Sale date</th><th>Order</th><th>Customer</th><th>Items sold</th><th>Value</th><th>Result</th></tr></thead><tbody id="sales"><tr><td colspan="6" class="empty"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading sales…</span></td></tr></tbody></table></div><div class="pagination" id="salesPagination"></div>
 </main>
 <div class="toast" id="toast" role="status"></div>
 <script>
-const $=s=>document.querySelector(s);let sales=[];
+const $=s=>document.querySelector(s);let sales=[],salesPage=1,salesPageSize=8;
 function toggleAdminMenu(open){const drawer=$("#adminDrawer"),backdrop=$("#drawerBackdrop"),toggle=$(".menu-toggle");drawer.classList.toggle("open",open);backdrop.classList.toggle("open",open);drawer.setAttribute("aria-hidden",String(!open));drawer.inert=!open;toggle.setAttribute("aria-expanded",String(open));document.body.classList.toggle("menu-open",open);if(open)$(".drawer-close").focus();else toggle.focus()}
+function syncAdminMenuForViewport(){const drawer=$("#adminDrawer"),desktop=window.matchMedia("(min-width: 761px)").matches;if(desktop){drawer.classList.remove("open");drawer.setAttribute("aria-hidden","false");drawer.inert=false;document.body.classList.remove("menu-open")}else if(!drawer.classList.contains("open")){drawer.setAttribute("aria-hidden","true");drawer.inert=true}}
+window.addEventListener("resize",syncAdminMenuForViewport);syncAdminMenuForViewport();
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&$("#adminDrawer").classList.contains("open"))toggleAdminMenu(false)});
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function money(n){return '₦'+Number(n).toLocaleString('en-NG')}
 async function request(url,options={}){const r=await fetch(url,{credentials:'same-origin',...options}),d=await r.json().catch(()=>({}));if(r.status===401){location.replace('/admin');throw new Error('Sign in again')}if(!r.ok)throw new Error(d.error||'Could not load sales');return d}
 async function loadSales(){const button=document.querySelector('.refresh');button.disabled=true;button.classList.add('is-loading');$('#sales').innerHTML='<tr><td colspan="6" class="empty"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading sales…</span></td></tr>';try{sales=(await request('/api/admin/sales')).sales;renderSales()}catch(error){if(error.message!=='Sign in again'){$('#sales').innerHTML=`<tr><td colspan="6" class="error">${esc(error.message)}</td></tr>`}}finally{button.disabled=false;button.classList.remove('is-loading')}}
-function renderSales(){const q=$('#search').value.trim().toLowerCase(),shown=sales.filter(s=>!q||`${s.orderId} ${s.customerName} ${s.email} ${(s.items||[]).map(i=>i.name+' '+i.color+' '+i.size).join(' ')}`.toLowerCase().includes(q));const successful=sales.filter(s=>!s.reversed),pairs=successful.reduce((n,s)=>n+(s.items||[]).reduce((m,i)=>m+Number(i.quantity||0),0),0),value=successful.reduce((n,s)=>n+(s.items||[]).reduce((m,i)=>m+(i.unitPrice==null?0:Number(i.unitPrice)*Number(i.quantity||0)),0),0);$('#stats').innerHTML=`<div class="stat"><b>${successful.length}</b><span>Successful sales</span></div><div class="stat"><b>${pairs}</b><span>Pairs sold</span></div><div class="stat"><b>${money(value)}</b><span>Recorded order value</span></div>`;$('#count').textContent=`${shown.length} record${shown.length===1?'':'s'}`;$('#sales').innerHTML=shown.length?shown.map(s=>{const value=(s.items||[]).every(i=>i.unitPrice!=null)?money(s.items.reduce((n,i)=>n+Number(i.unitPrice)*Number(i.quantity||0),0)):'—';return `<tr><td>${new Intl.DateTimeFormat('en-NG',{dateStyle:'medium',timeStyle:'short'}).format(new Date(s.soldAt))}</td><td><b>${esc(s.orderId.slice(-8).toUpperCase())}</b><div class="order-id">${s.legacy?'Imported confirmation':'Confirmed order'}</div></td><td>${esc(s.customerName)}<div class="order-id">${esc(s.email)}</div></td><td><ul class="items">${(s.items||[]).map(i=>`<li>${Number(i.quantity)} × ${esc(i.name)} · ${esc(i.color)} · size ${esc(i.size)}</li>`).join('')}</ul></td><td>${value}</td><td><span class="badge ${s.reversed?'reversed':''}">${s.reversed?'Reversed':'Successful'}</span></td></tr>`}).join(''):'<tr><td colspan="6" class="empty">No confirmed sales yet.</td></tr>'}
+function renderPager(selector,total,page,pageSize,onPage,onPageSize){const el=$(selector),pages=Math.ceil(total/pageSize),first=total?(page-1)*pageSize+1:0,last=Math.min(page*pageSize,total);if(!pages){el.innerHTML="";return}let nums;if(pages<=3)nums=Array.from({length:pages},(_,i)=>i+1);else if(page<=3)nums=[1,2,3];else if(page>=pages-2)nums=[pages-2,pages-1,pages];else nums=[page-1,page,page+1];const b=(label,target,disabled=false,current=false)=>`<button type="button" data-page="${target}" ${disabled?"disabled":""} ${current?'aria-current="page"':''} aria-label="${typeof label==="number"?`Page ${label}`:label}">${label}</button>`;el.innerHTML=`<div class="pager-pages">${b("‹",page-1,page<=1)}${nums.map(n=>b(n,n,false,n===page)).join("")}${pages>3&&nums[nums.length-1]<pages-1?`<span class="pager-ellipsis" aria-hidden="true">…</span>${b(pages,pages,false,pages===page)}`:""}${b("›",page+1,page>=pages)}</div><div class="pager-meta"><span class="pager-summary">Showing ${first} to ${last} of ${total} entries</span><label class="pager-size">Show <select class="pager-select" aria-label="Rows per page">${[8,16,24,50].map(n=>`<option value="${n}" ${n===pageSize?"selected":""}>${n}</option>`).join("")}</select></label></div>`;el.onclick=e=>{const button=e.target.closest("button[data-page]");if(button&&!button.disabled)onPage(Number(button.dataset.page))};el.onchange=e=>{if(e.target.matches(".pager-select"))onPageSize(Number(e.target.value))}}
+function renderSales(){
+ const q=$('#search').value.trim().toLowerCase(),shown=sales.filter(s=>!q||`${s.orderId} ${s.customerName} ${s.email} ${(s.items||[]).map(i=>i.name+' '+i.color+' '+i.size).join(' ')}`.toLowerCase().includes(q));
+ const successful=sales.filter(s=>!s.reversed),pairs=successful.reduce((n,s)=>n+(s.items||[]).reduce((m,i)=>m+Number(i.quantity||0),0),0),value=successful.reduce((n,s)=>n+(s.items||[]).reduce((m,i)=>m+(i.unitPrice==null?0:Number(i.unitPrice)*Number(i.quantity||0)),0),0);
+ $('#stats').innerHTML=`<div class="stat"><b>${successful.length}</b><span>Successful sales</span></div><div class="stat"><b>${pairs}</b><span>Pairs sold</span></div><div class="stat"><b>${money(value)}</b><span>Recorded order value</span></div>`;
+ salesPage=Math.max(1,Math.min(salesPage,Math.ceil(shown.length/salesPageSize)||1));const start=(salesPage-1)*salesPageSize,saleRows=shown.slice(start,start+salesPageSize);$('#count').textContent=`${shown.length} record${shown.length===1?'':'s'}`;
+ $('#sales').innerHTML=saleRows.length?saleRows.map(s=>{const saleValue=(s.items||[]).every(i=>i.unitPrice!=null)?money(s.items.reduce((n,i)=>n+Number(i.unitPrice)*Number(i.quantity||0),0)):'—';return `<tr><td>${new Intl.DateTimeFormat('en-NG',{dateStyle:'medium',timeStyle:'short'}).format(new Date(s.soldAt))}</td><td><b>${esc(s.orderId.slice(-8).toUpperCase())}</b><div class="order-id">${s.legacy?'Imported confirmation':'Confirmed order'}</div></td><td>${esc(s.customerName)}<div class="order-id">${esc(s.email)}</div></td><td><ul class="items">${(s.items||[]).map(i=>`<li>${Number(i.quantity)} × ${esc(i.name)} · ${esc(i.color)} · size ${esc(i.size)}</li>`).join('')}</ul></td><td>${saleValue}</td><td><span class="badge ${s.reversed?'reversed':''}">${s.reversed?'Reversed':'Successful'}</span></td></tr>`}).join(''):'<tr><td colspan="6" class="empty">No confirmed sales yet.</td></tr>';
+ renderPager('#salesPagination',shown.length,salesPage,salesPageSize,page=>{salesPage=page;renderSales()},size=>{salesPageSize=size;salesPage=1;renderSales()});
+}
 async function logout(){await fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'});location.replace('/admin')}
 loadSales();
 </script>

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const ORDER_STATUSES = ['pending_confirmation', 'confirmed', 'fulfilled', 'cancelled'];
+const ORDER_STATUSES = ['pending_confirmation', 'confirmed', 'preparing', 'dispatched', 'out_for_delivery', 'delivered', 'fulfilled', 'cancelled'];
 
 const OrderItemSchema = new mongoose.Schema(
   {
@@ -45,8 +45,11 @@ const OrderSchema = new mongoose.Schema(
     note: { type: String, trim: true, maxlength: 500, default: '' },
     items: { type: [OrderItemSchema], required: true },
     status: { type: String, enum: ORDER_STATUSES, default: 'pending_confirmation' },
+    statusUpdatedAt: { type: Date, default: null },
     inventoryReserved: { type: Boolean, default: false },
     inventoryDeducted: { type: Boolean, default: false },
+    reservationExpiresAt: { type: Date, default: null },
+    cancellationReason: { type: String, default: '' },
     salesHistory: { type: [SaleEventSchema], default: [] },
     paymentProvider: { type: String, enum: ['whatsapp', 'paystack'], default: 'whatsapp' },
     paymentStatus: { type: String, enum: ['not_started', 'pending', 'paid', 'failed', 'refunded'], default: 'not_started' },
@@ -61,6 +64,7 @@ const OrderSchema = new mongoose.Schema(
 );
 
 OrderSchema.index({ customer: 1, createdAt: -1 });
+OrderSchema.index({ status: 1, paymentStatus: 1, inventoryReserved: 1, reservationExpiresAt: 1 });
 OrderSchema.index({ paystackReference: 1 }, { unique: true, sparse: true });
 
 const Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
