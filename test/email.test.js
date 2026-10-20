@@ -10,7 +10,7 @@ const order = {
   paymentProvider: 'paystack',
   paymentStatus: 'paid',
   fulfillmentMethod: 'delivery',
-  address: 'Karkasara way No. 17',
+  address: 'KANO.ABUJA.LOKOJA',
   city: 'Kano',
   deliveryFee: 2000,
   totalAmount: 14500,
