@@ -357,6 +357,48 @@ app.get('/api/customer/orders', requireCustomer, async (req, res) => {
   const orders = await Order.find({ customer: req.customerId }).select('-emailNotifications').sort({ createdAt: -1 }).limit(50).lean();
   res.json({ orders });
 });
+app.get('/api/customer/rewards', requireCustomer, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const customer = await Customer.findById(req.customerId).select('rewardNotificationsSeen');
+  if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
+  const orders = await Order.find({
+    customer: req.customerId,
+    paymentStatus: 'paid',
+    status: { $in: ['confirmed', 'fulfilled'] },
+  }).select('items createdAt').sort({ createdAt: 1 }).lean();
+  const pairPrices = [];
+  for (const order of orders) {
+    for (const item of order.items || []) {
+      const price = Number(item.unitPrice);
+      if (!Number.isFinite(price) || price <= 0) continue;
+      for (let i = 0; i < Math.max(0, Number(item.quantity) || 0); i += 1) pairPrices.push(price);
+    }
+  }
+  const milestone = Math.floor(pairPrices.length / 5);
+  const seenMilestones = Number(customer.rewardNotificationsSeen) || 0;
+  let newlyEarned = false;
+  let rewardPriceLimit = null;
+  if (milestone > seenMilestones) {
+    const group = pairPrices.slice((milestone - 1) * 5, milestone * 5);
+    rewardPriceLimit = group.length ? Math.max(...group) : null;
+    const update = await Customer.updateOne({
+      _id: customer._id,
+      $or: [
+        { rewardNotificationsSeen: { $lt: milestone } },
+        { rewardNotificationsSeen: { $exists: false } },
+      ],
+    }, { $set: { rewardNotificationsSeen: milestone } });
+    newlyEarned = update.modifiedCount > 0;
+  }
+  const earnedPairs = pairPrices.length;
+  res.json({
+    earnedPairs,
+    pairsToNextReward: earnedPairs % 5 === 0 ? 0 : 5 - (earnedPairs % 5),
+    earnedRewards: milestone,
+    newlyEarned,
+    rewardPriceLimit,
+  });
+});
 const guestOrderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
 const paystackOrderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
 function completeVariantStock(product) {
@@ -1079,6 +1121,8 @@ const pub = path.join(__dirname, 'public');
 app.get('/admin', (req, res) => res.sendFile(path.join(pub, 'admin.html')));
 app.get('/admin/orders', (req, res) => res.sendFile(path.join(pub, 'orders.html')));
 app.get('/admin/sales', (req, res) => res.sendFile(path.join(pub, 'sales.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(pub, 'terms.html')));
+app.get('/privacy', (req, res) => res.sendFile(path.join(pub, 'privacy.html')));
 app.get(['/shop', '/cart', '/checkout', '/about', '/contact', '/customize', '/product/:id'], (req, res) =>
   res.sendFile(path.join(pub, 'index.html')));
 app.use(express.static(pub));

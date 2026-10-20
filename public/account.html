@@ -466,6 +466,13 @@
     }
 
     .empty-orders { color: var(--muted); font-size: 14px; line-height: 1.7 }
+    .reward-summary { margin-top: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface2); color: var(--muted); font-size: 14px; line-height: 1.6 }
+    .reward-summary strong { color: var(--text) }
+    .reward-dialog { width: min(440px, calc(100% - 32px)); padding: 32px; border: 1px solid var(--gold); border-radius: 20px; background: var(--surface); color: var(--text); text-align: center; box-shadow: 0 24px 80px rgba(0,0,0,.35) }
+    .reward-dialog::backdrop { background: rgba(5,8,15,.68); backdrop-filter: blur(4px) }
+    .reward-dialog h2 { margin: 10px 0; font-size: clamp(24px, 6vw, 32px) }
+    .reward-dialog p { line-height: 1.65 }
+    .reward-dialog-close { position: absolute; top: 10px; right: 14px; border: 0; background: transparent; color: var(--muted); font-size: 28px; cursor: pointer }
     .muted { color: var(--muted); font-size: 13px; line-height: 1.6 }
     .message { margin-top: 16px; color: var(--muted); font-size: 13px; line-height: 1.6 }
     .loading-indicator { display: inline-flex; align-items: center; gap: 9px }
@@ -481,22 +488,30 @@
     @keyframes spin { to { transform: rotate(360deg) } }
     [hidden] { display: none !important }
 
-    footer { border-top: 1px solid var(--line); padding: 38px 0 }
+    footer { border-top: 1px solid var(--line); padding: 44px 0 22px; background: color-mix(in srgb, var(--surface) 58%, var(--bg)) }
     .footer {
-      display: flex;
-      justify-content: space-between;
-      gap: 20px;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: minmax(220px, 1.2fr) minmax(280px, 1fr);
+      align-items: start;
+      gap: 30px 48px;
       color: var(--muted);
       font-size: 12px
     }
     .footer strong { color: var(--text); letter-spacing: .17em }
+    .footer > div:nth-child(3) { display: none }
+    .footer > div:last-child { grid-column: 1 / -1; padding-top: 16px; border-top: 1px solid var(--line); font-size: 11px; letter-spacing: .04em }
+    .footer-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px; align-content: start }
+    .footer-links strong { grid-column: 1 / -1; margin-bottom: 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .16em }
+    .footer-links a { width: fit-content; color: inherit; text-decoration: none; transition: color .18s ease }
+    .footer-links a:hover { color: var(--gold) }
 
     @media (max-width: 620px) {
       .container { width: min(100% - 28px, 1180px) }
       .section { padding: 42px 0 62px }
       .order summary { align-items: flex-start }
       .order-meta { flex-direction: column; align-items: flex-end; gap: 8px }
+      .footer { grid-template-columns: 1fr; gap: 22px }
+      .footer > div:last-child { grid-column: 1 }
     }
 
     @media (max-width: 360px) {
@@ -612,7 +627,17 @@
             <button class="btn btn-outline" type="button" onclick="signOut()">Sign out</button>
             <a class="btn btn-gold" href="/shop">Continue shopping</a>
           </div>
+          <div class="reward-summary" id="rewardSummary" aria-live="polite">Loading your PALMZ rewards…</div>
         </section>
+
+        <dialog class="reward-dialog" id="rewardDialog" aria-labelledby="rewardTitle">
+          <button class="reward-dialog-close" type="button" onclick="closeRewardDialog()" aria-label="Close reward message">×</button>
+          <div class="kicker">PALMZ REWARDS</div>
+          <h2 id="rewardTitle">You earned a free shoe!</h2>
+          <p id="rewardMessage"></p>
+          <p class="muted">Contact PALMZ to choose your reward. The selected shoe must be at or below this value.</p>
+          <button class="btn btn-gold" type="button" onclick="closeRewardDialog()">Wonderful</button>
+        </dialog>
 
         <section id="history" hidden>
           <div class="history-head">
@@ -628,6 +653,7 @@
     <footer>
       <div class="container footer">
         <div><strong>PALMZ</strong><br><span>Karkasara, behind AKTH, Kano, Nigeria</span></div>
+        <div class="footer-links"><strong>Quick links</strong><a href="/shop">Shop</a><a href="/about">About PALMZ</a><a href="/contact">Contact</a><a href="/account.html">My account</a><a href="/terms">Terms and conditions</a><a href="/privacy">Privacy policy</a></div>
         <div><a href="/shop">Shop</a> · <a href="/about">About</a></div>
         <div>© 2026 PALMZ · Footwear</div>
       </div>
@@ -752,6 +778,29 @@
       if (customer.picture) picture.src = customer.picture;
       if (googleReady) $("#googleButton").replaceChildren();
       loadOrders();
+      loadRewards();
+    }
+
+    function formatNaira(value) {
+      return `₦${Number(value).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
+    }
+
+    async function loadRewards() {
+      const summary = $("#rewardSummary");
+      try {
+        const rewards = await request("/api/customer/rewards");
+        summary.innerHTML = `<strong>PALMZ Rewards</strong><br>${rewards.earnedPairs} qualifying pair${rewards.earnedPairs === 1 ? "" : "s"} purchased · ${rewards.earnedRewards} free shoe${rewards.earnedRewards === 1 ? "" : "s"} earned · ${rewards.pairsToNextReward} more pair${rewards.pairsToNextReward === 1 ? "" : "s"} to your next reward.<br><small>Purchases count after payment and confirmation. Sign in while ordering to earn rewards.</small>`;
+        if (rewards.newlyEarned && rewards.rewardPriceLimit != null) {
+          $("#rewardMessage").textContent = `You’ve bought five qualifying pairs and earned a free shoe worth up to ${formatNaira(rewards.rewardPriceLimit)}.`;
+          $("#rewardDialog").showModal();
+        }
+      } catch (error) {
+        summary.textContent = "Your reward progress could not be loaded. Please refresh to try again.";
+      }
+    }
+
+    function closeRewardDialog() {
+      if ($("#rewardDialog").open) $("#rewardDialog").close();
     }
 
     function orderPreview(order) {
