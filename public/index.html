@@ -22,6 +22,7 @@
       "/customize": "Customize your shoe — PALMZ",
       "/product": "Product details — PALMZ"
     })[page] || "PALMZ — Footwear";
+    if (window.innerWidth <= 1100) document.documentElement.classList.add("nav-compact");
   </script>
   <style>
     :root {
@@ -132,13 +133,43 @@
 
     .navlinks {
       display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+      justify-content: flex-end;
       gap: 28px;
       font-size: 13px;
       /* text-transform: uppercase; */
     }
 
+    .navlinks a {
+      flex: 0 0 auto;
+      white-space: nowrap
+    }
+
     .navlinks a:hover {
       color: var(--gold)
+    }
+
+    .logo,
+    .actions {
+      flex: 0 0 auto
+    }
+
+    .mobile-nav-head,
+    .mobile-nav-backdrop {
+      display: none
+    }
+
+    .nav-inline-probe {
+      position: absolute;
+      left: 0;
+      top: 0;
+      display: flex;
+      gap: 28px;
+      font-size: 13px;
+      visibility: hidden;
+      pointer-events: none;
+      white-space: nowrap
     }
 
     .account-menu-button {
@@ -152,7 +183,8 @@
       border: 1px solid var(--line);
       background: var(--surface);
       color: var(--text);
-      place-items: center
+      place-items: center;
+      border-radius: 20px;
     }
 
     .menu-toggle svg {
@@ -431,10 +463,6 @@
         border-color .2s ease, color .2s ease
     }
 
-    .filter:hover {
-      transform: translateY(-2px)
-    }
-
     .filter.active,
     .filter:hover {
       background: var(--navy);
@@ -538,7 +566,7 @@
     .card {
       background: var(--surface);
       border: 1px solid var(--line);
-      border-radius: 0;
+      border-radius: 20px;
       overflow: hidden;
       box-shadow: 0 8px 25px rgba(0, 0, 0, .04);
       transition: transform .28s ease, border-color .28s ease,
@@ -1689,15 +1717,15 @@
       opacity: 1;
       transform: translate(-50%, 0)
     }
-
+/* 
     button,
     .btn {
       border-radius: 0 !important
-    }
+    } */
 
-    *:not(.hero-image) {
+    /* *:not(.hero-image) {
       border-radius: 4px !important
-    }
+    } */
 
     .account-button {
       border-radius: 50% !important
@@ -1705,6 +1733,201 @@
 
     .hero-image {
       border-radius: 34px !important
+    }
+
+    html.nav-compact .nav {
+      position: relative;
+      height: 68px;
+      gap: 8px
+    }
+
+    html.nav-compact .header {
+      z-index: 60
+    }
+
+    html.nav-compact .menu-toggle {
+      display: grid;
+      flex: 0 0 38px;
+      width: 38px;
+      height: 38px
+    }
+
+    html.nav-compact .navlinks {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 65;
+      display: flex;
+      width: min(350px, calc(100vw - 52px));
+      height: 100vh;
+      height: 100dvh;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 6px;
+      padding: 24px 22px;
+      background: var(--surface);
+      box-shadow: 18px 0 55px rgba(0, 0, 0, .2);
+      transform: translateX(-105%);
+      visibility: hidden;
+      transition: transform .42s cubic-bezier(.22, 1, .36, 1), visibility .42s;
+      will-change: transform;
+      overflow-y: auto;
+      overscroll-behavior: contain
+    }
+
+    html.nav-compact .mobile-nav-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0 22px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--line)
+    }
+
+    html.nav-compact .mobile-nav-brand {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: .22em;
+      color: var(--text)
+    }
+
+    html.nav-compact .mobile-nav-caption {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .13em;
+      text-transform: uppercase
+    }
+
+    html.nav-compact .menu-close {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 1px solid var(--line);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 25px;
+      line-height: 1;
+      cursor: pointer
+    }
+
+    html.nav-compact .mobile-nav-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 55;
+      display: block;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      border: 0;
+      background: rgba(8, 10, 16, .58);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity .32s ease, visibility .32s
+    }
+
+    html.nav-compact .mobile-nav-backdrop.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto
+    }
+
+    html.nav-compact .navlinks.open {
+      transform: translateX(0);
+      visibility: visible
+    }
+
+    html.nav-compact .account-button {
+      flex: 0 0 38px;
+      width: 38px;
+      height: 38px
+    }
+
+    html.nav-compact .actions {
+      gap: 6px
+    }
+
+    html.nav-compact .actions .circle {
+      width: 38px;
+      height: 38px
+    }
+
+    html.nav-compact .navlinks a {
+      display: flex;
+      align-items: center;
+      min-height: 50px;
+      padding: 12px 14px;
+      border-left: 2px solid transparent;
+      color: var(--text);
+      font-size: 13px;
+      letter-spacing: .08em;
+      white-space: normal;
+      opacity: 0;
+      transform: translateX(-12px);
+      transition: opacity .25s ease, transform .3s ease, color .2s ease,
+        background-color .2s ease, border-color .2s ease
+    }
+
+    html.nav-compact .navlinks.open a {
+      opacity: 1;
+      transform: translateX(0)
+    }
+
+    html.nav-compact .navlinks.open a:nth-of-type(1) { transition-delay: .08s }
+    html.nav-compact .navlinks.open a:nth-of-type(2) { transition-delay: .12s }
+    html.nav-compact .navlinks.open a:nth-of-type(3) { transition-delay: .16s }
+    html.nav-compact .navlinks.open a:nth-of-type(4) { transition-delay: .2s }
+    html.nav-compact .navlinks.open a:nth-of-type(5) { transition-delay: .24s }
+    html.nav-compact .navlinks.open a:nth-of-type(6) { transition-delay: .28s }
+
+    html.nav-compact .navlinks a:hover,
+    html.nav-compact .navlinks a:focus-visible {
+      border-left-color: var(--gold);
+      background: var(--surface2);
+      color: var(--text)
+    }
+
+    html.nav-compact .menu-toggle svg path {
+      transform-origin: center;
+      transition: transform .25s ease, opacity .2s ease
+    }
+
+    html.nav-compact .menu-toggle.open svg path:nth-child(1) {
+      transform: translateY(6px) rotate(45deg)
+    }
+
+    html.nav-compact .menu-toggle.open svg path:nth-child(2) {
+      opacity: 0
+    }
+
+    html.nav-compact .menu-toggle.open svg path:nth-child(3) {
+      transform: translateY(-6px) rotate(-45deg)
+    }
+
+    html.nav-compact .actions > .account-button {
+      display: none
+    }
+
+    html.nav-compact .navlinks .account-menu-button {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px;
+      border: 0;
+      border-top: 1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      font-weight: 700
+    }
+
+    html.nav-compact .navlinks .account-menu-button:hover,
+    html.nav-compact .navlinks .account-menu-button:focus-visible {
+      background: var(--surface2);
+      color: var(--text)
     }
 
     @media(max-width:950px) {
@@ -1729,199 +1952,6 @@
     @media(max-width:620px) {
       .container {
         width: min(100% - 28px, 1180px)
-      }
-
-      .nav {
-        position: relative;
-        height: 68px;
-        gap: 8px
-      }
-
-      .header {
-        z-index: 60
-      }
-
-      .menu-toggle {
-        display: grid;
-        flex: 0 0 38px;
-        width: 38px;
-        height: 38px
-      }
-
-      .navlinks {
-        position: fixed;
-        inset: 0 auto 0 0;
-        z-index: 65;
-        display: flex;
-        width: min(350px, calc(100vw - 52px));
-        height: 100vh;
-        height: 100dvh;
-        flex-direction: column;
-        gap: 6px;
-        padding: 24px 22px;
-        background: var(--surface);
-        box-shadow: 18px 0 55px rgba(0, 0, 0, .2);
-        transform: translateX(-105%);
-        visibility: hidden;
-        transition: transform .42s cubic-bezier(.22, 1, .36, 1), visibility .42s;
-        will-change: transform;
-        overflow-y: auto;
-        overscroll-behavior: contain
-      }
-
-      .mobile-nav-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 4px 0 22px;
-        margin-bottom: 8px;
-        border-bottom: 1px solid var(--line)
-      }
-
-      .mobile-nav-brand {
-        font-size: 18px;
-        font-weight: 900;
-        letter-spacing: .22em;
-        color: var(--text)
-      }
-
-      .mobile-nav-caption {
-        display: block;
-        margin-top: 5px;
-        color: var(--muted);
-        font-size: 10px;
-        letter-spacing: .13em;
-        text-transform: uppercase
-      }
-
-      .menu-close {
-        display: grid;
-        width: 38px;
-        height: 38px;
-        place-items: center;
-        border: 1px solid var(--line);
-        background: var(--surface2);
-        color: var(--text);
-        font-size: 25px;
-        line-height: 1;
-        cursor: pointer
-      }
-
-      .mobile-nav-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 55;
-        display: block;
-        width: 100%;
-        height: 100%;
-        padding: 0;
-        border: 0;
-        background: rgba(8, 10, 16, .58);
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-        transition: opacity .32s ease, visibility .32s
-      }
-
-      .mobile-nav-backdrop.open {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto
-      }
-
-      .navlinks.open {
-        transform: translateX(0);
-        visibility: visible
-      }
-
-      .account-button {
-        flex: 0 0 38px;
-        width: 38px;
-        height: 38px
-      }
-
-      .actions {
-        gap: 6px
-      }
-
-      .actions .circle {
-        width: 38px;
-        height: 38px
-      }
-
-      .navlinks a {
-        display: flex;
-        align-items: center;
-        min-height: 50px;
-        padding: 12px 14px;
-        border-left: 2px solid transparent;
-        color: var(--text);
-        font-size: 13px;
-        letter-spacing: .08em;
-        opacity: 0;
-        transform: translateX(-12px);
-        transition: opacity .25s ease, transform .3s ease, color .2s ease,
-          background-color .2s ease, border-color .2s ease
-      }
-
-      .navlinks.open a {
-        opacity: 1;
-        transform: translateX(0)
-      }
-
-      .navlinks.open a:nth-of-type(1) { transition-delay: .08s }
-      .navlinks.open a:nth-of-type(2) { transition-delay: .12s }
-      .navlinks.open a:nth-of-type(3) { transition-delay: .16s }
-      .navlinks.open a:nth-of-type(4) { transition-delay: .2s }
-      .navlinks.open a:nth-of-type(5) { transition-delay: .24s }
-      .navlinks.open a:nth-of-type(6) { transition-delay: .28s }
-
-      .navlinks a:hover,
-      .navlinks a:focus-visible {
-        border-left-color: var(--gold);
-        background: var(--surface2);
-        color: var(--text)
-      }
-
-      .menu-toggle svg path {
-        transform-origin: center;
-        transition: transform .25s ease, opacity .2s ease
-      }
-
-      .menu-toggle.open svg path:nth-child(1) {
-        transform: translateY(6px) rotate(45deg)
-      }
-
-      .menu-toggle.open svg path:nth-child(2) {
-        opacity: 0
-      }
-
-      .menu-toggle.open svg path:nth-child(3) {
-        transform: translateY(-6px) rotate(-45deg)
-      }
-
-      .actions > .account-button {
-        display: none
-      }
-
-      .navlinks .account-menu-button {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-        padding: 12px;
-        border: 0;
-        border-top: 1px solid var(--line);
-        background: transparent;
-        color: var(--text);
-        text-align: left;
-        font-weight: 700
-      }
-
-      .navlinks .account-menu-button:hover,
-      .navlinks .account-menu-button:focus-visible {
-        background: var(--surface2);
-        color: var(--text)
       }
 
       .hero-grid {
@@ -2097,12 +2127,6 @@
       }
     }
 
-    @media (min-width: 621px) {
-      .mobile-nav-head,
-      .mobile-nav-backdrop {
-        display: none
-      }
-    }
   </style>
 </head>
 
@@ -2387,9 +2411,7 @@
       <div class="drawer-foot">
         <div class="total-line"><span>Items</span><span id="itemsTotal">0</span>
         </div>
-        <div class="total-note">Prices are currently confirmed by PALMZ on
-          WhatsApp. Your selected products and sizes will be included in the
-          message.</div>
+        
         <button class="btn whatsapp full" onclick="openCheckout()">Proceed to checkout →</button>
       </div>
     </aside>
@@ -2560,14 +2582,60 @@
     }
 
     function closeMenu() {
-      $("#mainNav").classList.remove("open");
+      const menu = $("#mainNav");
+      const menuWasOpen = menu.classList.contains("open");
+      const active = document.activeElement;
+      menu.classList.remove("open");
       $(".mobile-nav-backdrop").classList.remove("open");
       document.body.classList.remove("menu-open");
       const button = $(".menu-toggle");
       button.classList.remove("open");
       button.setAttribute("aria-expanded", "false");
       button.setAttribute("aria-label", "Open navigation menu");
-      if (window.matchMedia("(max-width: 620px)").matches) button.focus();
+      if (menuWasOpen && document.documentElement.classList.contains("nav-compact") && active && menu.contains(active)) {
+        button.focus();
+      }
+    }
+
+    function measureInlineNavWidth() {
+      const links = $("#mainNav");
+      const probe = document.createElement("div");
+      probe.className = "nav-inline-probe";
+      [...links.children].forEach(child => {
+        if (child.classList.contains("mobile-nav-head") || child.classList.contains("account-menu-button")) return;
+        probe.appendChild(child.cloneNode(true));
+      });
+      document.body.appendChild(probe);
+      const width = probe.scrollWidth;
+      probe.remove();
+      return width;
+    }
+
+    function updateNavCompactMode() {
+      const nav = document.querySelector(".nav");
+      const logo = document.querySelector(".logo");
+      const actions = document.querySelector(".header .actions");
+      if (!nav || !logo || !actions) return;
+      const root = document.documentElement;
+      const compactNow = root.classList.contains("nav-compact");
+      const gap = parseFloat(getComputedStyle(nav).columnGap || getComputedStyle(nav).gap) || 20;
+      const toggle = actions.querySelector(".menu-toggle");
+      const account = actions.querySelector(".account-button");
+      const desktopActionsWidth = compactNow
+        ? actions.offsetWidth - (toggle && toggle.offsetWidth || 0) + (account ? 42 : 0)
+        : actions.offsetWidth;
+      const needed = logo.offsetWidth + measureInlineNavWidth() + desktopActionsWidth + gap * 2;
+      const slack = compactNow ? 48 : 12;
+      const compact = needed + slack > nav.clientWidth || window.innerWidth <= 620;
+      if (compact === compactNow) return;
+      if (!compact) closeMenu();
+      root.classList.toggle("nav-compact", compact);
+    }
+
+    let navCompactFrame = 0;
+    function scheduleNavCompactMode() {
+      cancelAnimationFrame(navCompactFrame);
+      navCompactFrame = requestAnimationFrame(updateNavCompactMode);
     }
 
     document.querySelectorAll("#mainNav a").forEach(link =>
@@ -2575,9 +2643,9 @@
     document.addEventListener("keydown", event => {
       if (event.key === "Escape" && $("#mainNav").classList.contains("open")) closeMenu();
     });
-    window.matchMedia("(min-width: 621px)").addEventListener("change", event => {
-      if (event.matches) closeMenu();
-    });
+    window.addEventListener("resize", scheduleNavCompactMode);
+    if (window.ResizeObserver) new ResizeObserver(scheduleNavCompactMode).observe(document.querySelector(".nav"));
+    updateNavCompactMode();
 
     function money(n) {
       return "₦" + Number(n).toLocaleString("en-NG");
@@ -2838,7 +2906,7 @@
       preload.onload = () => {
         const state = galleryTransitions.get(gallery);
         if (!state) return;
-        img.style.transition = "opacity .24s ease";
+        img.style.transition = "transform .35s ease, opacity .24s ease";
         img.style.opacity = "0";
         setTimeout(() => {
           img.src = nextSrc;
@@ -2848,7 +2916,7 @@
           });
           img.style.transition = "none";
           img.getBoundingClientRect();
-          img.style.transition = "opacity .38s ease";
+          img.style.transition = "transform .35s ease, opacity .38s ease";
           img.style.opacity = "1";
           setTimeout(finish, 400);
         }, 240);

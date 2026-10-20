@@ -2,88 +2,505 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <title>My Account — PALMZ</title>
+  <script>
+    if (window.innerWidth <= 1100) document.documentElement.classList.add("nav-compact");
+  </script>
   <style>
     :root {
-      color-scheme: light;
+      color-scheme: light dark;
       --bg: #f7f5ef;
-      --surface: #fff;
+      --surface: #ffffff;
       --surface2: #f1efe8;
       --text: #11141c;
       --muted: #6e6d68;
-      --line: rgba(17, 20, 28, .12);
+      --line: rgba(17, 20, 28, .10);
       --navy: #0c1227;
       --gold: #c9a34a;
-      --red: #b3261e
+      --gold2: #e5c66f;
+      --shadow: 0 20px 60px rgba(0, 0, 0, .13)
     }
 
     * { box-sizing: border-box }
+
+    html { scroll-behavior: smooth }
+
     body {
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
     }
-    button, a { font: inherit }
-    a { color: inherit; text-decoration: none }
-    .top { background: var(--navy); color: #fff }
-    .top-inner, main { width: min(760px, calc(100% - 32px)); margin: auto }
-    .top-inner {
-      min-height: 68px;
+
+    body.menu-open { overflow: hidden }
+
+    button, input { font: inherit }
+    button { cursor: pointer }
+    a { color: inherit; text-decoration: none; transition: color .2s ease, opacity .2s ease }
+
+    #app { min-height: 100vh; background: var(--bg) }
+
+    .container { width: min(1180px, calc(100% - 36px)); margin: auto }
+
+    .announcement {
+      background: var(--navy);
+      color: #e9e6da;
+      text-align: center;
+      padding: 10px 16px;
+      font-size: 11px;
+      letter-spacing: .15em;
+      text-transform: uppercase
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--line)
+    }
+
+    .nav {
+      height: 78px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px
+      gap: 20px
     }
-    .brand { font-weight: 900; letter-spacing: .18em }
-    .top-link { font-size: 13px; color: #e9e6da }
-    main { padding: 42px 0 70px }
-    h1 { margin: 0 0 8px; font: 700 36px Georgia, serif }
-    h2 { margin: 30px 0 12px; font: 700 24px Georgia, serif }
-    .muted { color: var(--muted); font-size: 13px; line-height: 1.6 }
-    .panel {
-      margin-top: 22px;
-      padding: 22px;
-      border: 1px solid var(--line);
-      background: var(--surface)
-    }
-    .profile { display: flex; align-items: center; gap: 14px }
-    .profile img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover }
-    .profile-name { font-weight: 800 }
-    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px }
-    .button {
-      display: inline-flex;
+
+    .logo {
+      display: flex;
       align-items: center;
-      justify-content: center;
-      min-height: 42px;
-      padding: 10px 16px;
-      border: 0;
+      gap: 10px;
+      font-weight: 900;
+      letter-spacing: .2em;
+      font-size: 17px;
+      font-family: "Playfair Display", Georgia, serif
+    }
+
+    .navlinks {
+      display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+      justify-content: flex-end;
+      gap: 28px;
+      font-size: 13px
+    }
+
+    .navlinks a { flex: 0 0 auto; white-space: nowrap }
+    .navlinks a:hover { color: var(--gold) }
+    .logo, .actions { flex: 0 0 auto }
+    .mobile-nav-head, .mobile-nav-backdrop { display: none }
+
+    .nav-inline-probe {
+      position: absolute;
+      left: 0;
+      top: 0;
+      display: flex;
+      gap: 28px;
+      font-size: 13px;
+      visibility: hidden;
+      pointer-events: none;
+      white-space: nowrap
+    }
+
+    .account-menu-button { display: none }
+
+    .menu-toggle {
+      display: none;
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      place-items: center
+    }
+
+    .menu-toggle svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round
+    }
+
+    .actions { display: flex; gap: 8px }
+
+    .account-button {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50% !important;
+      background: var(--surface);
+      color: var(--text);
+      padding: 0
+    }
+
+    .circle {
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      transition: transform .22s ease, background-color .22s ease, border-color .22s ease, box-shadow .22s ease
+    }
+
+    .circle:hover {
+      transform: translateY(-2px);
+      border-color: var(--gold);
+      box-shadow: 0 7px 18px rgba(0, 0, 0, .12)
+    }
+
+    .circle svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round
+    }
+
+    .cart { position: relative }
+
+    .count {
+      position: absolute;
+      right: -2px;
+      top: -2px;
       background: var(--gold);
       color: #111;
-      font-size: 13px;
-      font-weight: 800;
-      cursor: pointer
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      font-size: 10px;
+      display: grid;
+      place-items: center;
+      font-weight: 900
     }
-    .button.secondary { background: var(--surface2); border: 1px solid var(--line) ; color: white;}
-    .orders { display: grid; gap: 12px }
-    .order {
-      padding: 16px;
+
+    html.nav-compact .nav { position: relative; height: 68px; gap: 8px }
+    html.nav-compact .header { z-index: 60 }
+    html.nav-compact .menu-toggle { display: grid; flex: 0 0 38px; width: 38px; height: 38px }
+    html.nav-compact .navlinks {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 65;
+      display: flex;
+      width: min(350px, calc(100vw - 52px));
+      height: 100vh;
+      height: 100dvh;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 6px;
+      padding: 24px 22px;
+      background: var(--surface);
+      box-shadow: 18px 0 55px rgba(0, 0, 0, .2);
+      transform: translateX(-105%);
+      visibility: hidden;
+      transition: transform .42s cubic-bezier(.22, 1, .36, 1), visibility .42s;
+      overflow-y: auto;
+      overscroll-behavior: contain
+    }
+    html.nav-compact .mobile-nav-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0 22px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--line)
+    }
+    html.nav-compact .mobile-nav-brand { font-size: 18px; font-weight: 900; letter-spacing: .22em }
+    html.nav-compact .mobile-nav-caption {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .13em;
+      text-transform: uppercase
+    }
+    html.nav-compact .menu-close {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
       border: 1px solid var(--line);
-      background: var(--surface)
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 25px;
+      line-height: 1
     }
-    .order-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 800 }
-    .status { color: #7a5a12; text-align: right }
-    .order-items { margin: 10px 0; color: var(--muted); font-size: 13px; line-height: 1.7 }
-    .order-delivery { padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.6 }
+    html.nav-compact .mobile-nav-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 55;
+      display: block;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      border: 0;
+      background: rgba(8, 10, 16, .58);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity .32s ease, visibility .32s
+    }
+    html.nav-compact .mobile-nav-backdrop.open { opacity: 1; visibility: visible; pointer-events: auto }
+    html.nav-compact .navlinks.open { transform: translateX(0); visibility: visible }
+    html.nav-compact .account-button { flex: 0 0 38px; width: 38px; height: 38px }
+    html.nav-compact .actions { gap: 6px }
+    html.nav-compact .actions .circle { width: 38px; height: 38px }
+    html.nav-compact .navlinks a {
+      display: flex;
+      align-items: center;
+      min-height: 50px;
+      padding: 12px 14px;
+      border-left: 2px solid transparent;
+      font-size: 13px;
+      letter-spacing: .08em;
+      white-space: normal;
+      opacity: 0;
+      transform: translateX(-12px);
+      transition: opacity .25s ease, transform .3s ease, color .2s ease, background-color .2s ease, border-color .2s ease
+    }
+    html.nav-compact .navlinks.open a { opacity: 1; transform: translateX(0) }
+    html.nav-compact .navlinks.open a:nth-of-type(1) { transition-delay: .08s }
+    html.nav-compact .navlinks.open a:nth-of-type(2) { transition-delay: .12s }
+    html.nav-compact .navlinks.open a:nth-of-type(3) { transition-delay: .16s }
+    html.nav-compact .navlinks.open a:nth-of-type(4) { transition-delay: .2s }
+    html.nav-compact .navlinks.open a:nth-of-type(5) { transition-delay: .24s }
+    html.nav-compact .navlinks.open a:nth-of-type(6) { transition-delay: .28s }
+    html.nav-compact .navlinks a:hover,
+    html.nav-compact .navlinks a:focus-visible {
+      border-left-color: var(--gold);
+      background: var(--surface2);
+      color: var(--text)
+    }
+    html.nav-compact .menu-toggle svg path { transform-origin: center; transition: transform .25s ease, opacity .2s ease }
+    html.nav-compact .menu-toggle.open svg path:nth-child(1) { transform: translateY(6px) rotate(45deg) }
+    html.nav-compact .menu-toggle.open svg path:nth-child(2) { opacity: 0 }
+    html.nav-compact .menu-toggle.open svg path:nth-child(3) { transform: translateY(-6px) rotate(-45deg) }
+    html.nav-compact .actions > .account-button { display: none }
+    html.nav-compact .navlinks .account-menu-button {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px;
+      border: 0;
+      border-top: 1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      font-weight: 700
+    }
+    html.nav-compact .navlinks .account-menu-button:hover,
+    html.nav-compact .navlinks .account-menu-button:focus-visible { background: var(--surface2) }
+
+    .kicker {
+      font-size: 11px;
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 800
+    }
+
+    .section { padding: 62px 0 82px }
+
+    .section h1 {
+      font: 700 clamp(42px, 6vw, 64px)/.95 Georgia, serif;
+      letter-spacing: -.04em;
+      margin: 8px 0 12px
+    }
+
+    .lead { max-width: 560px; color: var(--muted); font-size: 15px; line-height: 1.8 }
+
+    .panel {
+      margin-top: 28px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, .04)
+    }
+
+    .panel h2,
+    .history-head h2 {
+      font: 700 32px/1 Georgia, serif;
+      letter-spacing: -.03em;
+      margin: 0 0 8px
+    }
+
+    .profile { display: flex; align-items: center; gap: 14px }
+    .profile img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line) }
+    .profile-name { font-weight: 800; font-size: 18px }
+
+    .btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 13px 19px;
+      font-weight: 800;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      transition: transform .22s ease, box-shadow .22s ease, background-color .22s ease, border-color .22s ease
+    }
+
+    .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, .16) }
+    .btn-gold { background: var(--gold); color: #111 }
+    .btn-gold:hover { background: var(--gold2) }
+    .btn-outline {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--line)
+    }
+
+    .actions-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px }
+
+    .history-head { margin: 48px 0 18px }
+    .orders { display: grid; gap: 12px }
+
+    .order {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, .04)
+    }
+
+    .order[open] { border-color: color-mix(in srgb, var(--gold) 45%, var(--line)) }
+
+    .order summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px;
+      cursor: pointer;
+      list-style: none
+    }
+
+    .order summary::-webkit-details-marker { display: none }
+    .order summary::marker { content: "" }
+
+    .order-title { display: grid; gap: 4px }
+    .order-date { font-weight: 800; font-size: 15px }
+    .order-preview { color: var(--muted); font-size: 12px }
+
+    .order-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto
+    }
+
+    .status {
+      color: #7a5a12;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      white-space: nowrap
+    }
+
+    .order[data-status="confirmed"] .status,
+    .order[data-status="fulfilled"] .status { color: #168344 }
+    .order[data-status="cancelled"] .status { color: #b3261e }
+
+    .chevron {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: var(--surface2);
+      transition: transform .22s ease
+    }
+
+    .chevron svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round
+    }
+
+    .order[open] .chevron { transform: rotate(180deg); border-color: var(--gold) }
+
+    .order-body {
+      padding: 0 20px 20px;
+      border-top: 1px solid var(--line)
+    }
+
+    .order-items {
+      margin: 14px 0 0;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.8
+    }
+
+    .order-delivery {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7
+    }
+
+    .empty-orders { color: var(--muted); font-size: 14px; line-height: 1.7 }
+    .muted { color: var(--muted); font-size: 13px; line-height: 1.6 }
     .message { margin-top: 16px; color: var(--muted); font-size: 13px; line-height: 1.6 }
     .loading-indicator { display: inline-flex; align-items: center; gap: 9px }
-    .spinner { width: 15px; height: 15px; flex: 0 0 15px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite }
+    .spinner {
+      width: 15px;
+      height: 15px;
+      flex: 0 0 15px;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spin .7s linear infinite
+    }
     @keyframes spin { to { transform: rotate(360deg) } }
     [hidden] { display: none !important }
+
+    footer { border-top: 1px solid var(--line); padding: 38px 0 }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px
+    }
+    .footer strong { color: var(--text); letter-spacing: .17em }
+
+    @media (max-width: 620px) {
+      .container { width: min(100% - 28px, 1180px) }
+      .section { padding: 42px 0 62px }
+      .order summary { align-items: flex-start }
+      .order-meta { flex-direction: column; align-items: flex-end; gap: 8px }
+    }
+
+    @media (max-width: 360px) {
+      .menu-toggle, .account-button, .actions .circle { width: 34px; height: 34px }
+      .actions { gap: 4px }
+    }
+
     @media (prefers-color-scheme: dark) {
       :root {
         color-scheme: dark;
@@ -94,39 +511,126 @@
         --muted: #a5a8b4;
         --line: rgba(255, 255, 255, .09)
       }
+      .status { color: #e5c66f }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important
+      }
     }
   </style>
 </head>
 <body>
-  <header class="top">
-    <div class="top-inner">
-      <a href="/" class="brand">PALMZ</a>
-      <a href="/" class="top-link">Back to store</a>
-    </div>
-  </header>
-  <main>
-    <h1>My account</h1>
-    <div class="muted">View your saved details and order requests.</div>
-    <section class="panel" id="signedOut">
-      <strong>Sign in with Google</strong>
-      <p class="muted">Save your checkout details and access your order history on any device. Guest checkout is also available.</p>
-      <div id="googleButton"></div>
-      <div class="message" id="status" aria-live="polite"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Checking Google sign-in…</span></div>
-    </section>
-    <section class="panel" id="signedIn" hidden>
-      <div class="profile">
-        <img id="picture" alt="" hidden>
-        <div><div class="profile-name" id="name"></div><div class="muted" id="email"></div></div>
+  <div id="app">
+    <div class="announcement">Tarauni shopping complex, along Government House, kano.</div>
+    <header class="header">
+      <div class="container nav">
+        <a href="/" class="logo">PALMZ</a>
+        <nav class="navlinks" id="mainNav" aria-label="Main navigation">
+          <div class="mobile-nav-head">
+            <div>
+              <span class="mobile-nav-brand">PALMZ</span>
+              <span class="mobile-nav-caption">Move with intention</span>
+            </div>
+            <button class="menu-close" type="button" onclick="closeMenu()" aria-label="Close navigation menu">×</button>
+          </div>
+          <a href="/shop">Shop</a>
+          <a href="/shop?category=Foreign%20Footwear">Foreign footwear</a>
+          <a href="/about">About</a>
+          <a href="/contact">Contact</a>
+          <a href="/#order">How to order</a>
+          <a href="/customize">Customize a shoe</a>
+          <button class="account-menu-button" type="button" onclick="closeMenu()">
+            <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20">
+              <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.7"></circle>
+              <path d="M5 20c.5-3.4 3.2-5.3 7-5.3s6.5 1.9 7 5.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
+            </svg>
+            Your account
+          </button>
+        </nav>
+        <div class="actions">
+          <button class="menu-toggle" type="button" onclick="toggleMenu()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="mainNav">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 6h16"></path>
+              <path d="M4 12h16"></path>
+              <path d="M4 18h16"></path>
+            </svg>
+          </button>
+          <a class="circle search" href="/shop" aria-label="Search">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="5.5"></circle>
+              <path d="M16 16l4.5 4.5"></path>
+            </svg>
+          </a>
+          <a class="account-button" href="/account.html" aria-label="Account" title="Account" aria-current="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20">
+              <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.7"></circle>
+              <path d="M5 20c.5-3.4 3.2-5.3 7-5.3s6.5 1.9 7 5.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
+            </svg>
+          </a>
+          <a class="circle cart" href="/cart" aria-label="Bag">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5.5 8.5h13l-1 10.25a1.25 1.25 0 0 1-1.25 1.13h-9.5a1.25 1.25 0 0 1-1.25-1.13L5.5 8.5Z"></path>
+              <path d="M9 8.5V6.75a3 3 0 0 1 6 0V8.5"></path>
+            </svg>
+            <span class="count" id="count">0</span>
+          </a>
+        </div>
       </div>
-      <div class="actions">
-        <button class="button secondary" type="button" onclick="signOut()">Sign out</button>
+    </header>
+    <button class="mobile-nav-backdrop" type="button" onclick="closeMenu()" aria-label="Close navigation menu" tabindex="-1"></button>
+
+    <main class="section">
+      <div class="container">
+        <div class="kicker">PALMZ ACCOUNT</div>
+        <h1>My account</h1>
+        <p class="lead">View your saved details and order requests.</p>
+
+        <section class="panel" id="signedOut">
+          <h2>Sign in with Google</h2>
+          <p class="muted">Save your checkout details and access your order history on any device. Guest checkout is also available.</p>
+          <div id="googleButton"></div>
+          <div class="message" id="status" aria-live="polite"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Checking Google sign-in…</span></div>
+        </section>
+
+        <section class="panel" id="signedIn" hidden>
+          <div class="profile">
+            <img id="picture" alt="" hidden>
+            <div>
+              <div class="profile-name" id="name"></div>
+              <div class="muted" id="email"></div>
+            </div>
+          </div>
+          <div class="actions-row">
+            <button class="btn btn-outline" type="button" onclick="signOut()">Sign out</button>
+            <a class="btn btn-gold" href="/shop">Continue shopping</a>
+          </div>
+        </section>
+
+        <section id="history" hidden>
+          <div class="history-head">
+            <div class="kicker">YOUR ORDERS</div>
+            <h2>Order history</h2>
+            <p class="muted">Open an order to see items, delivery, and payment details.</p>
+          </div>
+          <div class="orders" id="orders"></div>
+        </section>
       </div>
-    </section>
-    <section id="history" hidden>
-      <h2>Order history</h2>
-      <div class="orders" id="orders"></div>
-    </section>
-  </main>
+    </main>
+
+    <footer>
+      <div class="container footer">
+        <div><strong>PALMZ</strong><br><span>Karkasara, behind AKTH, Kano, Nigeria</span></div>
+        <div><a href="/shop">Shop</a> · <a href="/about">About</a></div>
+        <div>© 2026 PALMZ · Footwear</div>
+      </div>
+    </footer>
+  </div>
+
   <script>
     const $ = selector => document.querySelector(selector);
     let googleReady = false;
@@ -136,6 +640,90 @@
       fulfilled: "Fulfilled",
       cancelled: "Cancelled"
     };
+
+    function toggleMenu() {
+      const menu = $("#mainNav");
+      const button = $(".menu-toggle");
+      const isOpen = menu.classList.toggle("open");
+      button.classList.toggle("open", isOpen);
+      $(".mobile-nav-backdrop").classList.toggle("open", isOpen);
+      document.body.classList.toggle("menu-open", isOpen);
+      button.setAttribute("aria-expanded", String(isOpen));
+      button.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
+      if (isOpen) $(".menu-close").focus();
+    }
+
+    function closeMenu() {
+      const menu = $("#mainNav");
+      const menuWasOpen = menu.classList.contains("open");
+      const active = document.activeElement;
+      menu.classList.remove("open");
+      $(".mobile-nav-backdrop").classList.remove("open");
+      document.body.classList.remove("menu-open");
+      const button = $(".menu-toggle");
+      button.classList.remove("open");
+      button.setAttribute("aria-expanded", "false");
+      button.setAttribute("aria-label", "Open navigation menu");
+      if (menuWasOpen && document.documentElement.classList.contains("nav-compact") && active && menu.contains(active)) {
+        button.focus();
+      }
+    }
+
+    function measureInlineNavWidth() {
+      const links = $("#mainNav");
+      const probe = document.createElement("div");
+      probe.className = "nav-inline-probe";
+      [...links.children].forEach(child => {
+        if (child.classList.contains("mobile-nav-head") || child.classList.contains("account-menu-button")) return;
+        probe.appendChild(child.cloneNode(true));
+      });
+      document.body.appendChild(probe);
+      const width = probe.scrollWidth;
+      probe.remove();
+      return width;
+    }
+
+    function updateNavCompactMode() {
+      const nav = document.querySelector(".nav");
+      const logo = document.querySelector(".logo");
+      const actions = document.querySelector(".header .actions");
+      if (!nav || !logo || !actions) return;
+      const root = document.documentElement;
+      const compactNow = root.classList.contains("nav-compact");
+      const gap = parseFloat(getComputedStyle(nav).columnGap || getComputedStyle(nav).gap) || 20;
+      const toggle = actions.querySelector(".menu-toggle");
+      const account = actions.querySelector(".account-button");
+      const desktopActionsWidth = compactNow
+        ? actions.offsetWidth - (toggle && toggle.offsetWidth || 0) + (account ? 42 : 0)
+        : actions.offsetWidth;
+      const needed = logo.offsetWidth + measureInlineNavWidth() + desktopActionsWidth + gap * 2;
+      const slack = compactNow ? 48 : 12;
+      const compact = needed + slack > nav.clientWidth || window.innerWidth <= 620;
+      if (compact === compactNow) return;
+      if (!compact) closeMenu();
+      root.classList.toggle("nav-compact", compact);
+    }
+
+    let navCompactFrame = 0;
+    function scheduleNavCompactMode() {
+      cancelAnimationFrame(navCompactFrame);
+      navCompactFrame = requestAnimationFrame(updateNavCompactMode);
+    }
+
+    document.querySelectorAll("#mainNav a").forEach(link => link.addEventListener("click", closeMenu));
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && $("#mainNav").classList.contains("open")) closeMenu();
+    });
+    window.addEventListener("resize", scheduleNavCompactMode);
+    if (window.ResizeObserver) new ResizeObserver(scheduleNavCompactMode).observe(document.querySelector(".nav"));
+    updateNavCompactMode();
+
+    try {
+      const cart = JSON.parse(localStorage.getItem("palmz_cart_v3") || "[]");
+      $("#count").textContent = cart.reduce((n, item) => n + (item.qty || 0), 0);
+    } catch (error) {
+      $("#count").textContent = "0";
+    }
 
     async function request(url, options = {}) {
       const response = await fetch(url, { credentials: "same-origin", ...options });
@@ -161,21 +749,36 @@
       loadOrders();
     }
 
+    function orderPreview(order) {
+      const first = order.items && order.items[0];
+      if (!first) return "No items";
+      const extra = Math.max(0, order.items.length - 1);
+      return extra ? `${escapeHtml(first.name)} + ${extra} more` : escapeHtml(first.name);
+    }
+
     async function loadOrders() {
       $("#orders").innerHTML = '<div class="muted"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading your orders…</span></div>';
       try {
         const { orders } = await request("/api/customer/orders");
-        $("#orders").innerHTML = orders.length ? orders.map(order => `
-          <article class="order">
-            <div class="order-head">
-              <span>${new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(order.createdAt))}</span>
-              <span class="status">${escapeHtml(orderStatusLabels[order.status] || order.status)}</span>
+        $("#orders").innerHTML = orders.length ? orders.map((order, index) => `
+          <details class="order" data-status="${escapeHtml(order.status || "")}"${index === 0 ? " open" : ""}>
+            <summary>
+              <span class="order-title">
+                <span class="order-date">${new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(order.createdAt))}</span>
+                <span class="order-preview">${orderPreview(order)}${order.totalAmount != null ? ` · ₦${Number(order.totalAmount).toLocaleString("en-NG")}` : ""}</span>
+              </span>
+              <span class="order-meta">
+                <span class="status">${escapeHtml(orderStatusLabels[order.status] || order.status)}</span>
+                <span class="chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></span>
+              </span>
+            </summary>
+            <div class="order-body">
+              <div class="order-items">${order.items.map(item => `${item.quantity} × ${escapeHtml(item.name)} — size ${escapeHtml(item.size)}, ${escapeHtml(item.color)}${item.unitPrice != null ? ` — ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}`).join("<br>")}</div>
+              <div class="order-delivery">${order.fulfillmentMethod === "pickup" ? `Pickup: ${escapeHtml(order.pickupBranchName || "Branch")} — ${escapeHtml(order.pickupBranchAddress || order.address)}, ${escapeHtml(order.city)}` : `${escapeHtml(order.address)}, ${escapeHtml(order.city)}${order.deliveryFee ? `<br>Delivery: ₦${Number(order.deliveryFee).toLocaleString("en-NG")}${order.deliveryEstimate ? ` · ${escapeHtml(order.deliveryEstimate)}` : ""}` : ""}`}${order.totalAmount != null ? `<br>Total: ₦${Number(order.totalAmount).toLocaleString("en-NG")}` : ""}<br>Phone: ${escapeHtml(order.phone)}<br>Payment: ${escapeHtml(order.paymentProvider || "whatsapp")} · ${escapeHtml(order.paymentStatus || "not_started")}${Number.isSafeInteger(order.paidAmountKobo) ? `<br>Amount received: ₦${(order.paidAmountKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}${Number.isSafeInteger(order.paystackFeeKobo) && order.paystackFeeKobo > 0 ? `<br>Paystack checkout charge: ₦${(order.paystackFeeKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (not added by PALMZ)` : ""}</div>
             </div>
-            <div class="order-items">${order.items.map(item => `${item.quantity} × ${escapeHtml(item.name)} — size ${escapeHtml(item.size)}, ${escapeHtml(item.color)}${item.unitPrice != null ? ` — ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}`).join("<br>")}</div>
-            <div class="order-delivery">${order.fulfillmentMethod === "pickup" ? `Pickup: ${escapeHtml(order.pickupBranchName || "Branch")} — ${escapeHtml(order.pickupBranchAddress || order.address)}, ${escapeHtml(order.city)}` : `${escapeHtml(order.address)}, ${escapeHtml(order.city)}${order.deliveryFee ? `<br>Delivery: ₦${Number(order.deliveryFee).toLocaleString("en-NG")}${order.deliveryEstimate ? ` · ${escapeHtml(order.deliveryEstimate)}` : ""}` : ""}`}${order.totalAmount != null ? `<br>Total: ₦${Number(order.totalAmount).toLocaleString("en-NG")}` : ""}<br>Phone: ${escapeHtml(order.phone)}<br>Payment: ${escapeHtml(order.paymentProvider || "whatsapp")} · ${escapeHtml(order.paymentStatus || "not_started")}${Number.isSafeInteger(order.paidAmountKobo) ? `<br>Amount received: ₦${(order.paidAmountKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}${Number.isSafeInteger(order.paystackFeeKobo) && order.paystackFeeKobo > 0 ? `<br>Paystack checkout charge: ₦${(order.paystackFeeKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (not added by PALMZ)` : ""}</div>
-          </article>`).join("") : '<div class="panel muted">No saved orders yet.</div>';
+          </details>`).join("") : '<div class="panel empty-orders">No saved orders yet.</div>';
       } catch (error) {
-        $("#orders").innerHTML = `<div class="panel muted">${escapeHtml(error.message)}</div>`;
+        $("#orders").innerHTML = `<div class="panel empty-orders">${escapeHtml(error.message)}</div>`;
       }
     }
 
