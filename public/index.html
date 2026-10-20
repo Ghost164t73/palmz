@@ -122,7 +122,8 @@
       letter-spacing: .2em;
       /* color : var(--gold); */
       font-size: 17px;
-      font-family: 'Playfair Display';
+           font-family: "Playfair Display", Georgia, serif
+
     }
 
     .logo img {
@@ -1349,6 +1350,13 @@
       line-height: 1.02
     }
 
+    #youMayLike { margin-top: clamp(54px, 8vw, 96px); padding-top: 32px; border-top: 1px solid var(--line) }
+    .recommendation-heading { margin-bottom: 22px }
+    .recommendation-heading .kicker { color: var(--gold); font-size: 11px; letter-spacing: .17em; text-transform: uppercase }
+    .recommendation-heading h2 { margin: 7px 0 0; font: 700 clamp(28px, 4vw, 38px)/1.1 Georgia, serif }
+    #recommendedProducts.products { grid-template-columns: repeat(4, minmax(0, 1fr)) }
+    #recommendedProducts .product-image { height: 260px }
+
     .product-loading {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1940,6 +1948,7 @@
     }
 
     @media(max-width:950px) {
+      #recommendedProducts.products { grid-template-columns: repeat(2, minmax(0, 1fr)) }
       .products {
         grid-template-columns: repeat(2, 1fr)
       }
@@ -1959,6 +1968,7 @@
     }
 
     @media(max-width:620px) {
+      #recommendedProducts.products { grid-template-columns: 1fr }
       .container {
         width: min(100% - 28px, 1180px)
       }
@@ -2299,6 +2309,10 @@
           <div class="product-loading-line product-loading-button skeleton-shimmer"></div>
         </div>
       </div>
+      <section id="youMayLike" aria-labelledby="recommendationTitle" hidden>
+        <div class="recommendation-heading"><div class="kicker">YOU MAY ALSO LIKE</div><h2 id="recommendationTitle">Find another favourite</h2></div>
+        <div class="products" id="recommendedProducts"></div>
+      </section>
     </section>
 
     <section class="brand-story" id="story">
@@ -2804,6 +2818,21 @@
       render();
     }
 
+    function productCardMarkup(product) {
+      return `<article class="card">
+        ${galleryMarkup(product, "product-image")}
+        <div class="info">
+          <div class="name"><a href="/product/${encodeURIComponent(product.id)}">${esc(product.name)}</a></div>
+          <div class="card-price">${cardPriceLabel(product)}</div>
+          <div class="sizes">Sizes ${product.sizeMin}–${product.sizeMax}</div>
+          <div class="card-actions">
+            <button class="view" data-id="${esc(product.id)}" onclick="openProduct(this.dataset.id)">View pair</button>
+            ${product.inStock ? `<button class="add" data-id="${esc(product.id)}" onclick="openProduct(this.dataset.id)">Choose size</button>` : `<button class="add" disabled style="opacity:.5;cursor:not-allowed">Sold out</button>`}
+          </div>
+        </div>
+      </article>`;
+    }
+
     function render() {
       if (productsLoading) return;
       autoSlideTimers.forEach((timer) => clearInterval(timer));
@@ -2954,9 +2983,28 @@
       location.href = `/product/${encodeURIComponent(id)}`;
     }
 
+    function relatedProducts(product) {
+      const ignored = new Set(["and", "for", "the", "shoe", "shoes", "footwear", "sandal", "sandals", "slipper", "slippers"]);
+      const words = value => String(value || "").toLocaleLowerCase("en").match(/[a-z0-9]+/g)?.filter(word => word.length > 2 && !ignored.has(word)) || [];
+      const productWords = new Set(words(product.name));
+      const productType = String(product.type || "").trim().toLocaleLowerCase("en");
+      return PRODUCTS.map((candidate, index) => {
+        if (candidate.id === product.id) return null;
+        const sameCategory = productType && String(candidate.type || "").trim().toLocaleLowerCase("en") === productType;
+        const sharedNameWords = words(candidate.name).filter(word => productWords.has(word)).length;
+        if (!sameCategory && !sharedNameWords) return null;
+        return { candidate, index, score: (sameCategory ? 4 : 0) + sharedNameWords };
+      }).filter(Boolean)
+        .sort((a, b) => b.score - a.score || Number(b.candidate.inStock) - Number(a.candidate.inStock) || a.index - b.index)
+        .slice(0, 4)
+        .map(result => result.candidate);
+    }
+
     function renderProductPage() {
       const match = location.pathname.match(/^\/product\/([^/]+)\/?$/);
       if (!match) return;
+      $("#youMayLike").hidden = true;
+      $("#recommendedProducts").innerHTML = "";
       let productId;
       try { productId = decodeURIComponent(match[1]); }
       catch (error) {
@@ -2989,6 +3037,10 @@
     </div>`;
       const detailGallery = $("#productPageDetail").querySelector(".detail-img");
       if (detailGallery) attachGallery(detailGallery);
+      const suggestions = relatedProducts(selectedProduct);
+      $("#recommendedProducts").innerHTML = suggestions.map(productCardMarkup).join("");
+      $("#youMayLike").hidden = suggestions.length === 0;
+      $("#recommendedProducts").querySelectorAll(".product-image").forEach(attachGallery);
       $("#productPageDetail").setAttribute("aria-busy", "false");
       updateVariantButton();
     }
@@ -3566,7 +3618,6 @@ Please confirm item availability and payment details. Thank you!`;
       save();
       render();
       refreshCheckoutPage();
-      renderProductPage();
     }
     loadProducts();
     deliveryOptionsPromise = loadDeliveryOptions();
