@@ -252,11 +252,21 @@ async function uploadProductGallery(files) {
     throw err;
   }
 }
-function productImagePublicIds(product) {
-  return [...new Set([
-    product.image && product.image.publicId,
-    ...(product.images || []).map((image) => image.publicId),
-  ].filter(Boolean))];
+function productImageAssets(product) {
+  const images = [...(product.images || []), product.image].filter((image) => image && image.publicId);
+  return [...new Map(images.map((image) => [image.publicId, image])).values()];
+}
+async function removeUnreferencedProductImages(images) {
+  const uniqueImages = [...new Map(images.filter((image) => image && image.publicId).map((image) => [image.publicId, image])).values()];
+  if (!uniqueImages.length) return;
+  let referencedUrls;
+  try {
+    referencedUrls = new Set(await Order.distinct('items.imageUrl', { 'items.imageUrl': { $in: uniqueImages.map((image) => image.url) } }));
+  } catch (error) {
+    console.error('Could not check product image order history; keeping images in storage', error.message);
+    return;
+  }
+  await Promise.all(uniqueImages.filter((image) => !referencedUrls.has(image.url)).map((image) => removeFromCloudinary(image.publicId)));
 }
 
 // ---------- Admin auth (single password, signed cookie) ----------
@@ -640,7 +650,9 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
     const quantity = Number(item.quantity);
     const size = String(item.size || '');
     const color = String(item.color || '');
-    if (!product || !product.inStock || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+    if (!product) throw bad('An item in your bag is no longer available');
+    if (product.available === false) throw bad(`${product.name} is currently unavailable for ordering`);
+    if (!product.inStock || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
       throw bad('An item in your bag is no longer available');
     }
     if (!product.sizes.includes(size) || !product.colors.includes(color)) {
@@ -654,6 +666,7 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
     return {
       productId,
       name: product.name,
+      imageUrl: product.image && product.image.url ? product.image.url : '',
       size,
       color,
       quantity,
@@ -972,6 +985,18 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
     filter.status = req.query.status;
   }
   const orders = await Order.find(filter).sort({ createdAt: -1 }).limit(200).lean();
+  const missingImageProductIds = [...new Set(orders.flatMap((order) => (order.items || [])
+    .filter((item) => !item.imageUrl && item.productId)
+    .map((item) => item.productId)))];
+  if (missingImageProductIds.length) {
+    const products = await Product.find({ _id: { $in: missingImageProductIds } }).select('_id image').lean();
+    const imagesByProductId = new Map(products.map((product) => [String(product._id), product.image && product.image.url || '']));
+    for (const order of orders) {
+      for (const item of order.items || []) {
+        if (!item.imageUrl) item.imageUrl = imagesByProductId.get(item.productId) || '';
+      }
+    }
+  }
   res.json({ orders, statuses: Order.ORDER_STATUSES });
 });
 app.patch('/api/admin/orders/:id/payment', requireAdmin, async (req, res) => {
@@ -1159,7 +1184,7 @@ app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, a
   const files = productImageFiles(req);
   const images = files.length ? await uploadProductGallery(files) : null;
   let p;
-  let removedImageIds = [];
+  let removedImages = [];
   try {
     await mongoose.connection.transaction(async (session) => {
       p = await Product.findById(req.params.id).session(session);
@@ -1200,7 +1225,7 @@ app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, a
       data.images = nextImages;
       data.image = nextImages[0];
       const nextPublicIds = new Set(nextImages.map((image) => image.publicId).filter(Boolean));
-      removedImageIds = productImagePublicIds(p).filter((publicId) => !nextPublicIds.has(publicId));
+      removedImages = productImageAssets(p).filter((image) => !nextPublicIds.has(image.publicId));
       p.set(data);
       await p.save({ session });
     });
@@ -1208,7 +1233,7 @@ app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, a
     if (images) await Promise.all(images.map((image) => removeFromCloudinary(image.publicId)));
     throw error;
   }
-  await Promise.all(removedImageIds.map(removeFromCloudinary));
+  await removeUnreferencedProductImages(removedImages);
   res.json(p);
 });
 
@@ -1259,7 +1284,7 @@ app.delete('/api/admin/products/:id', requireAdmin, validId, async (req, res) =>
     p = await Product.findByIdAndDelete(req.params.id, { session });
   });
   if (!p) return res.status(404).json({ error: 'Product not found' });
-  await Promise.all(productImagePublicIds(p).map(removeFromCloudinary));
+  await removeUnreferencedProductImages(productImageAssets(p));
   res.json({ ok: true });
 });
 

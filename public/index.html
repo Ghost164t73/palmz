@@ -2826,7 +2826,7 @@
           <div class="sizes">Sizes ${product.sizeMin}–${product.sizeMax}</div>
           <div class="card-actions">
             <button class="view" data-id="${esc(product.id)}" onclick="openProduct(this.dataset.id)">View pair</button>
-            ${product.inStock ? `<button class="add" data-id="${esc(product.id)}" onclick="openProduct(this.dataset.id)">Choose size</button>` : `<button class="add" disabled style="opacity:.5;cursor:not-allowed">Sold out</button>`}
+            ${product.inStock ? `<button class="add" data-id="${esc(product.id)}" onclick="openProduct(this.dataset.id)">Choose size</button>` : `<button class="add" disabled style="opacity:.5;cursor:not-allowed">${product.available === false ? "Unavailable" : "Sold out"}</button>`}
           </div>
         </div>
       </article>`;
@@ -2857,7 +2857,7 @@
         <div class="sizes">Sizes ${p.sizeMin}–${p.sizeMax}</div>
         <div class="card-actions">
           <button class="view" onclick="openProduct('${p.id}')">View pair</button>
-          ${p.inStock?`<button class="add" onclick="openProduct('${p.id}')">Choose size</button>`:`<button class="add" disabled style="opacity:.5;cursor:not-allowed">Sold out</button>`}
+          ${p.inStock?`<button class="add" onclick="openProduct('${p.id}')">Choose size</button>`:`<button class="add" disabled style="opacity:.5;cursor:not-allowed">${p.available === false ? "Unavailable" : "Sold out"}</button>`}
         </div>
       </div>
     </article>`).join("") :
@@ -3015,7 +3015,7 @@
         $("#productPageDetail").innerHTML = `<div class="product-page-empty"><h2>Product not found</h2><p>This pair may no longer be available.</p><a class="btn btn-gold" href="/shop">Browse footwear</a></div>`;
         $("#productPageDetail").setAttribute("aria-busy", "false"); return;
       }
-      const sizesInStock = selectedProduct.sizes.filter(size => selectedProduct.colors.some(color => variantStock(selectedProduct, color, size) > 0));
+      const sizesInStock = selectedProduct.available === false ? [] : selectedProduct.sizes.filter(size => selectedProduct.colors.some(color => variantStock(selectedProduct, color, size) > 0));
       selectedSize = sizesInStock[0] || null;
       selectedColor = selectedProduct.colors.find(color => variantStock(selectedProduct, color, selectedSize) > 0) || null;
       document.title = `${selectedProduct.name} — PALMZ`;
@@ -3026,7 +3026,7 @@
       <h3>${esc(selectedProduct.name)}</h3>
       <div class="desc">${esc(selectedProduct.desc)}</div>
       <div class="label">SIZE</div>
-      <div class="options" id="sizeOptions">${sizesInStock.map(s=>`<button class="option ${s===selectedSize?"selected":""}" onclick="chooseSize('${s}')">${s}</button>`).join("") || '<span class="desc">No sizes currently in stock.</span>'}</div>
+      <div class="options" id="sizeOptions">${sizesInStock.map(s=>`<button class="option ${s===selectedSize?"selected":""}" onclick="chooseSize('${s}')">${s}</button>`).join("") || `<span class="desc">${selectedProduct.available === false ? "This product is currently unavailable." : "No sizes currently in stock."}</span>`}</div>
       <div class="label">COLOUR / VARIANT</div>
       <div class="options" id="colorOptions">${availableColorsMarkup(selectedProduct, selectedSize)}</div>
       <div class="label">PRICE</div>
@@ -3045,6 +3045,7 @@
     }
 
     function availableColorsMarkup(product, size) {
+      if (product.available === false) return '<span class="desc">This product is currently unavailable.</span>';
       if (!size) return '<span class="desc">No colors currently in stock.</span>';
       return product.colors.filter(color => variantStock(product, color, size) > 0).map(color =>
         `<button class="option ${color===selectedColor?"selected":""}" data-v="${esc(color)}" onclick="chooseColor(this.dataset.v)">${esc(color)}</button>`
@@ -3053,6 +3054,13 @@
 
     function updateVariantButton() {
       if (!selectedProduct || !document.getElementById("addSelectedButton")) return;
+      if (selectedProduct.available === false) {
+        const unavailableButton = $("#addSelectedButton");
+        unavailableButton.disabled = true;
+        unavailableButton.textContent = "Currently unavailable";
+        $("#variantAvailability").textContent = "This product is currently unavailable for ordering.";
+        return;
+      }
       const available = selectedColor ? variantStock(selectedProduct, selectedColor, selectedSize) : 0;
       const inCart = cart.filter(item => item.id === selectedProduct.id && item.size === selectedSize && item.color === selectedColor).reduce((n, item) => n + item.qty, 0);
       const button = $("#addSelectedButton");
@@ -3079,6 +3087,10 @@
     }
 
     function addSelected() {
+      if (selectedProduct && selectedProduct.available === false) {
+        showToast("This product is currently unavailable for ordering");
+        return;
+      }
       if (!selectedProduct || !selectedColor || !selectedSize) {
         showToast("Choose an available color and size first");
         return;
@@ -3576,6 +3588,8 @@ Please confirm item availability and payment details. Thank you!`;
     }
 
     function badge(p) {
+      if (p.available === false)
+      return '<span class="tag" style="left:auto;right:12px;background:#b3261e">Unavailable</span>';
       if (!p.inStock)
       return '<span class="tag" style="left:auto;right:12px;background:#b3261e">Sold out</span>';
       if (p.quantity <= 5)
@@ -3610,6 +3624,7 @@ Please confirm item availability and payment details. Thank you!`;
       $("#products").setAttribute("aria-busy", "false");
       cart = cart.flatMap(item => {
         const product = PRODUCTS.find(p => p.id === item.id);
+        if (!product || product.available === false) return [];
         const available = product ? variantStock(product, item.color, item.size) : 0;
         if (!available) return [];
         item.qty = Math.min(item.qty, available);

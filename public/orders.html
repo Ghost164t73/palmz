@@ -93,7 +93,13 @@
     .customer-name { font-weight: 800 }
     .contact { margin-top: 8px; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere }
     .contact a { text-decoration: underline; text-underline-offset: 2px }
-    .items { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.8 }
+    .items { display:grid;gap:10px;margin:0;padding:0;list-style:none;font-size:12px;line-height:1.6 }
+    .order-item { display:flex;align-items:center;gap:12px;min-width:0;padding:9px;border:1px solid var(--line);border-radius:14px;background:var(--surface2) }
+    .order-item-image,.order-item-placeholder { flex:0 0 64px;width:64px;height:64px;border:1px solid var(--line);border-radius:11px;background:var(--surface);object-fit:cover }
+    .order-item-placeholder { display:grid;place-items:center;color:var(--muted);font-size:10px;text-align:center }
+    .order-item-copy { min-width:0;overflow-wrap:anywhere }
+    .order-item-copy strong { display:block;margin-bottom:3px;color:var(--text);font-size:13px }
+    .order-item-meta { color:var(--muted) }
     .order-note { margin-top: 8px; color: var(--muted); font-size: 12px; white-space: pre-wrap }
     .order-manage { display: grid; align-content: start; gap: 10px }
     .order-manage select { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface2); color: var(--text) }
@@ -310,7 +316,7 @@
       const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.createdAt));
       const phoneDigits = order.phone.replace(/\D/g, "");
       const whatsappNumber = phoneDigits.startsWith("0") ? `234${phoneDigits.slice(1)}` : phoneDigits;
-      const items = order.items.map(item => `<li>${item.quantity} × ${escapeHtml(item.name)} — size ${escapeHtml(item.size)}, ${escapeHtml(item.color)}${item.unitPrice != null ? ` — ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}</li>`).join("");
+      const items = order.items.map(item => `<li class="order-item">${item.imageUrl ? `<img class="order-item-image" src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name)}" loading="lazy">` : '<span class="order-item-placeholder" aria-label="No product image">No image</span>'}<div class="order-item-copy"><strong>${item.quantity} × ${escapeHtml(item.name)}</strong><span class="order-item-meta">Size ${escapeHtml(item.size)} · ${escapeHtml(item.color)}${item.unitPrice != null ? ` · ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}</span></div></li>`).join("");
       const paymentStatus = PAYMENT_LABELS[order.paymentStatus] || "Not started";
       const paymentIsPaid = order.paymentStatus === "paid";
       return `<article class="order" data-id="${escapeHtml(order._id)}">
