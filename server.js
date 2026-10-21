@@ -1159,7 +1159,7 @@ app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, a
   const files = productImageFiles(req);
   const images = files.length ? await uploadProductGallery(files) : null;
   let p;
-  let oldIds = [];
+  let removedImageIds = [];
   try {
     await mongoose.connection.transaction(async (session) => {
       p = await Product.findById(req.params.id).session(session);
@@ -1174,11 +1174,33 @@ app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, a
       const sameVariants = p.sizeMin === data.sizeMin && p.sizeMax === data.sizeMax && JSON.stringify(p.colors) === JSON.stringify(data.colors);
       data.stockByVariant = sameVariants ? p.stockByVariant : {};
       data.stockBySize = sameVariants ? p.stockBySize : {};
-      oldIds = productImagePublicIds(p);
-      if (images) {
-        data.image = images[0];
-        data.images = images;
+      const currentImages = p.images && p.images.length ? [...p.images] : (p.image && p.image.url ? [p.image] : []);
+      let retainedImages;
+      if (req.body.retainedImages !== undefined) {
+        let requestedUrls;
+        try { requestedUrls = JSON.parse(req.body.retainedImages); }
+        catch { throw bad('The selected product photos are invalid. Please review them and try again.'); }
+        if (!Array.isArray(requestedUrls) || requestedUrls.length > 12 || requestedUrls.some((url) => typeof url !== 'string')) {
+          throw bad('The selected product photos are invalid. Please review them and try again.');
+        }
+        if (new Set(requestedUrls).size !== requestedUrls.length) throw bad('A product photo cannot be selected more than once');
+        const imagesByUrl = new Map(currentImages.map((image) => [image.url, image]));
+        retainedImages = requestedUrls.map((url) => {
+          const image = imagesByUrl.get(url);
+          if (!image) throw bad('A saved photo could not be found. Reload the page and try again.');
+          return image;
+        });
+      } else {
+        // Keep compatibility with admin clients that still replace images on upload.
+        retainedImages = files.length ? [] : currentImages;
       }
+      const nextImages = [...retainedImages, ...(images || [])];
+      if (!nextImages.length) throw bad('A product must have at least one photo');
+      if (nextImages.length > 12) throw bad('A product can have no more than 12 photos');
+      data.images = nextImages;
+      data.image = nextImages[0];
+      const nextPublicIds = new Set(nextImages.map((image) => image.publicId).filter(Boolean));
+      removedImageIds = productImagePublicIds(p).filter((publicId) => !nextPublicIds.has(publicId));
       p.set(data);
       await p.save({ session });
     });
@@ -1186,7 +1208,7 @@ app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, a
     if (images) await Promise.all(images.map((image) => removeFromCloudinary(image.publicId)));
     throw error;
   }
-  if (images) await Promise.all(oldIds.map(removeFromCloudinary));
+  await Promise.all(removedImageIds.map(removeFromCloudinary));
   res.json(p);
 });
 
@@ -1197,25 +1219,29 @@ app.patch('/api/admin/products/:id/stock', requireAdmin, validId, async (req, re
     p = await Product.findById(req.params.id).session(session);
     if (!p) throw Object.assign(new Error('Product not found'), { status: 404, expose: true });
     const b = req.body || {};
-    if (b.size !== undefined || b.color !== undefined) {
+    const hasVariant = b.size !== undefined || b.color !== undefined;
+    if (hasVariant) {
       const size = String(b.size);
       const color = String(b.color);
       if (!p.sizes.includes(size)) throw bad('Choose a size within this product range');
       if (!p.colors.includes(color)) throw bad('Choose a color for this product');
-      const amount = int(b.delta, -100000, 100000, 'Stock change');
-      if (!amount) throw bad('Stock change cannot be zero');
       const map = completeVariantStock(p);
       const key = variantStockKey(color, size);
-      const next = (map.get(key) || 0) + amount;
+      const current = map.get(key) || 0;
+      const next = b.quantity !== undefined
+        ? int(b.quantity, 0, 100000, 'Quantity')
+        : current + int(b.delta, -100000, 100000, 'Stock change');
       if (next < 0) throw bad('Stock cannot be reduced below zero');
+      const amount = next - current;
       map.set(key, next);
       p.stockByVariant = map;
       p.stockBySize = {};
-      p.stockHistory.push({ color, size, quantity: amount, reason: amount > 0 ? 'stock received' : 'manual adjustment', createdAt: new Date() });
+      if (amount) p.stockHistory.push({ color, size, quantity: amount, reason: b.quantity !== undefined ? 'manual adjustment' : amount > 0 ? 'stock received' : 'manual adjustment', createdAt: new Date() });
       p.quantity = [...map.values()].reduce((sum, n) => sum + n, 0);
+    } else {
+      if (b.quantity !== undefined) p.quantity = int(b.quantity, 0, 100000, 'Quantity');
+      if (b.delta !== undefined) p.quantity = Math.max(0, p.quantity + int(b.delta, -1000, 1000, 'Change'));
     }
-    if (b.quantity !== undefined) p.quantity = int(b.quantity, 0, 100000, 'Quantity');
-    if (b.delta !== undefined) p.quantity = Math.max(0, p.quantity + int(b.delta, -1000, 1000, 'Change'));
     if (b.available !== undefined) p.available = b.available === true || b.available === 'true';
     await p.save({ session });
   });

@@ -84,7 +84,7 @@ label input,label textarea,label select{margin-top:5px;font-weight:400;color:var
 .box h3{margin:0 0 4px;font:700 26px Georgia,serif}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .preview-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-top:5px}
-.preview-gallery img,.preview-empty{width:100%;height:100px;border:1px dashed var(--line);border-radius:14px;background:var(--surface2);object-fit:cover}
+.preview-item{position:relative;min-width:0}.preview-gallery img,.preview-empty{display:block;width:100%;height:100px;border:1px solid var(--line);border-radius:14px;background:var(--surface2);object-fit:cover}.preview-remove{position:absolute;top:6px;right:6px;width:28px;height:28px;display:grid;place-items:center;padding:0;border:1px solid rgba(255,255,255,.5);border-radius:50%;background:rgba(11,19,34,.88);color:#fff;font-size:19px;line-height:1;cursor:pointer;transition:background .18s,transform .18s}.preview-remove:hover{background:var(--red);transform:scale(1.06)}.preview-remove:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .preview-empty{display:grid;place-items:center;color:var(--muted);font-size:12px}
 .hint{font-size:11px;color:var(--muted);margin-top:4px;font-weight:400}
 .check{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:var(--text);font-weight:600}
@@ -94,9 +94,10 @@ label input,label textarea,label select{margin-top:5px;font-weight:400;color:var
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .toast.bad{background:var(--red)}
 .inventory-tools{display:grid;grid-template-columns:minmax(220px,1fr) 180px 180px;gap:10px;margin:18px 0}
+.inventory-status{display:flex;align-items:center;gap:10px;min-height:42px;margin:12px 0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--muted);font-size:13px}.inventory-status[hidden]{display:none}.inventory-status.error{justify-content:space-between;color:var(--red)}.inventory-status .spinner{color:var(--gold)}.inventory-status button{padding:7px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface2);color:var(--text);cursor:pointer}
 .table-wrap{overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:22px;margin-bottom:24px}
 table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line);font-size:13px}th{font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;background:#faf9f5}tbody tr{cursor:pointer}tbody tr:hover,tbody tr.selected{background:#f7f3e8}tbody tr:last-child td{border:0}.product-cell{display:flex;align-items:center;gap:12px;font-weight:750}.product-cell img{width:42px;height:42px;object-fit:cover;border-radius:9px;background:var(--surface2)}
-.detail{display:none;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px;margin:0 0 40px;scroll-margin-top:18px}.detail.open{display:block}.detail-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.detail h3{margin:0;font-size:18px}.sizes{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.size-stock{border:1px solid var(--line);background:var(--surface2);border-radius:14px;padding:10px 13px;font-size:12px}.size-stock b{display:block;font-size:16px;margin-top:3px}.detail-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.detail-actions .icon-action{width:46px;height:46px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:18px;background:#f5f3ed;color:var(--navy);transition:transform .18s,background .18s,border-color .18s}.detail-actions .icon-action:hover{transform:translateY(-2px);background:#eee9dc;border-color:rgba(17,20,28,.22)}.detail-actions .icon-action.receive{background:#edf5ef;color:#247448;border-color:#d6e9dc}.detail-actions .icon-action.edit{background:#f5f0e3;color:#86651f;border-color:#e9dec2}.detail-actions .icon-action.history{background:#eef1f7;color:#43577e;border-color:#dce2ee}.detail-actions .icon-action.delete{background:#faeeec;color:#b3261e;border-color:#f0d8d4}.detail-actions .icon-action:focus-visible{outline:3px solid rgba(201,163,74,.55);outline-offset:2px}.detail-actions svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.detail .hint{margin-top:12px}.matrix{width:100%;min-width:0;margin:12px 0 16px}.matrix th,.matrix td{padding:10px;text-align:center}.matrix th:first-child,.matrix td:first-child{text-align:left}.variant-total{font-weight:800}.variant-control{display:flex;align-items:center;justify-content:center;gap:6px}.variant-control button{width:25px;height:25px;padding:0;line-height:1;border-radius:8px}.variant-control span{min-width:18px;font-weight:750}
+.detail{display:none;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px;margin:0 0 40px;scroll-margin-top:18px}.detail.open{display:block}.detail-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.detail h3{margin:0;font-size:18px}.sizes{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.size-stock{border:1px solid var(--line);background:var(--surface2);border-radius:14px;padding:10px 13px;font-size:12px}.size-stock b{display:block;font-size:16px;margin-top:3px}.detail-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.detail-actions .icon-action{width:46px;height:46px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:18px;background:#f5f3ed;color:var(--navy);transition:transform .18s,background .18s,border-color .18s}.detail-actions .icon-action:hover{transform:translateY(-2px);background:#eee9dc;border-color:rgba(17,20,28,.22)}.detail-actions .icon-action.receive{background:#edf5ef;color:#247448;border-color:#d6e9dc}.detail-actions .icon-action.edit{background:#f5f0e3;color:#86651f;border-color:#e9dec2}.detail-actions .icon-action.history{background:#eef1f7;color:#43577e;border-color:#dce2ee}.detail-actions .icon-action.delete{background:#faeeec;color:#b3261e;border-color:#f0d8d4}.detail-actions .icon-action:focus-visible{outline:3px solid rgba(201,163,74,.55);outline-offset:2px}.detail-actions svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.detail .hint{margin-top:12px}.matrix{width:100%;min-width:0;margin:12px 0 16px}.matrix th,.matrix td{padding:10px;text-align:center}.matrix th:first-child,.matrix td:first-child{text-align:left}.variant-total{font-weight:800}.variant-control{display:flex;align-items:center;justify-content:center;gap:6px}.variant-control button{width:25px;height:25px;padding:0;line-height:1;border-radius:8px}.variant-quantity{width:58px;min-width:0;padding:5px 3px;text-align:center;font-weight:750;font-variant-numeric:tabular-nums}
 @media(max-width:640px){.inventory-tools{grid-template-columns:1fr 1fr}.inventory-tools input{grid-column:1/-1}.bar h2{font-size:26px}}
 @media(max-width:640px){.item{grid-template-columns:70px 1fr}.item img{width:70px;height:70px}.ctrl{grid-column:1/-1;flex-direction:row;justify-content:space-between;flex-wrap:wrap;align-items:center}.two{grid-template-columns:1fr}}
 </style>
@@ -215,7 +216,7 @@ tbody tr{transition:background .18s}tbody tr:hover{transform:none}
     <div class="bar"><h2>Inventory</h2><button class="btn" onclick="openForm()">+ Add product</button></div>
     <div class="stats" id="stats"></div>
     <div class="inventory-tools"><input id="search" placeholder="Search products…" oninput="inventoryPage=1;renderTable()"><select id="category" onchange="inventoryPage=1;renderTable()"><option value="">All categories</option></select><select id="stockFilter" onchange="inventoryPage=1;renderTable()"><option value="">All stock statuses</option><option value="In stock">In stock</option><option value="Low stock">Low stock</option><option value="Sold out">Sold out</option><option value="Unavailable">Unavailable</option></select></div>
-    <div class="table-wrap"><table><thead><tr><th>Product</th><th>Variant</th><th>Size</th><th>Stock</th><th>Status</th></tr></thead><tbody id="list"></tbody></table></div><div class="pagination" id="inventoryPagination"></div>
+    <div class="inventory-status" id="inventoryStatus" role="status" aria-live="polite" hidden></div><div class="table-wrap" id="inventoryTable" aria-busy="false"><table><thead><tr><th>Product</th><th>Variant</th><th>Size</th><th>Stock</th><th>Status</th></tr></thead><tbody id="list"></tbody></table></div><div class="pagination" id="inventoryPagination"></div>
     <section class="detail" id="detail" role="dialog" aria-modal="true" aria-label="Product inventory details" onclick="if(event.target===this)closeDetail()"></section>
   </div>
 </div>
@@ -235,7 +236,7 @@ tbody tr{transition:background .18s}tbody tr:hover{transform:none}
 <div class="modal" id="formModal" onclick="if(event.target===this)closeForm()">
   <form class="box" id="form" onsubmit="saveProduct(event)">
     <h3 id="formTitle">Add product</h3>
-    <label>Product photos <span class="hint">(up to 12 images, 4MB total; upload in the order customers should browse. New photos replace the current gallery.)</span>
+    <label>Product photos <span class="hint">(up to 12 images total; remove photos with × or add more below. New images are added after the current gallery.)</span>
       <div class="preview-gallery" id="preview"><div class="preview-empty">No photos chosen</div></div>
       <input type="file" id="images" accept="image/jpeg,image/png,image/webp" multiple onchange="previewImg()">
     </label>
@@ -263,7 +264,8 @@ tbody tr{transition:background .18s}tbody tr:hover{transform:none}
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let products = [], editingId = null, selectedId = null, inventoryPage = 1, inventoryPageSize = 8;
-let previewUrls = [];
+let inventoryRequest = 0, inventoryController = null;
+let imageItems = [];
 
 function toast(t, bad) { const el = $("#toast"); el.textContent = t; el.className = "toast show" + (bad ? " bad" : ""); clearTimeout(window.__t); window.__t = setTimeout(() => el.classList.remove("show"), 2200); }
 function showLogin() { $("#bootView").style.display = "none"; $("#appView").style.display = "none"; $("#loginView").style.display = "block"; $("#adminDrawer").classList.add("auth-hidden"); }
@@ -311,10 +313,38 @@ window.addEventListener("resize",syncAdminMenuForViewport);syncAdminMenuForViewp
 document.addEventListener("keydown", event => { if(event.key==="Escape"&&$("#detail").classList.contains("open")){closeDetail();return} if (event.key === "Escape" && $("#adminDrawer").classList.contains("open")) toggleAdminMenu(false); });
 
 async function load() {
+  const request = ++inventoryRequest;
+  if (inventoryController) inventoryController.abort();
+  const controller = new AbortController();
+  inventoryController = controller;
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  const status = $("#inventoryStatus");
+  status.hidden = false;
+  status.className = "inventory-status";
+  status.innerHTML = '<span class="spinner" aria-hidden="true"></span><span>Loading inventory…</span>';
+  $("#inventoryTable").setAttribute("aria-busy", "true");
   $("#list").setAttribute("aria-busy", "true");
   $("#list").innerHTML = Array.from({length: 4}, () => '<tr class="loading-row" aria-hidden="true"><td><div class="loading-bar"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td></tr>').join("");
-  try { products = (await api("/api/products")).products; $("#list").setAttribute("aria-busy", "false"); render(); }
-  catch (err) { $("#list").setAttribute("aria-busy", "false"); $("#list").innerHTML = `<tr><td colspan="5" class="empty">${esc(err.message)}</td></tr>`; toast(err.message, true); }
+  try {
+    const response = await api("/api/products", { signal: controller.signal });
+    if (request !== inventoryRequest) return;
+    products = Array.isArray(response.products) ? response.products : [];
+    status.hidden = true;
+    render();
+  } catch (err) {
+    if (request !== inventoryRequest) return;
+    const message = controller.signal.aborted ? "Inventory took too long to load. Check your connection and try again." : err.message;
+    status.className = "inventory-status error";
+    status.innerHTML = `<span>${esc(message)}</span><button type="button" onclick="load()">Try again</button>`;
+    $("#list").innerHTML = '<tr><td colspan="5" class="empty">Inventory could not be loaded.</td></tr>';
+  } finally {
+    clearTimeout(timeout);
+    if (request === inventoryRequest) {
+      inventoryController = null;
+      $("#inventoryTable").setAttribute("aria-busy", "false");
+      $("#list").setAttribute("aria-busy", "false");
+    }
+  }
 }
 
 function variantKey(color,size){return `${encodeURIComponent(String(color)).replace(/\./g,'%2E').replace(/\$/g,'%24')}__${size}`}
@@ -352,7 +382,7 @@ function renderTable(){
 function closeDetail(){selectedId=null;$("#detail").classList.remove("open");document.body.style.overflow="";renderTable()}
 function renderDetail(p){
  const d=$("#detail"),q=variantQuantities(p),colors=p.colors&&p.colors.length?p.colors:['Standard'],sizes=Array.from({length:p.sizeMax-p.sizeMin+1},(_,i)=>String(p.sizeMin+i));d.classList.add('open');document.body.style.overflow='hidden';
- d.innerHTML=`<div class="detail-panel"><div class="detail-head"><h3>${esc(p.name)} · ${esc(p.type)}</h3><button class="small" data-act="close">Close</button></div><div class="meta">Stock by color and size · adjust each variant here</div><div class="table-wrap"><table class="matrix"><thead><tr><th>Color</th>${sizes.map(s=>`<th>${s}</th>`).join('')}<th>Total</th></tr></thead><tbody>${colors.map(color=>{const row=sizes.map(size=>Number(q[variantKey(color,size)]||0));return `<tr><td>${esc(color)}</td>${sizes.map((size,i)=>`<td><div class="variant-control"><button type="button" class="small" ${row[i]<=0?'disabled':''} data-act="variant-dec" data-color="${esc(color)}" data-size="${size}" aria-label="Reduce ${esc(color)} size ${size}">−</button><span>${row[i]}</span><button type="button" class="small" data-act="variant-inc" data-color="${esc(color)}" data-size="${size}" aria-label="Increase ${esc(color)} size ${size}">+</button></div></td>`).join('')}<td class="variant-total">${row.reduce((a,b)=>a+b,0)}</td></tr>`}).join('')}</tbody></table></div><div class="detail-actions"><button type="button" class="icon-action receive" data-act="receive" aria-label="Receive stock" title="Receive stock"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3.5 7.3 12 11.5l8.5-4.2L12 3Z"/><path d="M3.5 7.3v9.4L12 21l8.5-4.3V7.3M12 11.5V21"/><path d="M16 3v5m-2.5-2.5h5"/></svg><span class="sr-only">Receive stock</span></button><button type="button" class="icon-action edit" data-act="edit" aria-label="Edit product" title="Edit product"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4.2-.9L19.4 7.9a2.1 2.1 0 0 0-3-3L5.2 16.1 4 20Z"/><path d="M13 20h7"/></svg><span class="sr-only">Edit product</span></button><button type="button" class="icon-action history" data-act="history" aria-label="View stock history" title="View stock history"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/><path d="M4.8 5.5 3 7.3"/></svg><span class="sr-only">View stock history</span></button><button type="button" class="icon-action delete" data-act="del" aria-label="Delete product" title="Delete product"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m3 3v7m6-7v7"/></svg><span class="sr-only">Delete product</span></button></div><div class="hint" id="history"></div></div>`;
+ d.innerHTML=`<div class="detail-panel"><div class="detail-head"><h3>${esc(p.name)} · ${esc(p.type)}</h3><button class="small" data-act="close">Close</button></div><div class="meta">Stock by color and size · adjust each variant here</div><div class="table-wrap"><table class="matrix"><thead><tr><th>Color</th>${sizes.map(s=>`<th>${s}</th>`).join('')}<th>Total</th></tr></thead><tbody>${colors.map(color=>{const row=sizes.map(size=>Number(q[variantKey(color,size)]||0));return `<tr><td>${esc(color)}</td>${sizes.map((size,i)=>`<td><div class="variant-control"><button type="button" class="small" ${row[i]<=0?'disabled':''} data-act="variant-dec" data-color="${esc(color)}" data-size="${size}" aria-label="Reduce ${esc(color)} size ${size}">−</button><input class="variant-quantity" type="number" min="0" max="100000" step="1" value="${row[i]}" data-color="${esc(color)}" data-size="${size}" aria-label="Set ${esc(color)} size ${size} stock"><button type="button" class="small" data-act="variant-inc" data-color="${esc(color)}" data-size="${size}" aria-label="Increase ${esc(color)} size ${size}">+</button></div></td>`).join('')}<td class="variant-total">${row.reduce((a,b)=>a+b,0)}</td></tr>`}).join('')}</tbody></table></div><div class="detail-actions"><button type="button" class="icon-action receive" data-act="receive" aria-label="Receive stock" title="Receive stock"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3.5 7.3 12 11.5l8.5-4.2L12 3Z"/><path d="M3.5 7.3v9.4L12 21l8.5-4.3V7.3M12 11.5V21"/><path d="M16 3v5m-2.5-2.5h5"/></svg><span class="sr-only">Receive stock</span></button><button type="button" class="icon-action edit" data-act="edit" aria-label="Edit product" title="Edit product"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4.2-.9L19.4 7.9a2.1 2.1 0 0 0-3-3L5.2 16.1 4 20Z"/><path d="M13 20h7"/></svg><span class="sr-only">Edit product</span></button><button type="button" class="icon-action history" data-act="history" aria-label="View stock history" title="View stock history"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/><path d="M4.8 5.5 3 7.3"/></svg><span class="sr-only">View stock history</span></button><button type="button" class="icon-action delete" data-act="del" aria-label="Delete product" title="Delete product"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m3 3v7m6-7v7"/></svg><span class="sr-only">Delete product</span></button></div><div class="hint" id="history"></div></div>`;
 }$("#list").addEventListener("click",e=>{const row=e.target.closest('tr[data-id]');if(!row)return;selectedId=row.dataset.id;renderTable();renderDetail(products.find(p=>p.id===selectedId));$("#detail [data-act=close]").focus();});
 $("#detail").addEventListener("click",async e=>{
  const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act,p=products.find(x=>x.id===selectedId);if(!p)return;
@@ -363,51 +393,59 @@ $("#detail").addEventListener("click",async e=>{
  if(act==='receive'){$("#history").innerHTML=`<form id="receiveForm" class="row" style="margin-top:14px"><label style="margin:0">Color<select name="color">${(p.colors||['Standard']).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></label><label style="margin:0">Size<select name="size">${Array.from({length:p.sizeMax-p.sizeMin+1},(_,i)=>String(p.sizeMin+i)).map(s=>`<option value="${s}">${s}</option>`).join('')}</select></label><label style="margin:0">Pairs received<input name="amount" type="number" min="1" step="1" required placeholder="e.g. 5"></label><button class="btn dark" type="submit">Add stock</button></form>`}
  if(act==='history'){const h=p.stockHistory||[];$("#history").innerHTML=h.length?`<b>Recent stock changes</b><br>${h.slice().reverse().slice(0,12).map(x=>`${esc(x.color||'Legacy')} · size ${esc(x.size)} · ${x.quantity>0?'+':''}${x.quantity} (${esc(x.reason||'stock change')}) · ${new Date(x.createdAt).toLocaleString()}`).join('<br>')}`:'No stock changes recorded yet.'}
 });
-$("#detail").addEventListener("submit",async e=>{if(e.target.id!=='receiveForm')return;e.preventDefault();const data=new FormData(e.target);await stock(selectedId,{color:data.get('color'),size:data.get('size'),delta:Number(data.get('amount'))},e.submitter)});
+$("#detail").addEventListener("change",async e=>{const input=e.target.closest(".variant-quantity");if(!input)return;const quantity=Number(input.value);if(!Number.isInteger(quantity)||quantity<0||quantity>100000){toast("Enter a whole stock count from 0 to 100000",true);renderDetail(products.find(p=>p.id===selectedId));return}await stock(selectedId,{color:input.dataset.color,size:input.dataset.size,quantity},input)});$("#detail").addEventListener("submit",async e=>{if(e.target.id!=='receiveForm')return;e.preventDefault();const data=new FormData(e.target);await stock(selectedId,{color:data.get('color'),size:data.get('size'),delta:Number(data.get('amount'))},e.submitter)});
 async function stock(id,body,button){if(button){button.disabled=true;button.classList.add('is-loading')}try{const p=await api(`/api/admin/products/${id}/stock`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});products=products.map(x=>x.id===id?p:x);render();toast('Stock saved')}catch(err){toast(err.message,true);load()}finally{if(button){button.disabled=false;button.classList.remove('is-loading')}}}
 function clearPreviewUrls() {
-  previewUrls.forEach(URL.revokeObjectURL);
-  previewUrls = [];
+  imageItems.forEach(item => { if (item.previewUrl) URL.revokeObjectURL(item.previewUrl); });
+  imageItems = [];
 }
-function showPreview(images) {
+function showPreview() {
   const pv = $("#preview");
   pv.replaceChildren();
-  if (!images.length) {
+  if (!imageItems.length) {
     const empty = document.createElement("div");
     empty.className = "preview-empty";
-    empty.textContent = "No photos chosen";
+    empty.textContent = "No product photos";
     pv.append(empty);
     return;
   }
-  images.forEach(src => {
+  imageItems.forEach((item, index) => {
+    const card = document.createElement("div");
+    card.className = "preview-item";
     const img = document.createElement("img");
-    img.src = src;
-    img.alt = "Product photo preview";
-    pv.append(img);
+    img.src = item.previewUrl || item.url;
+    img.alt = `Product photo ${index + 1}`;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "preview-remove";
+    remove.dataset.removeImage = String(index);
+    remove.setAttribute("aria-label", `Remove product photo ${index + 1}`);
+    remove.title = "Remove photo";
+    remove.textContent = "×";
+    card.append(img, remove);
+    pv.append(card);
   });
 }
 function previewImg() {
-  clearPreviewUrls();
   const files = Array.from($("#images").files);
-  if (files.length > 12) {
-    $("#formErr").textContent = "Choose no more than 12 product photos.";
-    $("#images").value = "";
-    showPreview(currentProductImages());
+  $("#images").value = "";
+  if (imageItems.length + files.length > 12) {
+    $("#formErr").textContent = "A product can have no more than 12 photos.";
     return;
   }
-  if (files.reduce((total, file) => total + file.size, 0) > 4 * 1024 * 1024) {
+  const currentUploadSize = imageItems.reduce((total, item) => total + (item.file ? item.file.size : 0), 0);
+  if (currentUploadSize + files.reduce((total, file) => total + file.size, 0) > 4 * 1024 * 1024) {
     $("#formErr").textContent = "Product photos must total no more than 4MB.";
-    $("#images").value = "";
-    showPreview(currentProductImages());
     return;
   }
   $("#formErr").textContent = "";
-  previewUrls = files.map(file => URL.createObjectURL(file));
-  showPreview(previewUrls);
+  files.forEach(file => imageItems.push({ file, previewUrl: URL.createObjectURL(file) }));
+  showPreview();
 }
 function currentProductImages() {
   const product = products.find(p => p.id === editingId);
-  return product ? (product.images && product.images.length ? product.images : [product.image].filter(Boolean)) : [];
+  const images = product ? (product.images && product.images.length ? product.images : [product.image].filter(Boolean)) : [];
+  return images.map(image => typeof image === "string" ? image : image.url).filter(Boolean);
 }
 function openForm(p) {
   editingId = p ? p.id : null;
@@ -419,20 +457,31 @@ function openForm(p) {
   $("#colors").value = p ? p.colors.join(", ") : "";
   $("#sizeMin").value = p ? p.sizeMin : 43; $("#sizeMax").value = p ? p.sizeMax : 48;
   $("#quantity").value = p ? p.quantity : 0; $("#available").checked = p ? p.available : true;
-  showPreview(currentProductImages());
+  imageItems = currentProductImages().map(url => ({ url }));
+  showPreview();
   $("#formModal").classList.add("open");
 }
 function closeForm() { clearPreviewUrls(); $("#formModal").classList.remove("open"); }
 
+$("#preview").addEventListener("click", event => {
+  const button = event.target.closest("[data-remove-image]");
+  if (!button) return;
+  const [removed] = imageItems.splice(Number(button.dataset.removeImage), 1);
+  if (removed && removed.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+  $("#formErr").textContent = "";
+  showPreview();
+});
+
 async function saveProduct(e) {
   e.preventDefault(); $("#formErr").textContent = "";
-  const images = Array.from($("#images").files);
-  if (!editingId && !images.length) { $("#formErr").textContent = "Please choose at least one product photo."; return; }
-  if (images.length > 12) { $("#formErr").textContent = "Choose no more than 12 product photos."; return; }
+  const images = imageItems.filter(item => item.file).map(item => item.file);
+  if (!imageItems.length) { $("#formErr").textContent = "Please keep or choose at least one product photo."; return; }
+  if (imageItems.length > 12) { $("#formErr").textContent = "A product can have no more than 12 photos."; return; }
   if (images.reduce((total, file) => total + file.size, 0) > 4 * 1024 * 1024) { $("#formErr").textContent = "Product photos must total no more than 4MB."; return; }
   const fd = new FormData();
   for (const k of ["name", "type", "price", "desc", "colors", "sizeMin", "sizeMax", "quantity"]) fd.append(k, $("#" + k).value);
   fd.append("available", $("#available").checked);
+  fd.append("retainedImages", JSON.stringify(imageItems.filter(item => !item.file).map(item => item.url)));
   images.forEach(image => fd.append("images", image));
   const btn = $("#saveBtn"); btn.disabled = true; btn.classList.add("is-loading"); btn.textContent = "Saving…";
   try {
