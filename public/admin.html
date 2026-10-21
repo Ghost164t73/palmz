@@ -26,14 +26,16 @@ button{cursor:pointer}
 .admin-drawer{position:fixed;z-index:61;inset:0 0 0 auto;width:min(330px,86vw);padding:22px;background:var(--navy);color:#fff;border-radius:24px 0 0 24px;transform:translateX(102%);transition:transform .25s ease;box-shadow:-14px 0 40px rgba(0,0,0,.2)}
 .admin-drawer.open{transform:translateX(0)}
 .drawer-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:22px;border-bottom:1px solid rgba(255,255,255,.14)}
+.sidebar-collapse{display:none}
 .drawer-title{font-weight:900;letter-spacing:.18em}.drawer-title small{display:block;margin-top:5px;color:var(--gold);font-size:10px;letter-spacing:.14em}
 .drawer-close{width:38px;height:38px;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:none;color:#fff;font-size:23px;line-height:1}
 .drawer-links{display:grid;gap:8px;padding:20px 0}
-.drawer-links a,.drawer-links button{display:block;width:100%;padding:13px 14px;border:0;border-radius:14px;background:transparent;color:#eeece5;text-align:left;text-decoration:none;font-size:14px}
+.drawer-links a,.drawer-links button{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border:0;border-radius:14px;background:transparent;color:#eeece5;text-align:left;text-decoration:none;font-size:14px}
+.drawer-brand{display:inline-block}.nav-icon{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;font-size:19px;line-height:1}
 .drawer-links a:hover,.drawer-links a[aria-current="page"],.drawer-links button:hover{background:rgba(255,255,255,.09)}
 .drawer-links a[aria-current="page"]{color:var(--gold);font-weight:800}
+.drawer-links a[href="/admin/orders"]{position:relative}
 body.menu-open{overflow:hidden}
-.drawer-links a[href="/admin/orders"]{display:flex;align-items:center}
 .orders-notification{min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;margin-left:auto;border-radius:999px;background:#d9473f;color:#fff;font-size:10px;font-weight:850;letter-spacing:0}.orders-notification[hidden]{display:none}
 .btn{border:0;border-radius:999px;padding:11px 18px;font-weight:800;background:var(--gold);color:#111}
 .btn.dark{background:var(--navy);color:#fff}
@@ -154,15 +156,24 @@ tbody tr:last-child td{border-bottom:0}
 @media(max-width:760px){.wrap{width:calc(100% - 28px)}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* Admin dashboard frame */
 @media(min-width:761px){
-  .admin-drawer{inset:0 auto 0 0;width:236px;padding:22px 16px;border-radius:0;transform:none;box-shadow:8px 0 34px rgba(0,0,0,.18);border-right:1px solid var(--line)}
-  .admin-drawer.open{transform:none}.drawer-close,.menu-toggle,.drawer-backdrop{display:none!important}
-  .drawer-head{padding:12px 10px 24px}.drawer-title{font-size:18px}.drawer-title small{color:var(--gold)}
-  .drawer-links{gap:8px;padding-top:22px}.drawer-links a,.drawer-links button{padding:14px 12px;border-radius:14px;color:#aab8cc;transition:background .2s,color .2s,transform .2s}
-  .drawer-links a:hover,.drawer-links button:hover{transform:translateX(3px);background:rgba(255,255,255,.06);color:#fff}
+  .admin-drawer{inset:0 auto 0 0;width:236px;padding:22px 16px;border-radius:0;transform:none;transition:width .24s,padding .24s,transform .25s ease;box-shadow:8px 0 34px rgba(0,0,0,.18);border-right:1px solid var(--line)}
+  .admin-drawer.open{transform:none}.drawer-close,.drawer-backdrop{display:none!important}.menu-toggle{display:none!important}.sidebar-collapse{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px;padding:0;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--gold);font-size:22px;line-height:1;cursor:pointer;transition:background .2s,border-color .2s,transform .2s}.sidebar-collapse:hover{background:rgba(201,163,74,.12);border-color:var(--gold);transform:translateX(-2px)}.sidebar-chevron{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .24s}.sidebar-collapse.is-collapsed .sidebar-chevron{transform:rotate(180deg)}
+  .drawer-head{justify-content:flex-end;gap:16px;padding:12px 10px 24px}.drawer-title{flex:0 1 auto;font-size:18px}.drawer-title small{color:var(--gold)}
+  .drawer-links{gap:8px;padding-top:22px}.drawer-links a,.drawer-links button{display:flex;align-items:center;gap:12px;padding:14px 12px;border-radius:14px;color:#aab8cc;transition:background .2s,color .2s}
+  .drawer-links a:hover,.drawer-links button:hover{background:rgba(255,255,255,.06);color:#fff}
   .drawer-links a[aria-current="page"]{background:rgba(201,163,74,.16);color:#e6c36e}
-  #appView .top{position:sticky;top:0;z-index:30;margin-left:236px}
+  #appView .top{position:sticky;top:0;z-index:30;margin-left:236px;transition:margin-left .24s}
   #appView .top .wrap{width:calc(100% - 48px);margin:0 24px}
-  #appView>.wrap{width:calc(100% - 284px);margin:0 24px 0 260px}
+  #appView>.wrap{width:calc(100% - 284px);margin:0 24px 0 260px;transition:width .24s,margin-left .24s}
+}
+@media(min-width:761px){
+  body.sidebar-collapsed .admin-drawer{width:82px;padding-inline:12px}
+  body.sidebar-collapsed .drawer-head{justify-content:center;gap:0;padding-inline:0}
+  body.sidebar-collapsed .drawer-title,body.sidebar-collapsed .nav-label{display:none}
+  body.sidebar-collapsed .drawer-links a,body.sidebar-collapsed .drawer-links button{justify-content:center;gap:0;padding:14px 4px}
+  body.sidebar-collapsed .orders-notification{position:absolute;top:5px;right:7px;min-width:9px;width:9px;height:9px;padding:0;border:2px solid var(--surface);font-size:0}
+  body.sidebar-collapsed #appView .top{margin-left:82px}body.sidebar-collapsed #appView>.wrap{width:calc(100% - 130px);margin-left:106px}
+  .sidebar-collapse:focus-visible,.drawer-links a:focus-visible,.drawer-links button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 }
 .bar{animation:admin-enter .45s both}.stats .stat{transition:box-shadow .22s,border-color .22s}.stats .stat:hover{border-color:rgba(201,163,74,.36);box-shadow:0 12px 28px rgba(0,0,0,.18)}
 tbody tr{transition:background .18s}tbody tr:hover{transform:none}
@@ -198,7 +209,7 @@ tbody tr{transition:background .18s}tbody tr:hover{transform:none}
 <div id="appView" style="display:none">
   <div class="top"><div class="wrap">
     <div class="brand">PALMZ<small>ADMIN</small></div>
-    <button class="menu-toggle" type="button" aria-label="Open admin navigation" aria-expanded="false" aria-controls="adminDrawer" onclick="toggleAdminMenu(true)"><span></span><span></span><span></span></button>
+    <button class="menu-toggle" type="button" aria-label="Toggle admin sidebar" aria-expanded="true" aria-controls="adminDrawer" onclick="toggleAdminNavigation()"><span></span><span></span><span></span></button>
   </div></div>
   <div class="wrap">
     <div class="bar"><h2>Inventory</h2><button class="btn" onclick="openForm()">+ Add product</button></div>
@@ -211,13 +222,13 @@ tbody tr{transition:background .18s}tbody tr:hover{transform:none}
 
 <button class="drawer-backdrop" id="drawerBackdrop" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)"></button>
 <aside class="admin-drawer auth-hidden" id="adminDrawer" aria-label="Admin navigation" aria-hidden="false">
-  <div class="drawer-head"><div class="drawer-title">PALMZ<small>ADMIN MENU</small></div><button class="drawer-close" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)">×</button></div>
+  <div class="drawer-head"><div class="drawer-title"><span class="drawer-brand">PALMZ</span><small>ADMIN MENU</small></div><button class="sidebar-collapse" id="sidebarCollapse" type="button" aria-label="Collapse admin sidebar" aria-expanded="true" title="Collapse sidebar" onclick="toggleAdminNavigation()"><svg class="sidebar-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg></button><button class="drawer-close" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)">×</button></div>
   <nav class="drawer-links">
-    <a href="/admin" aria-current="page">Inventory</a>
-    <a href="/admin/orders">Orders <span class="orders-notification" hidden aria-label="Pending orders"></span></a>
-    <a href="/admin/sales">Sales history</a>
-    <a href="/" target="_blank" rel="noopener">View store ↗</a>
-    <button type="button" onclick="logout()">Sign out</button>
+    <a href="/admin" aria-current="page" title="Inventory"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Inventory</span></a>
+    <a href="/admin/orders" title="Orders"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-label">Orders</span><span class="orders-notification" hidden aria-label="Pending orders"></span></a>
+    <a href="/admin/sales" title="Sales history"><span class="nav-icon" aria-hidden="true">↗</span><span class="nav-label">Sales history</span></a>
+    <a href="/" target="_blank" rel="noopener" title="View store"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-label">View store</span></a>
+    <button type="button" onclick="logout()" title="Sign out"><span class="nav-icon" aria-hidden="true">⇥</span><span class="nav-label">Sign out</span></button>
   </nav>
 </aside>
 
@@ -286,12 +297,16 @@ async function login(e) {
 async function logout() { toggleAdminMenu(false); await fetch("/api/admin/logout", { method: "POST" }); showLogin(); }
 function toggleAdminMenu(open) {
   const drawer = $("#adminDrawer"), backdrop = $("#drawerBackdrop"), toggle = $(".menu-toggle");
+  if(window.matchMedia("(min-width: 761px)").matches){drawer.classList.remove("open");drawer.setAttribute("aria-hidden","false");drawer.inert=false;document.body.classList.remove("menu-open");return}
   drawer.classList.toggle("open", open); backdrop.classList.toggle("open", open);
-  drawer.setAttribute("aria-hidden", String(!open)); drawer.inert = !open; toggle.setAttribute("aria-expanded", String(open));
+  drawer.setAttribute("aria-hidden", String(!open)); drawer.inert = !open; toggle.setAttribute("aria-expanded", String(open));toggle.setAttribute("aria-label",open?"Close admin navigation":"Open admin navigation");
   document.body.classList.toggle("menu-open", open);
   if (open) $(".drawer-close").focus(); else toggle.focus();
 }
-function syncAdminMenuForViewport(){const drawer=$("#adminDrawer"),desktop=window.matchMedia("(min-width: 761px)").matches;if(desktop){drawer.classList.remove("open");drawer.setAttribute("aria-hidden","false");drawer.inert=false;document.body.classList.remove("menu-open")}else if(!drawer.classList.contains("open")){drawer.setAttribute("aria-hidden","true");drawer.inert=true}}
+function setAdminSidebarCollapsed(collapsed){document.body.classList.toggle("sidebar-collapsed",collapsed);const button=$(".menu-toggle"),sidebarButton=$("#sidebarCollapse");button.setAttribute("aria-expanded",String(!collapsed));button.setAttribute("aria-label",collapsed?"Expand admin sidebar":"Collapse admin sidebar");button.title=collapsed?"Expand sidebar":"Collapse sidebar";sidebarButton.classList.toggle("is-collapsed",collapsed);sidebarButton.setAttribute("aria-expanded",String(!collapsed));sidebarButton.setAttribute("aria-label",collapsed?"Expand sidebar":"Collapse sidebar");sidebarButton.title=collapsed?"Expand sidebar":"Collapse sidebar";try{localStorage.setItem("palmz-admin-sidebar-collapsed",collapsed?"1":"0")}catch{}}
+function toggleAdminNavigation(){if(window.matchMedia("(min-width: 761px)").matches)setAdminSidebarCollapsed(!document.body.classList.contains("sidebar-collapsed"));else toggleAdminMenu(true)}
+try{setAdminSidebarCollapsed(localStorage.getItem("palmz-admin-sidebar-collapsed")==="1")}catch{}
+function syncAdminMenuForViewport(){const drawer=$("#adminDrawer"),toggle=$(".menu-toggle"),desktop=window.matchMedia("(min-width: 761px)").matches;if(desktop){drawer.classList.remove("open");drawer.setAttribute("aria-hidden","false");drawer.inert=false;document.body.classList.remove("menu-open");toggle.setAttribute("aria-expanded",String(!document.body.classList.contains("sidebar-collapsed")));toggle.setAttribute("aria-label",document.body.classList.contains("sidebar-collapsed")?"Expand admin sidebar":"Collapse admin sidebar")}else if(!drawer.classList.contains("open")){drawer.setAttribute("aria-hidden","true");drawer.inert=true;toggle.setAttribute("aria-expanded","false");toggle.setAttribute("aria-label","Open admin navigation")}}
 window.addEventListener("resize",syncAdminMenuForViewport);syncAdminMenuForViewport();
 document.addEventListener("keydown", event => { if(event.key==="Escape"&&$("#detail").classList.contains("open")){closeDetail();return} if (event.key === "Escape" && $("#adminDrawer").classList.contains("open")) toggleAdminMenu(false); });
 
