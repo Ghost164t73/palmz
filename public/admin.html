@@ -236,7 +236,7 @@ tbody tr{transition:background .18s}tbody tr:hover{transform:none}
 <div class="modal" id="formModal" onclick="if(event.target===this)closeForm()">
   <form class="box" id="form" onsubmit="saveProduct(event)">
     <h3 id="formTitle">Add product</h3>
-    <label>Product photos <span class="hint">(up to 12 images total; remove photos with × or add more below. New images are added after the current gallery.)</span>
+    <label>Product photos <span class="hint">(up to 12 images and 10 MB selected total; larger batches are optimized before upload. Remove photos with × or add more below.)</span>
       <div class="preview-gallery" id="preview"><div class="preview-empty">No photos chosen</div></div>
       <input type="file" id="images" accept="image/jpeg,image/png,image/webp" multiple onchange="previewImg()">
     </label>
@@ -434,8 +434,8 @@ function previewImg() {
     return;
   }
   const currentUploadSize = imageItems.reduce((total, item) => total + (item.file ? item.file.size : 0), 0);
-  if (currentUploadSize + files.reduce((total, file) => total + file.size, 0) > 4 * 1024 * 1024) {
-    $("#formErr").textContent = "Product photos must total no more than 4MB.";
+  if (currentUploadSize + files.reduce((total, file) => total + file.size, 0) > 10 * 1024 * 1024) {
+    $("#formErr").textContent = "Selected product photos must total no more than 10MB.";
     return;
   }
   $("#formErr").textContent = "";
@@ -477,18 +477,69 @@ async function saveProduct(e) {
   const images = imageItems.filter(item => item.file).map(item => item.file);
   if (!imageItems.length) { $("#formErr").textContent = "Please keep or choose at least one product photo."; return; }
   if (imageItems.length > 12) { $("#formErr").textContent = "A product can have no more than 12 photos."; return; }
-  if (images.reduce((total, file) => total + file.size, 0) > 4 * 1024 * 1024) { $("#formErr").textContent = "Product photos must total no more than 4MB."; return; }
-  const fd = new FormData();
-  for (const k of ["name", "type", "price", "desc", "colors", "sizeMin", "sizeMax", "quantity"]) fd.append(k, $("#" + k).value);
-  fd.append("available", $("#available").checked);
-  fd.append("retainedImages", JSON.stringify(imageItems.filter(item => !item.file).map(item => item.url)));
-  images.forEach(image => fd.append("images", image));
-  const btn = $("#saveBtn"); btn.disabled = true; btn.classList.add("is-loading"); btn.textContent = "Saving…";
+  if (images.reduce((total, file) => total + file.size, 0) > 10 * 1024 * 1024) { $("#formErr").textContent = "Selected product photos must total no more than 10MB."; return; }
+  const btn = $("#saveBtn"); btn.disabled = true; btn.classList.add("is-loading"); btn.textContent = "Preparing photos…";
   try {
+    const uploadImages = await optimizeProductImages(images);
+    const fd = new FormData();
+    for (const k of ["name", "type", "price", "desc", "colors", "sizeMin", "sizeMax", "quantity"]) fd.append(k, $("#" + k).value);
+    fd.append("available", $("#available").checked);
+    fd.append("retainedImages", JSON.stringify(imageItems.filter(item => !item.file).map(item => item.url)));
+    uploadImages.forEach(image => fd.append("images", image));
+    btn.textContent = "Saving…";
     await api(editingId ? `/api/admin/products/${editingId}` : "/api/admin/products", { method: editingId ? "PUT" : "POST", body: fd });
     closeForm(); await load(); toast("Saved");
   } catch (err) { $("#formErr").textContent = err.message; }
   finally { btn.disabled = false; btn.classList.remove("is-loading"); btn.textContent = "Save product"; }
+}
+
+async function optimizeProductImages(files) {
+  const requestLimit = 3.6 * 1024 * 1024;
+  if (files.reduce((total, file) => total + file.size, 0) <= requestLimit) return files;
+  const settings = [[1800, 0.86], [1600, 0.78], [1400, 0.70], [1200, 0.62]];
+  for (const [maxDimension, quality] of settings) {
+    const optimized = [];
+    for (const file of files) optimized.push(await optimizeProductImage(file, maxDimension, quality));
+    if (optimized.reduce((total, file) => total + file.size, 0) <= requestLimit) return optimized;
+  }
+  throw new Error("These photos are still too large after optimization. Choose fewer photos or smaller files.");
+}
+
+async function optimizeProductImage(file, maxDimension, quality) {
+  let source, width, height, releaseSource = () => {};
+  if (window.createImageBitmap) {
+    source = await createImageBitmap(file);
+    width = source.width;
+    height = source.height;
+    releaseSource = () => source.close();
+  } else {
+    const imageUrl = URL.createObjectURL(file);
+    try {
+      source = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error(`Could not read ${file.name}`));
+        image.src = imageUrl;
+      });
+      width = source.naturalWidth;
+      height = source.naturalHeight;
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+    }
+  }
+  try {
+    const scale = Math.min(1, maxDimension / Math.max(width, height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    canvas.getContext("2d").drawImage(source, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", quality));
+    if (!blob) throw new Error(`Could not optimize ${file.name}`);
+    const name = file.name.replace(/\.[^.]+$/, "") + ".webp";
+    return new File([blob], name, { type: "image/webp", lastModified: Date.now() });
+  } finally {
+    releaseSource();
+  }
 }
 
 (async () => { try { await api("/api/admin/me"); if (showApp()) load(); } catch { showLogin(); } })();

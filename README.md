@@ -35,7 +35,7 @@ Redeploy after adding or changing variables. Submitted WhatsApp orders alert the
 Delivery is ₦5,000 across zones, with ₦2,000 rates for Kano, FCT (Abuja), and Lokoja, Kogi. Delivery estimates continue to vary by zone. The state dropdown shows state names only. Pickup at the Lokoja and Abuja branches has no delivery charge. Delivery prices are maintained in `lib/delivery.js`.
 
 ## Product photos
-In `/admin`, upload up to 12 JPG, PNG, or WebP photos per product (4 MB total). Photos appear in upload order in the storefront image slider. When editing a product, selecting new photos replaces its current gallery; leaving the photo field empty keeps the existing gallery.
+In `/admin`, add up to 12 JPG, PNG, or WebP photos per product, with up to 10 MB selected per save. Larger batches are resized and optimized in the browser before upload to fit the hosting request-size limit. Photos appear in gallery order in the storefront image slider; when editing, remove existing photos or add new ones without replacing photos you keep.
 
 ## Foreign footwear
 Add imported pairs in `/admin` and set their category to **Foreign Footwear**. They will appear in the Foreign footwear shop section and category filter; that section is also available before any imported pairs have been added.
