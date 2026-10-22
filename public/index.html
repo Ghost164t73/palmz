@@ -897,6 +897,7 @@
     .fulfillment-options select:hover,#pickupBranch:hover{border-color:color-mix(in srgb,var(--gold) 70%,var(--line));background-color:var(--surface)}
     .fulfillment-options select:focus-visible,.delivery-fields select:focus-visible,#pickupBranch:focus-visible{outline:3px solid color-mix(in srgb,var(--gold) 42%,transparent);outline-offset:1px;border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
     .delivery-fields{display:grid;grid-template-columns:1fr 1fr;gap:7px 16px;align-content:start}
+    .delivery-fields.address-fields{margin:0}
     .delivery-fields label{margin:0}
     .delivery-fields input,.delivery-fields select{margin:6px 0 0}
     .delivery-estimate{grid-column:1/-1;margin-top:0;color:var(--muted);font-size:11px;font-weight:400}
@@ -2515,10 +2516,17 @@
           <label class="fulfillment-choice"><input type="radio" name="fulfillmentMethod" value="delivery" checked onchange="updateFulfillmentFields()"><span>Deliver to me<small>Enter the address where you’d like your order delivered.</small></span></label>
           <label class="fulfillment-choice"><input type="radio" name="fulfillmentMethod" value="pickup" onchange="updateFulfillmentFields()"><span>Pick up from a branch<small>Choose an available branch below.</small></span></label>
         </fieldset>
-        <label id="deliveryAddressField" class="checkout-wide">Delivery address
-          <textarea id="customerAddress" required
-            placeholder="House / office address"></textarea>
-        </label>
+        <div id="deliveryAddressField" class="delivery-fields checkout-wide address-fields">
+          <label>Street or building
+            <input id="customerStreet" required maxlength="180" autocomplete="street-address" placeholder="House number, street, or building">
+          </label>
+          <label>Area or neighborhood
+            <input id="customerArea" required maxlength="120" placeholder="e.g. Tarauni">
+          </label>
+          <label class="checkout-wide">Nearby landmark <span style="font-weight:400">(optional)</span>
+            <input id="customerLandmark" maxlength="180" placeholder="e.g. opposite the central market">
+          </label>
+        </div>
         <div id="deliveryCityField" class="delivery-fields checkout-wide">
           <label>City
             <input id="customerCity" required maxlength="80" placeholder="e.g. Kano" oninput="updateCheckoutSummary();schedulePromoRefresh()">
@@ -2756,9 +2764,9 @@
     function deliveryQuoteFor(state, city = "") {
       const tier = DELIVERY_TIERS.find(candidate => candidate.states.includes(state));
       if (!tier) return null;
-      if (state === "Kogi" && String(city).split(",")[0].trim().toLocaleLowerCase("en") === "lokoja") {
-        return { ...tier, fee: 2000 };
-      }
+      const cityName = String(city).split(",")[0].trim().toLocaleLowerCase("en");
+      const override = (tier.cityOverrides || []).find(entry => String(entry.city).trim().toLocaleLowerCase("en") === cityName);
+      if (override) return { ...tier, fee: Number(override.fee), estimate: override.estimate || tier.estimate };
       return tier;
     }
 
@@ -2768,7 +2776,10 @@
         customerName: $("#customerName").value.trim(),
         email: $("#customerEmail").value.trim(),
         phone: $("#customerPhone").value.trim(),
-        address: $("#customerAddress").value.trim(),
+        address: [$("#customerStreet").value.trim(), $("#customerArea").value.trim(), $("#customerLandmark").value.trim()].filter(Boolean).join(", "),
+        streetAddress: $("#customerStreet").value.trim(),
+        area: $("#customerArea").value.trim(),
+        landmark: $("#customerLandmark").value.trim(),
         city: $("#customerCity").value.trim(),
         state: $("#deliveryState").value,
         fulfillmentMethod,
@@ -3175,7 +3186,7 @@
         $("#productPageDetail").innerHTML = `<div class="product-page-empty"><h2>Product not found</h2><p>This pair may no longer be available.</p><a class="btn btn-gold" href="/shop">Browse footwear</a></div>`;
         $("#productPageDetail").setAttribute("aria-busy", "false"); return;
       }
-      const sizesInStock = selectedProduct.sizes.filter(size => selectedProduct.colors.some(color => variantStock(selectedProduct, color, size) > 0));
+      const sizesInStock = selectedProduct.inStock ? selectedProduct.sizes.filter(size => selectedProduct.colors.some(color => variantStock(selectedProduct, color, size) > 0)) : [];
       selectedSize = sizesInStock[0] || null;
       selectedColor = selectedProduct.colors.find(color => variantStock(selectedProduct, color, selectedSize) > 0) || null;
       document.title = `${selectedProduct.name} — PALMZ`;
@@ -3213,12 +3224,12 @@
 
     function updateVariantButton() {
       if (!selectedProduct || !document.getElementById("addSelectedButton")) return;
-      const available = selectedColor ? variantStock(selectedProduct, selectedColor, selectedSize) : 0;
+      const available = selectedProduct.inStock && selectedColor ? variantStock(selectedProduct, selectedColor, selectedSize) : 0;
       const inCart = cart.filter(item => item.id === selectedProduct.id && item.size === selectedSize && item.color === selectedColor).reduce((n, item) => n + item.qty, 0);
       const button = $("#addSelectedButton");
       button.disabled = available <= inCart;
       button.textContent = available <= inCart ? (available ? "Max in bag" : "Unavailable") : "Add to bag →";
-      $("#variantAvailability").textContent = available ? `${available - inCart} pair${available - inCart === 1 ? "" : "s"} available in this color and size.` : "This color and size is currently unavailable.";
+      $("#variantAvailability").textContent = !selectedProduct.inStock ? "This product is currently marked unavailable." : available ? `${available - inCart} pair${available - inCart === 1 ? "" : "s"} available in this color and size.` : "This color and size is currently unavailable.";
     }
 
     function chooseSize(s) {
@@ -3239,7 +3250,7 @@
     }
 
     function addSelected() {
-      if (!selectedProduct || !selectedColor || !selectedSize) {
+      if (!selectedProduct || !selectedProduct.inStock || !selectedColor || !selectedSize) {
         showToast("Choose an available color and size first");
         return;
       }
@@ -3321,7 +3332,8 @@
       const pickup = document.querySelector('input[name="fulfillmentMethod"]:checked')?.value === "pickup";
       $("#deliveryAddressField").hidden = pickup;
       $("#deliveryCityField").hidden = pickup;
-      $("#customerAddress").required = !pickup;
+      $("#customerStreet").required = !pickup;
+      $("#customerArea").required = !pickup;
       $("#customerCity").required = !pickup;
       $("#deliveryState").required = !pickup;
       $("#pickupBranchField").hidden = !pickup;
@@ -3641,7 +3653,9 @@ CUSTOMER DETAILS
 Full name: ${payload.customerName}
 Phone: ${payload.phone}
 Email: ${payload.email}
-${fulfillmentMethod === "pickup" ? deliverySummary : `Delivery address: ${payload.address}
+${fulfillmentMethod === "pickup" ? deliverySummary : `Street/building: ${payload.streetAddress}
+Area: ${payload.area}
+Nearby landmark: ${payload.landmark || "Not provided"}
 City & state: ${payload.city}, ${payload.state}
 ${deliverySummary}`}
 ${$("#customerNote").value.trim()?`Order note: ${$("#customerNote").value.trim()}`: ""}
@@ -3800,6 +3814,7 @@ Please confirm item availability and payment details. Thank you!`;
       $("#products").setAttribute("aria-busy", "false");
       cart = cart.flatMap(item => {
         const product = PRODUCTS.find(p => p.id === item.id);
+        if (!product || !product.inStock) return [];
         const available = product ? variantStock(product, item.color, item.size) : 0;
         if (!available) return [];
         item.qty = Math.min(item.qty, available);

@@ -13,6 +13,7 @@ const Customer = require('./models/Customer');
 const Order = require('./models/Order');
 const PromoCode = require('./models/PromoCode');
 const PromoUsage = require('./models/PromoUsage');
+const DeliveryZone = require('./models/DeliveryZone');
 const {
   CODE_PATTERN, normalizeCode, promoError, identityKeys, promoStatus, evaluatePromo,
   countCustomerUses, reservePromo, redeemPromo, releasePromo,
@@ -123,7 +124,11 @@ app.use(express.json({
     if (req.originalUrl === '/api/paystack/webhook') req.rawBody = Buffer.from(buffer);
   },
 }));
-app.get('/delivery-options', (req, res) => res.json({ tiers: DELIVERY_TIERS }));
+app.get('/delivery-options', async (req, res) => {
+  const zones = await ensureDeliveryZones();
+  res.set('Cache-Control', 'no-store');
+  res.json({ tiers: zones.filter((zone) => zone.active) });
+});
 
 const customizationUpload = multer({
   storage: multer.memoryStorage(),
@@ -205,6 +210,18 @@ async function connectDb() {
     throw e;
   }
   return cached.conn;
+}
+async function ensureDeliveryZones() {
+  await connectDb();
+  let zones = await DeliveryZone.find().sort({ name: 1 }).lean();
+  if (zones.length) return zones;
+  try {
+    await DeliveryZone.insertMany(DELIVERY_TIERS.map((tier) => ({ ...tier, active: true })));
+  } catch (error) {
+    if (!error || error.code !== 11000) throw error;
+  }
+  zones = await DeliveryZone.find().sort({ name: 1 }).lean();
+  return zones;
 }
 app.use('/api', async (req, res, next) => {
   try {
@@ -629,6 +646,9 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
   const phone = String(body.phone || '').trim();
   const fulfillmentMethod = String(body.fulfillmentMethod || 'delivery');
   let address = String(body.address || '').trim();
+  let streetAddress = String(body.streetAddress || '').trim();
+  let area = String(body.area || '').trim();
+  let landmark = String(body.landmark || '').trim();
   let city = String(body.city || '').trim();
   let deliveryState = '';
   let deliveryFee = 0;
@@ -644,11 +664,20 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
     if (!pickupBranch || !pickupBranch.available) throw bad('Choose an available pickup branch');
     address = `${pickupBranch.name}: ${pickupBranch.address}`;
     city = pickupBranch.city;
+    streetAddress = '';
+    area = '';
+    landmark = '';
   } else {
-    if (!address || address.length > 300) throw bad('Enter a delivery address of 1 to 300 characters');
+    const legacyAddressOnly = !streetAddress && !area;
+    if (legacyAddressOnly) streetAddress = address;
+    if (!streetAddress || streetAddress.length > 180) throw bad('Enter a street or building name of up to 180 characters');
+    if (!legacyAddressOnly && (!area || area.length > 120)) throw bad('Enter an area or neighborhood of up to 120 characters');
+    if (landmark.length > 180) throw bad('Nearby landmark must be 180 characters or fewer');
+    address = [streetAddress, area, landmark].filter(Boolean).join(', ');
+    if (address.length > 600) throw bad('The combined delivery address is too long');
     if (!city || city.length > 80) throw bad('Enter a city of 1 to 80 characters');
     deliveryState = String(body.state || '').trim();
-    const quote = deliveryQuote(deliveryState, city);
+    const quote = deliveryQuote(deliveryState, city, (await ensureDeliveryZones()).filter((zone) => zone.active));
     if (!quote) throw bad('Choose a valid delivery state');
     deliveryFee = quote.fee;
     deliveryEstimate = quote.estimate;
@@ -735,6 +764,9 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
     email,
     phone,
     address,
+    streetAddress,
+    area,
+    landmark,
     city,
     fulfillmentMethod,
     deliveryState,
@@ -1062,7 +1094,7 @@ app.post('/api/promo/validate', promoValidateLimiter, async (req, res) => {
   const lines = body.items.map((item) => {
     const product = byId.get(String(item.productId));
     const quantity = Number(item.quantity);
-    if (!product || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+    if (!product || !product.inStock || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
       throw bad('An item in your bag is no longer available');
     }
     return { productId: String(product._id), category: product.type, unitPrice: discountedPrice(product.price), quantity };
@@ -1071,7 +1103,7 @@ app.post('/api/promo/validate', promoValidateLimiter, async (req, res) => {
   let deliveryFee = null;
   if (fulfillmentMethod === 'pickup') deliveryFee = 0;
   else {
-    const quote = deliveryQuote(String(body.state || '').trim(), String(body.city || '').trim());
+    const quote = deliveryQuote(String(body.state || '').trim(), String(body.city || '').trim(), (await ensureDeliveryZones()).filter((zone) => zone.active));
     if (quote) deliveryFee = quote.fee;
   }
   const { breakdown } = await resolvePromo({
@@ -1185,6 +1217,67 @@ app.get('/api/admin/promos', requireAdmin, async (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.json({ promos: promos.map((promo) => presentPromo(promo)) });
 });
+function readDeliveryZoneFields(body) {
+  const name = String(body.name || '').trim();
+  const states = (Array.isArray(body.states) ? body.states : String(body.states || '').split(','))
+    .map((state) => String(state).trim()).filter(Boolean);
+  const fee = Number(body.fee);
+  const estimate = String(body.estimate || '').trim();
+  if (!name || name.length > 100) throw bad('Enter a zone name of 1 to 100 characters');
+  if (!states.length || states.length > 40 || states.some((state) => state.length > 80)) throw bad('Enter 1 to 40 valid state names');
+  if (new Set(states.map((state) => state.toLocaleLowerCase('en'))).size !== states.length) throw bad('A state can only appear once in a zone');
+  if (!Number.isFinite(fee) || fee < 0 || fee > 10000000) throw bad('Enter a delivery fee between 0 and 10,000,000');
+  if (!estimate || estimate.length > 120) throw bad('Enter a delivery estimate of 1 to 120 characters');
+  const cityOverrides = Array.isArray(body.cityOverrides) ? body.cityOverrides.map((entry) => ({
+    city: String(entry && entry.city || '').trim(), fee: Number(entry && entry.fee),
+    estimate: String(entry && entry.estimate || '').trim(),
+  })).filter((entry) => entry.city) : [];
+  if (cityOverrides.length > 30 || cityOverrides.some((entry) => entry.city.length > 100 || !Number.isFinite(entry.fee) || entry.fee < 0 || entry.fee > 10000000 || entry.estimate.length > 120)) throw bad('Check each city exception and its fee and estimate');
+  if (new Set(cityOverrides.map((entry) => entry.city.toLocaleLowerCase('en'))).size !== cityOverrides.length) throw bad('A city exception can only appear once in a zone');
+  return { name, states, fee, estimate, cityOverrides, active: body.active !== false };
+}
+async function assertDeliveryStatesAvailable(fields, ignoreId = null) {
+  const zones = await DeliveryZone.find(ignoreId ? { _id: { $ne: ignoreId } } : {}).select('states').lean();
+  const assigned = new Set(zones.flatMap((zone) => zone.states).map((state) => state.toLocaleLowerCase('en')));
+  if (fields.states.some((state) => assigned.has(state.toLocaleLowerCase('en')))) throw bad('A state is already assigned to another delivery zone');
+}
+app.get('/api/admin/delivery-zones', requireAdmin, async (req, res) => {
+  const zones = await ensureDeliveryZones();
+  res.set('Cache-Control', 'no-store');
+  res.json({ zones });
+});
+app.post('/api/admin/delivery-zones', requireAdmin, async (req, res) => {
+  const fields = readDeliveryZoneFields(req.body || {});
+  await assertDeliveryStatesAvailable(fields);
+  try {
+    const zone = await DeliveryZone.create(fields);
+    res.status(201).json({ zone });
+  } catch (error) {
+    if (error && error.code === 11000) throw bad('A delivery zone with this name already exists');
+    throw error;
+  }
+});
+app.put('/api/admin/delivery-zones/:id', requireAdmin, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Delivery zone not found' });
+  const fields = readDeliveryZoneFields(req.body || {});
+  await assertDeliveryStatesAvailable(fields, req.params.id);
+  let zone;
+  try {
+    zone = await DeliveryZone.findByIdAndUpdate(req.params.id, { $set: fields }, { new: true, runValidators: true });
+  } catch (error) {
+    if (error && error.code === 11000) throw bad('A delivery zone with this name already exists');
+    throw error;
+  }
+  if (!zone) return res.status(404).json({ error: 'Delivery zone not found' });
+  res.json({ zone });
+});
+app.delete('/api/admin/delivery-zones/:id', requireAdmin, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Delivery zone not found' });
+  if (await DeliveryZone.countDocuments() <= 1) throw bad('Keep at least one delivery zone configured');
+  const zone = await DeliveryZone.findByIdAndDelete(req.params.id);
+  if (!zone) return res.status(404).json({ error: 'Delivery zone not found' });
+  res.json({ ok: true });
+});
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
   const page = Math.max(1, Math.min(100000, Number.parseInt(req.query.page, 10) || 1));
   const limit = Math.max(1, Math.min(100, Number.parseInt(req.query.limit, 10) || 25));
@@ -1269,8 +1362,52 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
     if (!Order.ORDER_STATUSES.includes(req.query.status)) throw bad('Unknown order status');
     filter.status = req.query.status;
   }
+  if (req.query.fulfillmentMethod && req.query.fulfillmentMethod !== 'all') {
+    if (!['delivery', 'pickup'].includes(req.query.fulfillmentMethod)) throw bad('Choose a valid fulfillment method');
+    filter.fulfillmentMethod = req.query.fulfillmentMethod;
+  }
+  const dispatchStatuses = {
+    awaiting_dispatch: ['pending_confirmation', 'confirmed', 'preparing'],
+    dispatched: ['dispatched'],
+    out_for_delivery: ['out_for_delivery'],
+    delivered: ['delivered', 'fulfilled'],
+  };
+  if (req.query.dispatchStage && req.query.dispatchStage !== 'all') {
+    const statuses = dispatchStatuses[req.query.dispatchStage];
+    if (!statuses) throw bad('Choose a valid dispatch stage');
+    if (filter.fulfillmentMethod === 'pickup') {
+      filter.status = { $in: [] };
+    } else {
+      filter.fulfillmentMethod = 'delivery';
+    }
+    if (filter.status && Array.isArray(filter.status.$in) && filter.status.$in.length === 0) {
+      // Keep contradictory pickup and dispatch filters empty.
+    } else if (typeof filter.status === 'string') {
+      if (!statuses.includes(filter.status)) filter.status = { $in: [] };
+    } else {
+      filter.status = { $in: statuses };
+    }
+  }
   const orders = await Order.find(filter).sort({ createdAt: -1 }).limit(200).lean();
   res.json({ orders, statuses: Order.ORDER_STATUSES });
+});
+app.patch('/api/admin/orders/:id/delivery', requireAdmin, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Order not found' });
+  const body = req.body || {};
+  const courier = String(body.courier || '').trim();
+  const trackingReference = String(body.trackingReference || '').trim();
+  const deliveryNotes = String(body.deliveryNotes || '').trim();
+  if (courier.length > 100) throw bad('Courier name must be 100 characters or fewer');
+  if (trackingReference.length > 120) throw bad('Tracking reference must be 120 characters or fewer');
+  if (deliveryNotes.length > 1000) throw bad('Delivery notes must be 1000 characters or fewer');
+  const order = await Order.findById(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  if (order.fulfillmentMethod !== 'delivery') throw bad('Delivery handling details only apply to delivery orders');
+  order.courier = courier;
+  order.trackingReference = trackingReference;
+  order.deliveryNotes = deliveryNotes;
+  await order.save();
+  res.json({ order: order.toObject() });
 });
 app.patch('/api/admin/orders/:id/payment', requireAdmin, async (req, res) => {
   await expireOrderReservations();
@@ -1573,6 +1710,7 @@ app.get('/admin/orders', (req, res) => res.sendFile(path.join(pub, 'orders.html'
 app.get('/admin/sales', (req, res) => res.sendFile(path.join(pub, 'sales.html')));
 app.get('/admin/promos', (req, res) => res.sendFile(path.join(pub, 'promos.html')));
 app.get('/admin/users', (req, res) => res.sendFile(path.join(pub, 'users.html')));
+app.get('/admin/delivery', (req, res) => res.sendFile(path.join(pub, 'delivery.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(pub, 'terms.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(pub, 'privacy.html')));
 app.get(['/shop', '/cart', '/checkout', '/about', '/contact', '/customize', '/product/:id'], (req, res) =>

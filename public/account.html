@@ -839,12 +839,18 @@
             <div class="order-body">
               ${order.cancellationReason === "reservation_expired" ? '<div class="order-cancel-note">This order was cancelled because its unpaid stock hold expired. Please place a new order if you still want these items.</div>' : ""}
               <div class="order-items">${order.items.map(item => `${item.quantity} × ${escapeHtml(item.name)} — size ${escapeHtml(item.size)}, ${escapeHtml(item.color)}${item.unitPrice != null ? ` — ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}`).join("<br>")}</div>
-              <div class="order-delivery">${order.fulfillmentMethod === "pickup" ? `Pickup: ${escapeHtml(order.pickupBranchName || "Branch")} — ${escapeHtml(order.pickupBranchAddress || order.address)}, ${escapeHtml(order.city)}` : `${escapeHtml(order.address)}, ${escapeHtml(order.city)}${order.deliveryFee ? `<br>Delivery: ₦${Number(order.deliveryFee).toLocaleString("en-NG")}${order.deliveryEstimate ? ` · ${escapeHtml(order.deliveryEstimate)}` : ""}` : ""}`}${order.promo && Number(order.promo.totalDiscount) > 0 ? `<br>Promo ${escapeHtml(order.promo.code)}: −₦${Number(order.promo.totalDiscount).toLocaleString("en-NG")}` : ""}${order.totalAmount != null ? `<br>Total: ₦${Number(order.totalAmount).toLocaleString("en-NG")}` : ""}<br>Phone: ${escapeHtml(order.phone)}<br>Payment: ${escapeHtml(order.paymentProvider || "whatsapp")} · ${escapeHtml(order.paymentStatus || "not_started")}${Number.isSafeInteger(order.paidAmountKobo) ? `<br>Amount received: ₦${(order.paidAmountKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}${Number.isSafeInteger(order.paystackFeeKobo) && order.paystackFeeKobo > 0 ? `<br>Paystack checkout charge: ₦${(order.paystackFeeKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (not added by PALMZ)` : ""}</div>
+              <div class="order-delivery">${formatOrderDelivery(order)}${order.promo && Number(order.promo.totalDiscount) > 0 ? `<br>Promo ${escapeHtml(order.promo.code)}: −₦${Number(order.promo.totalDiscount).toLocaleString("en-NG")}` : ""}${order.totalAmount != null ? `<br>Total: ₦${Number(order.totalAmount).toLocaleString("en-NG")}` : ""}<br>Phone: ${escapeHtml(order.phone)}<br>Payment: ${escapeHtml(order.paymentProvider || "whatsapp")} · ${escapeHtml(order.paymentStatus || "not_started")}${Number.isSafeInteger(order.paidAmountKobo) ? `<br>Amount received: ₦${(order.paidAmountKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}${Number.isSafeInteger(order.paystackFeeKobo) && order.paystackFeeKobo > 0 ? `<br>Paystack checkout charge: ₦${(order.paystackFeeKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (not added by PALMZ)` : ""}</div>
             </div>
           </details>`).join("") : '<div class="panel empty-orders">No saved orders yet.</div>';
       } catch (error) {
         $("#orders").innerHTML = `<div class="panel empty-orders">${escapeHtml(error.message)}</div>`;
       }
+    }
+
+    function formatOrderDelivery(order) {
+      if (order.fulfillmentMethod === "pickup") return `Pickup: ${escapeHtml(order.pickupBranchName || "Branch")} — ${escapeHtml(order.pickupBranchAddress || order.address)}, ${escapeHtml(order.city)}`;
+      const location = [order.streetAddress || order.address, order.area && `Area: ${order.area}`, order.landmark && `Nearby landmark: ${order.landmark}`, order.city].filter(Boolean).map(escapeHtml).join("<br>");
+      return `${location}${order.deliveryFee ? `<br>Delivery: ₦${Number(order.deliveryFee).toLocaleString("en-NG")}${order.deliveryEstimate ? ` · ${escapeHtml(order.deliveryEstimate)}` : ""}` : ""}`;
     }
 
     function escapeHtml(value) {

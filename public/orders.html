@@ -93,6 +93,7 @@
     .customer-name { font-weight: 800 }
     .contact { margin-top: 8px; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere }
     .contact a { text-decoration: underline; text-underline-offset: 2px }
+    .delivery-manage{grid-column:1/-1}.delivery-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface2)}.delivery-form label{display:grid;gap:5px;color:var(--muted);font-size:11px;font-weight:700}.delivery-form input,.delivery-form textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font:inherit}.delivery-form textarea{grid-column:1/3;min-height:42px;resize:vertical}.delivery-form button{align-self:end;padding:10px 14px;border:0;border-radius:10px;background:var(--gold);color:#171208;font-weight:800}.delivery-current{margin-bottom:8px;color:var(--muted);font-size:12px;line-height:1.6}
     .items { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.8 }
     .order-note { margin-top: 8px; color: var(--muted); font-size: 12px; white-space: pre-wrap }
     .order-manage { display: grid; align-content: start; gap: 10px }
@@ -193,9 +194,9 @@
 .pagination{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:14px 0 24px;padding:16px 20px;border:1px solid var(--line);border-radius:20px;background:var(--surface);color:var(--muted);font-size:13px}.pager-pages{display:flex;align-items:center;gap:8px}.pager-pages button,.pager-select{min-width:46px;height:46px;padding:0 13px;border:1px solid var(--line);border-radius:13px;background:transparent;color:var(--text);font-weight:650;transition:background .18s,color .18s,border-color .18s,transform .18s}.pager-pages button:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(201,163,74,.6);background:rgba(201,163,74,.1)}.pager-pages button[aria-current="page"]{border-color:var(--gold);background:var(--gold);color:#171208}.pager-pages button:disabled{opacity:.42;cursor:not-allowed}.pager-ellipsis{padding:0 4px;color:var(--muted)}.pager-summary{white-space:nowrap}.pager-meta,.pager-size{display:flex;align-items:center;gap:12px;color:var(--muted);white-space:nowrap}.pager-select{height:42px;min-width:102px;padding:0 12px;background:var(--surface2);color:var(--text)}
 @media(max-width:640px){.pagination{align-items:stretch;flex-direction:column;gap:14px;padding:14px}.pager-pages{gap:5px;justify-content:center}.pager-pages button{min-width:38px;height:40px;padding:0 9px}.pager-meta{justify-content:space-between;gap:10px}.pager-size{gap:7px}.pager-summary{font-size:12px}}
 </style><style>
-.drawer-links a,.drawer-links button{display:flex;align-items:center;gap:12px}.drawer-links a[href="/admin/orders"]{position:relative}.drawer-brand{display:inline-block}.nav-icon{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;font-size:19px;line-height:1}.menu-toggle{cursor:pointer}.sidebar-collapse{display:none}
+.drawer-links a,.drawer-links button{display:flex;align-items:center;gap:12px}.drawer-links a[href="/admin/orders"]{position:relative}.drawer-brand{display:inline-block}.nav-icon{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;font-size:19px;line-height:1;color:currentColor}.nav-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.menu-toggle{cursor:pointer}.sidebar-collapse{display:none}
 @media(min-width:761px){.admin-drawer{inset:0 auto 0 0;width:236px;padding:22px 16px;border-radius:0;transform:none;transition:width .24s,padding .24s,transform .25s ease;box-shadow:8px 0 34px rgba(0,0,0,.18);border-right:1px solid var(--line)}.admin-drawer.open{transform:none}.drawer-close,.drawer-backdrop{display:none!important}.menu-toggle{display:none!important}.sidebar-collapse{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px;padding:0;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--gold);font-size:22px;line-height:1;cursor:pointer;transition:background .2s,border-color .2s,transform .2s}.sidebar-collapse:hover{background:rgba(201,163,74,.12);border-color:var(--gold);transform:translateX(-2px)}.sidebar-chevron{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .24s}.sidebar-collapse.is-collapsed .sidebar-chevron{transform:rotate(180deg)}.sidebar-collapse:focus-visible,.drawer-links a:focus-visible,.drawer-links button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.drawer-head{justify-content:flex-end;gap:16px;padding:12px 10px 24px}.drawer-title{flex:0 1 auto;font-size:18px}.drawer-title small{color:var(--gold)}.drawer-links{gap:8px;padding-top:22px}.drawer-links a,.drawer-links button{padding:14px 12px;border-radius:14px;color:#aab8cc;transition:background .2s,color .2s}.drawer-links a:hover,.drawer-links button:hover{background:rgba(255,255,255,.06);color:#fff}.drawer-links a[aria-current="page"]{background:rgba(201,163,74,.16);color:#e6c36e}.top{position:sticky;top:0;z-index:30;margin-left:236px;transition:margin-left .24s}.top .wrap{width:calc(100% - 48px);margin:0 24px}main.wrap{width:calc(100% - 284px);margin:0 24px 0 260px;transition:width .24s,margin-left .24s}body.sidebar-collapsed .admin-drawer{width:82px;padding-inline:12px}body.sidebar-collapsed .drawer-head{justify-content:center;gap:0;padding-inline:0}body.sidebar-collapsed .drawer-title{font-size:0;letter-spacing:0}body.sidebar-collapsed .drawer-title,body.sidebar-collapsed .nav-label{display:none}body.sidebar-collapsed .drawer-links a,body.sidebar-collapsed .drawer-links button{position:relative;justify-content:center;gap:0;padding:14px 4px}body.sidebar-collapsed .orders-notification{position:absolute;top:5px;right:7px;min-width:9px;width:9px;height:9px;padding:0;border:2px solid var(--surface);font-size:0}body.sidebar-collapsed .top{margin-left:82px}body.sidebar-collapsed main.wrap{width:calc(100% - 130px);margin-left:106px}}
-@media(max-width:760px){.admin-drawer{inset:0 0 0 auto;width:min(330px,86vw);border-radius:24px 0 0 24px;transform:translateX(102%)}.admin-drawer.open{transform:translateX(0)}}
+@media(max-width:760px){.admin-drawer{inset:0 0 0 auto;width:min(330px,86vw);border-radius:24px 0 0 24px;transform:translateX(102%)}.admin-drawer.open{transform:translateX(0)}}@media(max-width:640px){.delivery-form{grid-template-columns:1fr}.delivery-form textarea{grid-column:auto}}
 </style></head>
 <body>
   <header class="top">
@@ -207,7 +208,7 @@
   <button class="drawer-backdrop" id="drawerBackdrop" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)"></button>
   <aside class="admin-drawer" id="adminDrawer" aria-label="Admin navigation" aria-hidden="false">
     <div class="drawer-head"><div class="drawer-title"><span class="drawer-brand">PALMZ</span><small>ADMIN MENU</small></div><button class="sidebar-collapse" id="sidebarCollapse" type="button" aria-label="Collapse admin sidebar" aria-expanded="true" title="Collapse sidebar" onclick="toggleAdminNavigation()"><svg class="sidebar-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg></button><button class="drawer-close" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)">×</button></div>
-    <nav class="drawer-links"><a href="/admin" title="Inventory"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Inventory</span></a><a href="/admin/orders" aria-current="page" title="Orders"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-label">Orders</span><span class="orders-notification" hidden aria-label="Pending orders"></span></a><a href="/admin/sales" title="Sales history"><span class="nav-icon" aria-hidden="true">↗</span><span class="nav-label">Sales history</span></a><a href="/admin/promos" title="Promo codes"><span class="nav-icon" aria-hidden="true">%</span><span class="nav-label">Promo codes</span></a><a href="/admin/users" title="Users"><span class="nav-icon" aria-hidden="true">♙</span><span class="nav-label">Users</span></a><a href="/" target="_blank" rel="noopener" title="View store"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-label">View store</span></a><button type="button" onclick="logout()" title="Sign out"><span class="nav-icon" aria-hidden="true">⇥</span><span class="nav-label">Sign out</span></button></nav>
+    <nav class="drawer-links"><a href="/admin" title="Inventory"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg></span><span class="nav-label">Inventory</span></a><a href="/admin/orders" aria-current="page" title="Orders"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span><span class="nav-label">Orders</span><span class="orders-notification" hidden aria-label="Pending orders"></span></a><a href="/admin/sales" title="Sales history"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 6-7"/><path d="M15 6h5v5"/></svg></span><span class="nav-label">Sales history</span></a><a href="/admin/promos" title="Promo codes"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13 12 21.5 2.5 12V3.5H11z"/><circle cx="7" cy="8" r="1"/><path d="m9 15 6-6"/><circle cx="15.5" cy="15.5" r="1"/></svg></span><span class="nav-label">Promo codes</span></a><a href="/admin/users" title="Users"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span class="nav-label">Users</span></a><a href="/admin/delivery" title="Delivery rates"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h11v12H3zM14 10h4l3 3v5h-7"/><circle cx="7.5" cy="18" r="2"/><circle cx="17.5" cy="18" r="2"/></svg></span><span class="nav-label">Delivery rates</span></a><a href="/" target="_blank" rel="noopener" title="View store"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9v12h14V9M9 21v-7h6v7"/></svg></span><span class="nav-label">View store</span></a><button type="button" onclick="logout()" title="Sign out"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/></svg></span><span class="nav-label">Sign out</span></button></nav>
   </aside>
   <main class="wrap">
     <div class="heading">
@@ -228,6 +229,10 @@
         <option value="fulfilled">Fulfilled</option>
         <option value="cancelled">Cancelled</option>
       </select>
+      <label for="fulfillmentFilter">Fulfillment</label>
+      <select id="fulfillmentFilter" onchange="ordersPage=1;loadOrders()"><option value="all">Delivery and pickup</option><option value="delivery">Delivery only</option><option value="pickup">Pickup only</option></select>
+      <label for="dispatchFilter">Dispatch stage</label>
+      <select id="dispatchFilter" onchange="ordersPage=1;loadOrders()"><option value="all">All dispatch stages</option><option value="awaiting_dispatch">Awaiting dispatch</option><option value="dispatched">Dispatched</option><option value="out_for_delivery">Out for delivery</option><option value="delivered">Delivered</option></select>
       <span class="muted" id="resultCount"></span>
     </div>
     <section class="orders" id="orders" aria-live="polite"><div class="message"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading orders…</span></div></section>
@@ -306,6 +311,14 @@
         <div class="stat"><b>${counts.fulfilled}</b><span>Fulfilled</span></div>`;
     }
 
+    function renderDeliveryForm(order) {
+      const courier = escapeHtml(order.courier || "");
+      const tracking = escapeHtml(order.trackingReference || "");
+      const notes = escapeHtml(order.deliveryNotes || "");
+      const current = [order.courier && `Courier: ${escapeHtml(order.courier)}`, order.trackingReference && `Tracking: ${escapeHtml(order.trackingReference)}`, order.deliveryNotes && `Notes: ${escapeHtml(order.deliveryNotes)}`].filter(Boolean).join(" · ");
+      return `<div class="delivery-current">${current || "No courier or tracking details saved yet."}</div><form class="delivery-form" onsubmit="saveDeliveryDetails(event, '${escapeHtml(order._id)}')"><label>Courier<input name="courier" maxlength="100" value="${courier}" placeholder="Courier or delivery partner"></label><label>Tracking reference<input name="trackingReference" maxlength="120" value="${tracking}" placeholder="Tracking or waybill number"></label><label>Delivery notes<textarea name="deliveryNotes" maxlength="1000" placeholder="Handover instructions or follow-up details">${notes}</textarea></label><button type="submit">Save delivery details</button></form>`;
+    }
+
     function renderOrder(order) {
       const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.createdAt));
       const phoneDigits = order.phone.replace(/\D/g, "");
@@ -313,18 +326,21 @@
       const items = order.items.map(item => `<li>${item.quantity} × ${escapeHtml(item.name)} — size ${escapeHtml(item.size)}, ${escapeHtml(item.color)}${item.unitPrice != null ? ` — ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}</li>`).join("");
       const paymentStatus = PAYMENT_LABELS[order.paymentStatus] || "Not started";
       const paymentIsPaid = order.paymentStatus === "paid";
+      const addressLines = [order.streetAddress || order.address, order.area && `Area: ${order.area}`, order.landmark && `Nearby landmark: ${order.landmark}`, order.city].filter(Boolean).map(escapeHtml).join("<br>");
+      const fulfillmentDetails = order.fulfillmentMethod === "pickup" ? `Pickup: ${escapeHtml(order.pickupBranchName || "Branch")}<br>${escapeHtml(order.pickupBranchAddress || order.address)}<br>${escapeHtml(order.city)}` : `${addressLines}<br>Delivery fee: ₦${Number(order.deliveryFee || 0).toLocaleString("en-NG")}${order.deliveryEstimate ? ` · ${escapeHtml(order.deliveryEstimate)}` : ""}`;
       return `<article class="order" data-id="${escapeHtml(order._id)}">
         <details class="order-details">
           <summary>
             <div class="order-summary-main"><strong>${escapeHtml(order.customerName)}</strong><div class="order-id">Order ${escapeHtml(order._id)} · ${date}</div></div>
-            <div class="order-summary-meta"><span class="order-badge">${escapeHtml(STATUS_LABELS[order.status] || order.status)}</span><span class="order-badge${paymentIsPaid ? " payment-paid" : ""}">${escapeHtml(paymentStatus)}</span>${order.inventoryReserved ? '<span class="order-badge">Stock held</span>' : ''}</div>
+            <div class="order-summary-meta"><span class="order-badge">${order.fulfillmentMethod === "pickup" ? "Pickup" : "Delivery"}</span><span class="order-badge">${escapeHtml(STATUS_LABELS[order.status] || order.status)}</span><span class="order-badge${paymentIsPaid ? " payment-paid" : ""}">${escapeHtml(paymentStatus)}</span>${order.inventoryReserved ? '<span class="order-badge">Stock held</span>' : ''}</div>
           </summary>
           <div class="order-content">
-          <section><div class="label">Customer</div><div class="customer-name">${escapeHtml(order.customerName)}</div><div class="contact"><a href="mailto:${encodeURIComponent(order.email)}">${escapeHtml(order.email)}</a><br><a href="tel:${encodeURIComponent(order.phone)}">${escapeHtml(order.phone)}</a>${whatsappNumber ? `<br><a target="_blank" rel="noopener noreferrer" href="https://wa.me/${encodeURIComponent(whatsappNumber)}">Message on WhatsApp</a>` : ""}<br>${order.fulfillmentMethod === "pickup" ? `Pickup: ${escapeHtml(order.pickupBranchName || "Branch")}<br>${escapeHtml(order.pickupBranchAddress || order.address)}<br>${escapeHtml(order.city)}` : `Delivery: ${escapeHtml(order.address)}<br>${escapeHtml(order.city)}${order.deliveryFee ? `<br>Delivery fee: ₦${Number(order.deliveryFee).toLocaleString("en-NG")}${order.deliveryEstimate ? ` · ${escapeHtml(order.deliveryEstimate)}` : ""}` : ""}`}${order.promo ? `<br>Promo ${escapeHtml(order.promo.code)}: −₦${Number(order.promo.totalDiscount || 0).toLocaleString("en-NG")} (${escapeHtml(({ reserved: "pending", redeemed: "redeemed", released: "released" })[order.promo.state] || order.promo.state)})` : ""}${order.totalAmount != null ? `<br>Order total: ₦${Number(order.totalAmount).toLocaleString("en-NG")}` : ""}</div></section>
+          <section><div class="label">Customer</div><div class="customer-name">${escapeHtml(order.customerName)}</div><div class="contact"><a href="mailto:${encodeURIComponent(order.email)}">${escapeHtml(order.email)}</a><br><a href="tel:${encodeURIComponent(order.phone)}">${escapeHtml(order.phone)}</a>${whatsappNumber ? `<br><a target="_blank" rel="noopener noreferrer" href="https://wa.me/${encodeURIComponent(whatsappNumber)}">Message on WhatsApp</a>` : ""}<br>${fulfillmentDetails}${order.promo ? `<br>Promo ${escapeHtml(order.promo.code)}: −₦${Number(order.promo.totalDiscount || 0).toLocaleString("en-NG")} (${escapeHtml(({ reserved: "pending", redeemed: "redeemed", released: "released" })[order.promo.state] || order.promo.state)})` : ""}${order.totalAmount != null ? `<br>Order total: ₦${Number(order.totalAmount).toLocaleString("en-NG")}` : ""}</div></section>
           <section><div class="label">Items</div><ul class="items">${items}</ul>${order.note ? `<div class="order-note"><strong>Note:</strong> ${escapeHtml(order.note)}</div>` : ""}</section>
           <section class="order-manage"><div class="label">Order status</div><select aria-label="Update order status" onchange="updateStatus('${escapeHtml(order._id)}', this.value, this)">${Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${order.status === value ? "selected" : ""}>${label}</option>`).join("")}</select><div class="payment"><strong>Payment:</strong> ${escapeHtml(order.paymentProvider || "whatsapp")} · ${escapeHtml(paymentStatus)}${Number.isSafeInteger(order.paidAmountKobo) ? `<br>Amount received: ₦${(order.paidAmountKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}${Number.isSafeInteger(order.paystackFeeKobo) && order.paystackFeeKobo > 0 ? `<br>Paystack checkout charge: ₦${(order.paystackFeeKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (not added by PALMZ)` : ""}${order.paystackReference ? `<br>Paystack reference: ${escapeHtml(order.paystackReference)}` : ""}${order.paymentReference ? `<br>Payment reference: ${escapeHtml(order.paymentReference)}` : ""}<br>Payment tracking is separate from order status.</div>
             ${order.paymentProvider === "whatsapp" && !paymentIsPaid ? `<form class="payment-form" onsubmit="recordManualPayment(event, '${escapeHtml(order._id)}')"><label>Amount received (₦)<input name="amount" type="number" min="${order.totalAmount != null ? Number(order.totalAmount).toFixed(2) : "0.01"}" step="0.01" required></label><label>Payment reference <span class="muted">(optional)</span><input name="reference" type="text" maxlength="120" placeholder="Bank transfer reference"></label><button type="submit">Record payment received</button></form>` : ""}
           </section>
+          ${order.fulfillmentMethod === "delivery" ? `<section class="delivery-manage"><div class="label">Delivery handling</div>${renderDeliveryForm(order)}</section>` : ""}
           </div>
         </details>
       </article>`;
@@ -340,8 +356,8 @@
       refreshButton.innerHTML = '<span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading</span>';
       showMessage("Loading orders…", false, true);
       try {
-        const status = $("#statusFilter").value;
-        const { orders } = await request(`/api/admin/orders?status=${encodeURIComponent(status)}`);
+        const params = new URLSearchParams({ status: $("#statusFilter").value, fulfillmentMethod: $("#fulfillmentFilter").value, dispatchStage: $("#dispatchFilter").value });
+        const { orders } = await request(`/api/admin/orders?${params}`);
         ordersCache=orders;renderOrderList();
       } catch (error) {
         if (!/session has expired/.test(error.message)) showMessage(error.message, true);
@@ -371,6 +387,24 @@
         await loadOrders();
       } finally {
         loading.remove();
+      }
+    }
+
+    async function saveDeliveryDetails(event, id) {
+      event.preventDefault();
+      const form = event.currentTarget, button = form.querySelector('button[type="submit"]');
+      button.disabled = true;
+      try {
+        await request(`/api/admin/orders/${encodeURIComponent(id)}/delivery`, {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courier: form.elements.courier.value, trackingReference: form.elements.trackingReference.value, deliveryNotes: form.elements.deliveryNotes.value })
+        });
+        toast("Delivery details saved");
+        await loadOrders();
+      } catch (error) {
+        toast(error.message, true);
+      } finally {
+        button.disabled = false;
       }
     }
 
