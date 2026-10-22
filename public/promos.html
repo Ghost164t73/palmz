@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<title>Promo codes — PALMZ Admin</title>
+<style>
+:root{color-scheme:light;--bg:#f7f5ef;--surface:#fff;--surface2:#f1efe8;--text:#11141c;--muted:#6e6d68;--line:rgba(17,20,28,.12);--navy:#0c1227;--gold:#c9a34a;--red:#b3261e;--green:#1f8a4c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}button{font:inherit;cursor:pointer}.wrap{width:min(1100px,calc(100% - 28px));margin:auto}.top{background:var(--navy);color:#fff}.top .wrap{height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{font-size:13px;font-weight:900;letter-spacing:.18em;color:#fff;text-decoration:none}.refresh{padding:8px 13px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:transparent;color:#eee;font-size:12px;text-decoration:none}main{padding:28px 0 60px}.heading{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}.heading h1{font:700 32px Georgia,serif;margin:0 0 5px}.muted{color:var(--muted);font-size:13px}.refresh{background:var(--navy);color:white}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}.stat b{display:block;font-size:23px}.stat span{color:var(--muted);font-size:11px}.toolbar{display:flex;align-items:center;gap:10px;margin:18px 0 12px}.toolbar input{width:min(100%,380px);padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--text)}.table-wrap{overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px}table{width:100%;min-width:730px;border-collapse:collapse}th,td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:top;font-size:13px}th{font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;background:#faf9f5}tbody tr:last-child td{border-bottom:0}.order-id{font:11px ui-monospace,monospace;color:var(--muted);margin-top:4px}.items{margin:0;padding-left:17px;line-height:1.65}.badge{display:inline-block;border-radius:999px;padding:5px 9px;background:#e8f4eb;color:var(--green);font-size:10px;font-weight:800;white-space:nowrap}.badge.reversed{background:#f8e9e7;color:var(--red)}.empty,.error{padding:42px 18px;text-align:center;color:var(--muted)}.toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,12px);opacity:0;background:var(--navy);color:#fff;padding:10px 16px;border-radius:999px;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}@media(max-width:600px){.heading h1{font-size:27px}.stats{grid-template-columns:1fr 1fr}.stat:last-child{grid-column:1/-1}}
+</style>
+<style>.drawer-links a[href="/admin/orders"]{display:flex;align-items:center}.orders-notification{min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;margin-left:auto;border-radius:999px;background:#d9473f;color:#fff;font-size:10px;font-weight:850;letter-spacing:0}.orders-notification[hidden]{display:none}</style>
+<style>
+.loading-indicator{display:inline-flex;align-items:center;gap:9px}.spinner{width:15px;height:15px;flex:0 0 15px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}button.is-loading{position:relative;color:transparent!important;pointer-events:none}button.is-loading::after{content:"";position:absolute;left:50%;top:50%;width:15px;height:15px;margin:-8px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+.menu-toggle{width:42px;height:42px;padding:10px;display:grid;align-content:center;gap:5px;border:1px solid rgba(255,255,255,.2);border-radius:12px;background:none;color:#fff}.menu-toggle span{height:2px;background:currentColor;border-radius:2px}
+.drawer-backdrop{position:fixed;inset:0;z-index:60;border:0;background:rgba(5,9,20,.5);opacity:0;visibility:hidden;transition:opacity .22s,visibility .22s}.drawer-backdrop.open{opacity:1;visibility:visible}
+.admin-drawer{position:fixed;z-index:61;inset:0 0 0 auto;width:min(330px,86vw);padding:22px;background:var(--navy);color:#fff;transform:translateX(102%);transition:transform .25s ease;box-shadow:-14px 0 40px rgba(0,0,0,.2)}.admin-drawer.open{transform:translateX(0)}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:22px;border-bottom:1px solid rgba(255,255,255,.14)}.drawer-title{font-weight:900;letter-spacing:.18em}.drawer-title small{display:block;margin-top:5px;color:var(--gold);font-size:10px;letter-spacing:.14em}
+.drawer-close{width:38px;height:38px;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:none;color:#fff;font-size:23px}.drawer-links{display:grid;gap:8px;padding:20px 0}.drawer-links a,.drawer-links button{display:block;width:100%;padding:13px 14px;border:0;border-radius:11px;background:transparent;color:#eeece5;text-align:left;font-size:14px;text-decoration:none}.drawer-links a:hover,.drawer-links a[aria-current="page"],.drawer-links button:hover{background:rgba(255,255,255,.09)}.drawer-links a[aria-current="page"]{color:var(--gold);font-weight:800}body.menu-open{overflow:hidden}
+</style>
+<style>
+:root{color-scheme:dark;--bg:#080d19;--surface:#101a2b;--surface2:#172338;--text:#eef3fb;--muted:#91a1b8;--line:rgba(148,163,184,.16);--navy:#0b1322;--gold:#c9a34a;--red:#fb6b73;--green:#23c879}
+body{background:var(--bg);color:var(--text)}
+.wrap{width:min(1320px,calc(100% - 48px))}
+.top{background:#0d1524;border-bottom:1px solid var(--line)}
+.top .wrap{height:72px}
+.brand{font-size:14px}
+.menu-toggle{border-radius:16px;background:var(--surface);border-color:var(--line)}
+.admin-drawer{background:#101a2b}
+.drawer-links a[aria-current="page"]{background:rgba(201,163,74,.16)}
+main{padding-top:36px}
+.heading h1{color:var(--text)}
+.muted{color:var(--muted)}
+.stats{gap:12px}
+.stat{border-radius:20px;padding:18px 20px;background:#102622;border-color:rgba(35,200,121,.2)}
+.stat:nth-child(2){background:#102438;border-color:rgba(56,189,248,.2)}
+.stat:nth-child(3){background:#1a1d3b;border-color:rgba(139,92,246,.22)}
+.stat b{color:var(--text)}
+.stat span{color:#a6b4c8}
+.toolbar input{border-color:var(--line);border-radius:14px;background:var(--surface);color:var(--text)}
+.toolbar input::placeholder{color:#77869d}
+.table-wrap{border-color:var(--line);border-radius:20px;background:var(--surface)}
+table th{background:#141f31;color:#a8b8ce}
+table td{color:#dce5f2}
+table tr:hover td{background:#17283a}
+.order-id{color:var(--muted)}
+.badge{background:rgba(35,200,121,.16);color:#59e39c}
+.badge.reversed{background:rgba(251,107,115,.16);color:#ff8990}
+.empty,.error{color:var(--muted)}
+.refresh{border-radius:999px;background:var(--gold);color:#171208;border-color:var(--gold);font-weight:800}
+.refresh:hover{background:#d8b85f}
+.toast{background:#1b2a3e;color:var(--text)}
+.drawer-links a,.drawer-links button{border-radius:14px}
+@media(max-width:600px){.wrap{width:calc(100% - 28px)}}
+</style>
+<style>
+
+.stats .stat{transition:transform .22s,box-shadow .22s}.stats .stat:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(0,0,0,.22)}.table-wrap{animation:admin-enter .42s both}tbody tr{transition:background .18s}tbody tr:hover td{background:#17283a}@keyframes admin-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:760px){.admin-drawer{inset:0 0 0 auto;width:min(330px,86vw);border-radius:24px 0 0 24px;transform:translateX(102%)}.admin-drawer.open{transform:translateX(0)}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+<style>
+.pagination{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 24px;padding:16px 20px;border:1px solid var(--line);border-top:0;border-radius:0 0 20px 20px;background:var(--surface);color:var(--muted);font-size:13px}.pager-pages{display:flex;align-items:center;gap:8px}.pager-pages button,.pager-select{min-width:46px;height:46px;padding:0 13px;border:1px solid var(--line);border-radius:13px;background:transparent;color:var(--text);font-weight:650;transition:background .18s,color .18s,border-color .18s,transform .18s}.pager-pages button:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(201,163,74,.6);background:rgba(201,163,74,.1)}.pager-pages button[aria-current="page"]{border-color:var(--gold);background:var(--gold);color:#171208}.pager-pages button:disabled{opacity:.42;cursor:not-allowed}.pager-ellipsis{padding:0 4px;color:var(--muted)}.pager-summary{white-space:nowrap}.pager-meta,.pager-size{display:flex;align-items:center;gap:12px;color:var(--muted);white-space:nowrap}.pager-select{height:42px;min-width:102px;padding:0 12px;background:var(--surface2);color:var(--text)}
+@media(max-width:640px){.pagination{align-items:stretch;flex-direction:column;gap:14px;padding:14px}.pager-pages{gap:5px;justify-content:center}.pager-pages button{min-width:38px;height:40px;padding:0 9px}.pager-meta{justify-content:space-between;gap:10px}.pager-size{gap:7px}.pager-summary{font-size:12px}}
+</style><style>
+.drawer-links a,.drawer-links button{display:flex;align-items:center;gap:12px}.drawer-links a[href="/admin/orders"]{position:relative}.drawer-brand{display:inline-block}.nav-icon{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;font-size:19px;line-height:1}.menu-toggle{cursor:pointer}.sidebar-collapse{display:none}
+@media(min-width:761px){.admin-drawer{inset:0 auto 0 0;width:236px;padding:22px 16px;border-radius:0;transform:none;transition:width .24s,padding .24s,transform .25s ease;box-shadow:8px 0 34px rgba(0,0,0,.18);border-right:1px solid var(--line)}.admin-drawer.open{transform:none}.drawer-close,.drawer-backdrop{display:none!important}.menu-toggle{display:none!important}.sidebar-collapse{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px;padding:0;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--gold);font-size:22px;line-height:1;cursor:pointer;transition:background .2s,border-color .2s,transform .2s}.sidebar-collapse:hover{background:rgba(201,163,74,.12);border-color:var(--gold);transform:translateX(-2px)}.sidebar-chevron{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .24s}.sidebar-collapse.is-collapsed .sidebar-chevron{transform:rotate(180deg)}.sidebar-collapse:focus-visible,.drawer-links a:focus-visible,.drawer-links button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.drawer-head{justify-content:flex-end;gap:16px;padding:12px 10px 24px}.drawer-title{flex:0 1 auto;font-size:18px}.drawer-title small{color:var(--gold)}.drawer-links{gap:8px;padding-top:22px}.drawer-links a,.drawer-links button{padding:14px 12px;border-radius:14px;color:#aab8cc;transition:background .2s,color .2s}.drawer-links a:hover,.drawer-links button:hover{background:rgba(255,255,255,.06);color:#fff}.drawer-links a[aria-current="page"]{background:rgba(201,163,74,.16);color:#e6c36e}.top{position:sticky;top:0;z-index:30;margin-left:236px;transition:margin-left .24s}.top .wrap{width:calc(100% - 48px);margin:0 24px}main.wrap{width:calc(100% - 284px);margin:0 24px 0 260px;transition:width .24s,margin-left .24s}body.sidebar-collapsed .admin-drawer{width:82px;padding-inline:12px}body.sidebar-collapsed .drawer-head{justify-content:center;gap:0;padding-inline:0}body.sidebar-collapsed .drawer-title{font-size:0;letter-spacing:0}body.sidebar-collapsed .drawer-title,body.sidebar-collapsed .nav-label{display:none}body.sidebar-collapsed .drawer-links a,body.sidebar-collapsed .drawer-links button{position:relative;justify-content:center;gap:0;padding:14px 4px}body.sidebar-collapsed .orders-notification{position:absolute;top:5px;right:7px;min-width:9px;width:9px;height:9px;padding:0;border:2px solid var(--surface);font-size:0}body.sidebar-collapsed .top{margin-left:82px}body.sidebar-collapsed main.wrap{width:calc(100% - 130px);margin-left:106px}}
+@media(max-width:760px){.admin-drawer{inset:0 0 0 auto;width:min(330px,86vw);border-radius:24px 0 0 24px;transform:translateX(102%)}.admin-drawer.open{transform:translateX(0)}}
+</style></head>
+<body>
+<header class="top"><div class="wrap"><a href="/admin" class="brand">PALMZ ADMIN</a><button class="menu-toggle" type="button" aria-label="Toggle admin sidebar" aria-expanded="true" aria-controls="adminDrawer" onclick="toggleAdminNavigation()"><span></span><span></span><span></span></button></div></header>
+<button class="drawer-backdrop" id="drawerBackdrop" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)"></button>
+<aside class="admin-drawer" id="adminDrawer" aria-label="Admin navigation" aria-hidden="false"><div class="drawer-head"><div class="drawer-title"><span class="drawer-brand">PALMZ</span><small>ADMIN MENU</small></div><button class="sidebar-collapse" id="sidebarCollapse" type="button" aria-label="Collapse admin sidebar" aria-expanded="true" title="Collapse sidebar" onclick="toggleAdminNavigation()"><svg class="sidebar-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg></button><button class="drawer-close" type="button" aria-label="Close navigation" onclick="toggleAdminMenu(false)">×</button></div><nav class="drawer-links"><a href="/admin" title="Inventory"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Inventory</span></a><a href="/admin/orders" title="Orders"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-label">Orders</span><span class="orders-notification" hidden aria-label="Pending orders"></span></a><a href="/admin/sales" title="Sales history"><span class="nav-icon" aria-hidden="true">↗</span><span class="nav-label">Sales history</span></a><a href="/admin/promos" aria-current="page" title="Promo codes"><span class="nav-icon" aria-hidden="true">%</span><span class="nav-label">Promo codes</span></a><a href="/" target="_blank" rel="noopener" title="View store"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-label">View store</span></a><button type="button" onclick="logout()" title="Sign out"><span class="nav-icon" aria-hidden="true">⇥</span><span class="nav-label">Sign out</span></button></nav></aside>
+<style>
+.chip{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.chip.active{background:rgba(35,200,121,.16);color:#59e39c}.chip.inactive,.chip.expired{background:rgba(251,107,115,.16);color:#ff8990}.chip.scheduled{background:rgba(96,145,220,.16);color:#9dbcf1}.chip.exhausted{background:rgba(245,178,66,.18);color:#f6c66b}
+.code-cell b{font-size:15px;letter-spacing:.06em}.sub{display:block;margin-top:3px;color:var(--muted);font-size:11px;line-height:1.5}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap}.small{padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface2);color:var(--text);font-size:12px}.small:hover{border-color:var(--gold)}.small.del{color:#ff8990}
+.modal{position:fixed;inset:0;z-index:90;display:none;place-items:center;padding:16px;background:rgba(2,6,14,.76)}.modal.open{display:grid}
+.box{width:min(680px,100%);max-height:94vh;overflow:auto;padding:24px;border:1px solid var(--line);border-radius:24px;background:var(--surface);box-shadow:0 24px 80px rgba(0,0,0,.4)}.box.wide{width:min(980px,100%)}
+.box h3{margin:0 0 4px;font:700 24px Georgia,serif}
+label{display:block;margin-top:14px;font-size:11px;font-weight:700;color:var(--muted)}
+input,select,textarea{width:100%;margin-top:5px;padding:11px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface2);color:var(--text);font:inherit;font-weight:400;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,163,74,.16)}input:disabled{opacity:.6}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hint{margin-top:4px;color:var(--muted);font-size:11px;font-weight:400}
+.check{display:flex;align-items:center;gap:8px;margin-top:14px;color:var(--text);font-size:13px;font-weight:600}.check input{width:auto;margin:0}
+.picker{max-height:190px;overflow:auto;margin-top:6px;padding:8px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface2)}.picker .check{margin:7px 0;font-weight:500}
+.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}.actions button{padding:11px 18px;border:0;border-radius:999px;background:var(--gold);color:#171208;font-weight:800}.actions button.ghost{background:var(--surface2);color:var(--text);border:1px solid var(--line)}
+.err{min-height:16px;margin-top:12px;color:var(--red);font-size:12px}
+.new-btn{padding:11px 18px;border:0;border-radius:999px;background:var(--gold);color:#171208;font-weight:800}
+.stat:nth-child(3){background:#271e2e;border-color:rgba(251,107,115,.2)}
+@media(max-width:640px){.two{grid-template-columns:1fr}}
+</style>
+<main class="wrap">
+  <div class="heading"><div><h1>Promo codes</h1><div class="muted">Create discount codes for the checkout. Pending WhatsApp orders hold a slot until you confirm or cancel them; cancelled and expired orders give the slot back.</div></div><button class="new-btn" type="button" onclick="openForm()">+ New promo code</button></div>
+  <section class="stats" id="stats" aria-live="polite"></section>
+  <div class="toolbar"><input id="search" type="search" placeholder="Search promo codes…" oninput="page=1;render()"><span class="muted" id="count"></span></div>
+  <div class="table-wrap"><table><thead><tr><th>Code</th><th>Discount</th><th>Rules</th><th>Usage</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead><tbody id="rows"><tr><td colspan="7" class="empty"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Loading promo codes…</span></td></tr></tbody></table></div><div class="pagination" id="pager"></div>
+</main>
+
+<div class="modal" id="formModal" onclick="if(event.target===this)closeForm()">
+  <form class="box" id="form" onsubmit="savePromo(event)">
+    <h3 id="formTitle">New promo code</h3>
+    <div class="two">
+      <label>Code<input id="code" required maxlength="30" placeholder="e.g. PALMZ10" style="text-transform:uppercase"><span class="hint">Letters, numbers, - or _. Saved in capitals and cannot be changed later.</span></label>
+      <label>Note (only you see this)<input id="description" maxlength="200" placeholder="e.g. Instagram giveaway"></label>
+    </div>
+    <div class="two">
+      <label>Discount type<select id="discountType" onchange="syncType()"><option value="percentage">Percentage off</option><option value="fixed">Fixed amount off (₦)</option><option value="free_delivery">Free delivery</option></select></label>
+      <label id="valueField"><span id="valueLabel">Percentage (%)</span><input id="discountValue" type="number" min="0" step="0.01" placeholder="10"></label>
+    </div>
+    <div class="two">
+      <label>Minimum order subtotal (₦)<input id="minSubtotal" type="number" min="0" step="1" placeholder="0 = none"><span class="hint">Checked against the bag total after the store's 10% sale price.</span></label>
+      <label id="capField">Maximum discount (₦)<input id="maxDiscount" type="number" min="0" step="1" placeholder="Empty = no cap"><span class="hint">Percentage codes only.</span></label>
+    </div>
+    <div class="two">
+      <label>Starts<input id="startsAt" type="datetime-local"></label>
+      <label>Expires<input id="expiresAt" type="datetime-local"></label>
+    </div>
+    <div class="two">
+      <label>Total redemption limit<input id="maxRedemptions" type="number" min="1" step="1" placeholder="Empty = unlimited"></label>
+      <label>Limit per customer<input id="perCustomerLimit" type="number" min="1" step="1" placeholder="Empty = unlimited"><span class="hint">Matched by account, email or phone number.</span></label>
+    </div>
+    <label>Applies to<select id="appliesTo" onchange="syncScope()"><option value="all">All products</option><option value="selected">Selected products or categories</option></select></label>
+    <div id="scopeBox" hidden>
+      <label>Categories<div class="picker" id="categoryPicker"></div></label>
+      <label>Products<div class="picker" id="productPicker"></div></label>
+      <div class="hint">A product qualifies if it is ticked or its category is ticked.</div>
+    </div>
+    <label class="check"><input type="checkbox" id="active" checked> Active</label>
+    <div class="err" id="formErr" role="alert"></div>
+    <div class="actions"><button type="button" class="ghost" onclick="closeForm()">Cancel</button><button type="submit" id="saveBtn">Save promo code</button></div>
+  </form>
+</div>
+
+<div class="modal" id="ordersModal" onclick="if(event.target===this)closeOrders()">
+  <div class="box wide">
+    <h3 id="ordersTitle">Orders</h3>
+    <div class="muted" id="ordersNote"></div>
+    <div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Date</th><th>Order</th><th>Customer</th><th>Subtotal</th><th>Discount</th><th>Total</th><th>Order status</th><th>Code state</th></tr></thead><tbody id="orderRows"></tbody></table></div>
+    <div class="actions"><button type="button" class="ghost" onclick="closeOrders()">Close</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+const $=s=>document.querySelector(s);let promos=[],products=[],editing=null,page=1,pageSize=8;
+function toggleAdminMenu(open){const drawer=$("#adminDrawer"),backdrop=$("#drawerBackdrop"),toggle=$(".menu-toggle");drawer.classList.toggle("open",open);backdrop.classList.toggle("open",open);drawer.setAttribute("aria-hidden",String(!open));drawer.inert=!open;toggle.setAttribute("aria-expanded",String(open));toggle.setAttribute("aria-label",open?"Close admin navigation":"Open admin navigation");document.body.classList.toggle("menu-open",open);if(open)$(".drawer-close").focus();else toggle.focus()}
+function setAdminSidebarCollapsed(collapsed){document.body.classList.toggle("sidebar-collapsed",collapsed);const button=$(".menu-toggle"),sidebarButton=$("#sidebarCollapse");button.setAttribute("aria-expanded",String(!collapsed));button.setAttribute("aria-label",collapsed?"Expand admin sidebar":"Collapse admin sidebar");button.title=collapsed?"Expand sidebar":"Collapse sidebar";sidebarButton.classList.toggle("is-collapsed",collapsed);sidebarButton.setAttribute("aria-expanded",String(!collapsed));sidebarButton.setAttribute("aria-label",collapsed?"Expand sidebar":"Collapse sidebar");sidebarButton.title=collapsed?"Expand sidebar":"Collapse sidebar";try{localStorage.setItem("palmz-admin-sidebar-collapsed",collapsed?"1":"0")}catch{}}
+function toggleAdminNavigation(){if(window.matchMedia("(min-width: 761px)").matches)setAdminSidebarCollapsed(!document.body.classList.contains("sidebar-collapsed"));else toggleAdminMenu(true)}
+try{setAdminSidebarCollapsed(localStorage.getItem("palmz-admin-sidebar-collapsed")==="1")}catch{}
+function syncAdminMenuForViewport(){const drawer=$("#adminDrawer"),toggle=$(".menu-toggle"),desktop=window.matchMedia("(min-width: 761px)").matches;if(desktop){drawer.classList.remove("open");drawer.setAttribute("aria-hidden","false");drawer.inert=false;document.body.classList.remove("menu-open");toggle.setAttribute("aria-expanded",String(!document.body.classList.contains("sidebar-collapsed")));toggle.setAttribute("aria-label",document.body.classList.contains("sidebar-collapsed")?"Expand admin sidebar":"Collapse admin sidebar")}else if(!drawer.classList.contains("open")){drawer.setAttribute("aria-hidden","true");drawer.inert=true;toggle.setAttribute("aria-expanded","false");toggle.setAttribute("aria-label","Open admin navigation")}}
+window.addEventListener("resize",syncAdminMenuForViewport);syncAdminMenuForViewport();
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function money(n){return '₦'+Number(n).toLocaleString('en-NG')}
+async function request(url,options={}){const r=await fetch(url,{credentials:'same-origin',...options}),d=await r.json().catch(()=>({}));if(r.status===401){location.replace('/admin');throw new Error('Sign in again')}if(!r.ok)throw new Error(d.error||'Request failed');return d}
+function renderPager(selector,total,page,pageSize,onPage,onPageSize){const el=$(selector),pages=Math.ceil(total/pageSize),first=total?(page-1)*pageSize+1:0,last=Math.min(page*pageSize,total);if(!pages){el.innerHTML="";return}let nums;if(pages<=3)nums=Array.from({length:pages},(_,i)=>i+1);else if(page<=3)nums=[1,2,3];else if(page>=pages-2)nums=[pages-2,pages-1,pages];else nums=[page-1,page,page+1];const b=(label,target,disabled=false,current=false)=>`<button type="button" data-page="${target}" ${disabled?"disabled":""} ${current?'aria-current="page"':''} aria-label="${typeof label==="number"?`Page ${label}`:label}">${label}</button>`;el.innerHTML=`<div class="pager-pages">${b("‹",page-1,page<=1)}${nums.map(n=>b(n,n,false,n===page)).join("")}${pages>3&&nums[nums.length-1]<pages-1?`<span class="pager-ellipsis" aria-hidden="true">…</span>${b(pages,pages,false,pages===page)}`:""}${b("›",page+1,page>=pages)}</div><div class="pager-meta"><span class="pager-summary">Showing ${first} to ${last} of ${total} entries</span><label class="pager-size">Show <select class="pager-select" aria-label="Rows per page">${[8,16,24,50].map(n=>`<option value="${n}" ${n===pageSize?"selected":""}>${n}</option>`).join("")}</select></label></div>`;el.onclick=e=>{const button=e.target.closest("button[data-page]");if(button&&!button.disabled)onPage(Number(button.dataset.page))};el.onchange=e=>{if(e.target.matches(".pager-select"))onPageSize(Number(e.target.value))}}
+async function logout(){await fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'});location.replace('/admin')}
+document.addEventListener("keydown",event=>{if(event.key==="Escape"&&$("#adminDrawer").classList.contains("open"))toggleAdminMenu(false)});
+const TYPE_LABEL={percentage:'Percentage',fixed:'Fixed amount',free_delivery:'Free delivery'};
+const STATE_LABEL={reserved:'Pending (held)',redeemed:'Redeemed',released:'Released'};
+const dtf=new Intl.DateTimeFormat('en-NG',{dateStyle:'medium',timeStyle:'short'}),df=new Intl.DateTimeFormat('en-NG',{dateStyle:'medium'});
+function toast(t,bad){const el=$('#toast');el.textContent=t;el.classList.add('show');el.style.background=bad?'#8d2934':'';clearTimeout(window.__t);window.__t=setTimeout(()=>el.classList.remove('show'),2600)}
+function discountLabel(p){return p.discountType==='percentage'?`${p.discountValue}% off`:p.discountType==='fixed'?`${money(p.discountValue)} off`:'Free delivery'}
+function rulesHtml(p){const r=[];if(p.minSubtotal)r.push(`Min order ${money(p.minSubtotal)}`);if(p.maxDiscount!=null)r.push(`Max discount ${money(p.maxDiscount)}`);r.push(p.startsAt||p.expiresAt?`${p.startsAt?'From '+df.format(new Date(p.startsAt)):''}${p.startsAt&&p.expiresAt?' · ':''}${p.expiresAt?'Until '+dtf.format(new Date(p.expiresAt)):''}`:'No dates');if(p.perCustomerLimit!=null)r.push(`${p.perCustomerLimit} per customer`);r.push(p.appliesTo==='all'?'All products':`Selected: ${p.productIds.length} product(s), ${p.categories.length} categor${p.categories.length===1?'y':'ies'}`);return r.map(esc).join('<span class="sub" style="display:inline"> · </span>')}
+async function load(){try{const [a,b]=await Promise.all([request('/api/admin/promos'),fetch('/api/products').then(r=>r.json()).catch(()=>({products:[]}))]);promos=a.promos;products=b.products||[];render()}catch(e){if(e.message!=='Sign in again')$('#rows').innerHTML=`<tr><td colspan="7" class="error">${esc(e.message)}</td></tr>`}}
+function render(){
+ const q=$('#search').value.trim().toLowerCase(),shown=promos.filter(p=>!q||`${p.code} ${p.description}`.toLowerCase().includes(q));
+ $('#stats').innerHTML=`<div class="stat"><b>${promos.filter(p=>p.status==='active').length}</b><span>Active codes</span></div><div class="stat"><b>${promos.reduce((n,p)=>n+p.redeemedCount,0)}</b><span>Confirmed redemptions</span></div><div class="stat"><b>${promos.reduce((n,p)=>n+p.reservedCount,0)}</b><span>Pending (held by unconfirmed orders)</span></div>`;
+ page=Math.max(1,Math.min(page,Math.ceil(shown.length/pageSize)||1));const rows=shown.slice((page-1)*pageSize,page*pageSize);$('#count').textContent=`${shown.length} code${shown.length===1?'':'s'}`;
+ $('#rows').innerHTML=rows.length?rows.map(p=>`<tr><td class="code-cell"><b>${esc(p.code)}</b>${p.description?`<span class="sub">${esc(p.description)}</span>`:''}</td><td>${esc(discountLabel(p))}</td><td style="max-width:300px"><span class="sub" style="margin:0">${rulesHtml(p)}</span></td><td><b>${p.usedCount}${p.maxRedemptions!=null?` / ${p.maxRedemptions}`:''}</b><span class="sub">${p.redeemedCount} confirmed · ${p.reservedCount} pending</span></td><td><span class="chip ${p.status}">${p.status}</span></td><td>${df.format(new Date(p.createdAt))}</td><td><div class="row-actions"><button class="small" onclick="openForm('${p.id}')">Edit</button><button class="small" onclick="toggleActive('${p.id}',${!p.active})">${p.active?'Deactivate':'Activate'}</button><button class="small" onclick="openOrders('${p.id}')">Orders</button><button class="small del" onclick="removePromo('${p.id}')">Delete</button></div></td></tr>`).join(''):'<tr><td colspan="7" class="empty">No promo codes yet. Create your first one.</td></tr>';
+ renderPager('#pager',shown.length,page,pageSize,n=>{page=n;render()},n=>{pageSize=n;page=1;render()});
+}
+function toLocal(iso){if(!iso)return'';const d=new Date(iso),z=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`}
+function syncType(){const t=$('#discountType').value;$('#valueField').hidden=t==='free_delivery';$('#capField').hidden=t!=='percentage';$('#valueLabel').textContent=t==='percentage'?'Percentage (%)':'Amount off (₦)';$('#discountValue').max=t==='percentage'?100:'';$('#discountValue').required=t!=='free_delivery'}
+function syncScope(){$('#scopeBox').hidden=$('#appliesTo').value!=='selected'}
+function buildPickers(p){const cats=[...new Set(products.map(x=>x.type).filter(Boolean))].sort(),chosenC=new Set((p&&p.categories||[]).map(c=>c.toLowerCase())),chosenP=new Set(p?p.productIds:[]);
+ $('#categoryPicker').innerHTML=cats.length?cats.map(c=>`<label class="check"><input type="checkbox" name="cat" value="${esc(c)}" ${chosenC.has(c.toLowerCase())?'checked':''}> ${esc(c)}</label>`).join(''):'<span class="hint">No categories yet</span>';
+ $('#productPicker').innerHTML=products.length?products.map(x=>`<label class="check"><input type="checkbox" name="prod" value="${esc(x.id)}" ${chosenP.has(x.id)?'checked':''}> ${esc(x.name)} <span class="hint">· ${esc(x.type||'')}</span></label>`).join(''):'<span class="hint">No products yet</span>'}
+function openForm(id){editing=id?promos.find(p=>p.id===id):null;const p=editing;$('#formTitle').textContent=p?`Edit ${p.code}`:'New promo code';$('#formErr').textContent='';
+ $('#code').value=p?p.code:'';$('#code').disabled=!!p;$('#description').value=p?p.description:'';$('#discountType').value=p?p.discountType:'percentage';$('#discountValue').value=p&&p.discountType!=='free_delivery'?p.discountValue:'';
+ $('#minSubtotal').value=p&&p.minSubtotal?p.minSubtotal:'';$('#maxDiscount').value=p&&p.maxDiscount!=null?p.maxDiscount:'';$('#startsAt').value=p?toLocal(p.startsAt):'';$('#expiresAt').value=p?toLocal(p.expiresAt):'';
+ $('#maxRedemptions').value=p&&p.maxRedemptions!=null?p.maxRedemptions:'';$('#perCustomerLimit').value=p&&p.perCustomerLimit!=null?p.perCustomerLimit:'';$('#appliesTo').value=p?p.appliesTo:'all';$('#active').checked=p?p.active:true;
+ buildPickers(p);syncType();syncScope();$('#formModal').classList.add('open');setTimeout(()=>(p?$('#description'):$('#code')).focus(),50)}
+function closeForm(){$('#formModal').classList.remove('open')}
+async function savePromo(e){e.preventDefault();const btn=$('#saveBtn');$('#formErr').textContent='';
+ const iso=v=>v?new Date(v).toISOString():null,type=$('#discountType').value,
+ body={code:$('#code').value,description:$('#description').value,discountType:type,discountValue:type==='free_delivery'?0:$('#discountValue').value,minSubtotal:$('#minSubtotal').value,maxDiscount:type==='percentage'?$('#maxDiscount').value:'',startsAt:iso($('#startsAt').value),expiresAt:iso($('#expiresAt').value),maxRedemptions:$('#maxRedemptions').value,perCustomerLimit:$('#perCustomerLimit').value,appliesTo:$('#appliesTo').value,active:$('#active').checked,
+ categories:[...document.querySelectorAll('input[name=cat]:checked')].map(i=>i.value),productIds:[...document.querySelectorAll('input[name=prod]:checked')].map(i=>i.value)};
+ btn.disabled=true;btn.textContent='Saving…';
+ try{await request(editing?`/api/admin/promos/${editing.id}`:'/api/admin/promos',{method:editing?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});closeForm();toast(editing?'Promo code updated':'Promo code created');await load()}
+ catch(err){if(err.message!=='Sign in again')$('#formErr').textContent=err.message}finally{btn.disabled=false;btn.textContent='Save promo code'}}
+async function toggleActive(id,active){try{await request(`/api/admin/promos/${id}/active`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({active})});toast(active?'Promo code activated':'Promo code deactivated');await load()}catch(e){if(e.message!=='Sign in again')toast(e.message,true)}}
+async function removePromo(id){const p=promos.find(x=>x.id===id);if(!confirm(`Delete ${p.code}? This cannot be undone.`))return;try{await request(`/api/admin/promos/${id}`,{method:'DELETE'});toast('Promo code deleted');await load()}catch(e){if(e.message!=='Sign in again')toast(e.message,true)}}
+async function openOrders(id){const p=promos.find(x=>x.id===id);$('#ordersTitle').textContent=`Orders using ${p.code}`;$('#ordersNote').textContent='Pending orders hold a slot until confirmed, cancelled or expired. Released orders no longer count toward the limit.';$('#orderRows').innerHTML='<tr><td colspan="8" class="empty">Loading…</td></tr>';$('#ordersModal').classList.add('open');
+ try{const {orders}=await request(`/api/admin/promos/${id}/orders`);$('#orderRows').innerHTML=orders.length?orders.map(o=>`<tr><td>${dtf.format(new Date(o.createdAt))}</td><td><b>${esc(String(o._id).slice(-8).toUpperCase())}</b><span class="sub">${esc(o.paymentProvider||'whatsapp')} · ${esc((o.paymentStatus||'').replace(/_/g,' '))}</span></td><td>${esc(o.customerName)}<span class="sub">${esc(o.email)}</span></td><td>${o.subtotalAmount==null?'—':money(o.subtotalAmount)}</td><td>−${money(o.promo?o.promo.totalDiscount:0)}</td><td>${o.totalAmount==null?'—':money(o.totalAmount)}</td><td>${esc(String(o.status).replace(/_/g,' '))}</td><td>${esc(STATE_LABEL[o.promo&&o.promo.state]||'')}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">No orders have used this code yet.</td></tr>'}
+ catch(e){if(e.message!=='Sign in again')$('#orderRows').innerHTML=`<tr><td colspan="8" class="error">${esc(e.message)}</td></tr>`}}
+function closeOrders(){$('#ordersModal').classList.remove('open')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeForm();closeOrders()}});
+load();
+</script>
+<script src="/admin-notifications.js"></script>
+</body>
+</html>

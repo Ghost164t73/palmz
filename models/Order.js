@@ -6,7 +6,6 @@ const OrderItemSchema = new mongoose.Schema(
   {
     productId: { type: String, required: true },
     name: { type: String, required: true },
-    imageUrl: { type: String, default: '' },
     size: { type: String, required: true },
     color: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
@@ -39,7 +38,9 @@ const OrderSchema = new mongoose.Schema(
     deliveryState: { type: String, default: '' },
     deliveryFee: { type: Number, min: 0, default: 0 },
     deliveryEstimate: { type: String, default: '' },
+    subtotalAmount: { type: Number, min: 0, default: null },
     totalAmount: { type: Number, min: 0, default: null },
+    promo: { type: mongoose.Schema.Types.Mixed, default: null },
     pickupBranchId: { type: String, default: '' },
     pickupBranchName: { type: String, default: '' },
     pickupBranchAddress: { type: String, default: '' },
@@ -65,6 +66,7 @@ const OrderSchema = new mongoose.Schema(
 );
 
 OrderSchema.index({ customer: 1, createdAt: -1 });
+OrderSchema.index({ 'promo.promoId': 1, createdAt: -1 }, { sparse: true });
 OrderSchema.index({ status: 1, paymentStatus: 1, inventoryReserved: 1, reservationExpiresAt: 1 });
 OrderSchema.index({ paystackReference: 1 }, { unique: true, sparse: true });
 

@@ -11,6 +11,12 @@ const { OAuth2Client } = require('google-auth-library');
 const Product = require('./models/Product');
 const Customer = require('./models/Customer');
 const Order = require('./models/Order');
+const PromoCode = require('./models/PromoCode');
+const PromoUsage = require('./models/PromoUsage');
+const {
+  CODE_PATTERN, normalizeCode, promoError, identityKeys, promoStatus, evaluatePromo,
+  countCustomerUses, reservePromo, redeemPromo, releasePromo,
+} = require('./lib/promo');
 const { DELIVERY_TIERS, deliveryQuote, calculateOrderTotal, discountedPrice } = require('./lib/delivery');
 const { groupOrderItems, variantStockKey } = require('./lib/inventory');
 const {
@@ -252,21 +258,11 @@ async function uploadProductGallery(files) {
     throw err;
   }
 }
-function productImageAssets(product) {
-  const images = [...(product.images || []), product.image].filter((image) => image && image.publicId);
-  return [...new Map(images.map((image) => [image.publicId, image])).values()];
-}
-async function removeUnreferencedProductImages(images) {
-  const uniqueImages = [...new Map(images.filter((image) => image && image.publicId).map((image) => [image.publicId, image])).values()];
-  if (!uniqueImages.length) return;
-  let referencedUrls;
-  try {
-    referencedUrls = new Set(await Order.distinct('items.imageUrl', { 'items.imageUrl': { $in: uniqueImages.map((image) => image.url) } }));
-  } catch (error) {
-    console.error('Could not check product image order history; keeping images in storage', error.message);
-    return;
-  }
-  await Promise.all(uniqueImages.filter((image) => !referencedUrls.has(image.url)).map((image) => removeFromCloudinary(image.publicId)));
+function productImagePublicIds(product) {
+  return [...new Set([
+    product.image && product.image.publicId,
+    ...(product.images || []).map((image) => image.publicId),
+  ].filter(Boolean))];
 }
 
 // ---------- Admin auth (single password, signed cookie) ----------
@@ -385,7 +381,7 @@ app.post('/api/customer/logout', (req, res) => {
 });
 app.get('/api/customer/orders', requireCustomer, async (req, res) => {
   res.set('Cache-Control', 'no-store');
-  const orders = await Order.find({ customer: req.customerId }).select('-emailNotifications').sort({ createdAt: -1 }).limit(50).lean();
+  const orders = await Order.find({ customer: req.customerId }).select('-emailNotifications -promo.usageKeys').sort({ createdAt: -1 }).limit(50).lean();
   res.json({ orders });
 });
 app.get('/api/customer/rewards', requireCustomer, async (req, res) => {
@@ -531,6 +527,7 @@ async function createReservedOrder(order) {
   }
 
   await mongoose.connection.transaction(async (session) => {
+    await reservePromo(order, session);
     await order.save({ session });
     await adjustInventoryForOrder(order.items, -1, 'order reserved', session, true);
     order.inventoryReserved = true;
@@ -550,6 +547,7 @@ async function releaseOrderReservation(orderId, {
     if (!order || !order.inventoryReserved || order.inventoryDeducted) return;
     if (onlyUnpaid && ['paid', 'refunded'].includes(order.paymentStatus)) return;
     await adjustInventoryForOrder(order.items, 1, reason, session);
+    await releasePromo(order, session);
     order.inventoryReserved = false;
     if (paymentStatus) order.paymentStatus = paymentStatus;
     order.status = 'cancelled';
@@ -582,6 +580,7 @@ async function expireOrderReservations(now = new Date(), limit = 100) {
         }).session(session);
         if (!order) return false;
         await adjustInventoryForOrder(order.items, 1, 'expired order reservation returned', session);
+        await releasePromo(order, session);
         order.inventoryReserved = false;
         order.status = 'cancelled';
         order.statusUpdatedAt = now;
@@ -598,6 +597,30 @@ async function expireOrderReservations(now = new Date(), limit = 100) {
     }
   }
   return released;
+}
+
+// Looks the code up and prices it against the server's own item prices.
+async function resolvePromo({ code, lines, deliveryFee, fulfillmentMethod, identity }) {
+  const promo = await PromoCode.findOne({ code: normalizeCode(code) });
+  if (!promo) throw promoError('invalid', 'This promo code is not valid.');
+  const keys = identityKeys(identity);
+  const customerUses = promo.perCustomerLimit != null ? await countCustomerUses(promo._id, keys) : 0;
+  const breakdown = evaluatePromo({ promo, lines, deliveryFee, fulfillmentMethod, customerUses });
+  return { promo, breakdown, keys };
+}
+
+function orderBreakdown(order) {
+  const promo = order.promo || null;
+  return {
+    orderId: String(order._id),
+    status: order.status,
+    subtotal: order.subtotalAmount,
+    promoCode: promo ? promo.code : null,
+    itemDiscount: promo ? promo.itemDiscount : 0,
+    deliveryFee: order.deliveryFee || 0,
+    deliveryDiscount: promo ? promo.deliveryDiscount : 0,
+    total: order.totalAmount,
+  };
 }
 
 async function orderContact(body, account = null, paymentProvider = 'whatsapp') {
@@ -650,9 +673,7 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
     const quantity = Number(item.quantity);
     const size = String(item.size || '');
     const color = String(item.color || '');
-    if (!product) throw bad('An item in your bag is no longer available');
-    if (product.available === false) throw bad(`${product.name} is currently unavailable for ordering`);
-    if (!product.inStock || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+    if (!product || !product.inStock || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
       throw bad('An item in your bag is no longer available');
     }
     if (!product.sizes.includes(size) || !product.colors.includes(color)) {
@@ -666,14 +687,44 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
     return {
       productId,
       name: product.name,
-      imageUrl: product.image && product.image.url ? product.image.url : '',
       size,
       color,
       quantity,
       unitPrice: discountedPrice(product.price),
     };
   });
-  const totalAmount = calculateOrderTotal(items, deliveryFee);
+  const subtotalAmount = calculateOrderTotal(items, 0);
+  let totalAmount = calculateOrderTotal(items, deliveryFee);
+  let promo = null;
+  const promoCode = normalizeCode(body.promoCode);
+  if (promoCode) {
+    const resolved = await resolvePromo({
+      code: promoCode,
+      lines: items.map((item) => ({
+        productId: item.productId,
+        category: productsById.get(item.productId).type,
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+      })),
+      deliveryFee,
+      fulfillmentMethod,
+      identity: { customerId: account && account._id, email, phone },
+    });
+    const { breakdown } = resolved;
+    totalAmount = breakdown.total;
+    promo = {
+      promoId: String(resolved.promo._id),
+      code: breakdown.code,
+      discountType: breakdown.discountType,
+      discountValue: breakdown.discountValue,
+      eligibleSubtotal: breakdown.eligibleSubtotal,
+      itemDiscount: breakdown.itemDiscount,
+      deliveryDiscount: breakdown.deliveryDiscount,
+      totalDiscount: breakdown.totalDiscount,
+      usageKeys: resolved.promo.perCustomerLimit != null ? resolved.keys : [],
+      state: 'reserved',
+    };
+  }
   for (const [productId, quantity] of quantities) {
     if (quantity > productsById.get(productId).quantity) throw bad('There is not enough stock for an item in your bag');
   }
@@ -689,7 +740,9 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
     deliveryState,
     deliveryFee,
     deliveryEstimate,
+    subtotalAmount,
     totalAmount,
+    promo,
     pickupBranchId: pickupBranch ? String(body.pickupBranchId) : '',
     pickupBranchName: pickupBranch ? pickupBranch.name : '',
     pickupBranchAddress: pickupBranch ? pickupBranch.address : '',
@@ -704,7 +757,7 @@ app.post('/api/orders', guestOrderLimiter, async (req, res) => {
   await expireOrderReservations();
   const order = await createReservedOrder(new Order(await orderContact(req.body || {})));
   await notifyOrderEmail(order, 'admin_new_order');
-  res.status(201).json({ order: { id: String(order._id), status: order.status } });
+  res.status(201).json({ order: { id: String(order._id), status: order.status }, breakdown: orderBreakdown(order) });
 });
 app.post('/api/customer/orders', requireCustomer, async (req, res) => {
   await expireOrderReservations();
@@ -712,7 +765,9 @@ app.post('/api/customer/orders', requireCustomer, async (req, res) => {
   if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
   const order = await createReservedOrder(new Order(await orderContact(req.body || {}, customer)));
   await notifyOrderEmail(order, 'admin_new_order');
-  res.status(201).json({ order });
+  const saved = order.toObject();
+  if (saved.promo) saved.promo = { ...saved.promo, usageKeys: undefined };
+  res.status(201).json({ order: saved, breakdown: orderBreakdown(order) });
 });
 
 async function createPaystackOrder(req, account = null) {
@@ -976,6 +1031,201 @@ app.post('/api/paystack/webhook', async (req, res) => {
   res.json({ received: true });
 });
 
+// ---------- Promo codes: customer validation ----------
+const promoValidateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many promo code attempts. Please try again in a few minutes.' },
+});
+function optionalCustomerId(req) {
+  try {
+    const claims = jwt.verify(readCustomerCookie(req) || '', process.env.JWT_SECRET || '');
+    return claims && claims.scope === 'customer' && mongoose.isValidObjectId(claims.customer) ? claims.customer : null;
+  } catch {
+    return null;
+  }
+}
+// Checks a code against the current bag. Nothing is reserved or counted here, so repeated
+// validation never uses up a redemption; slots are only taken when an order is placed.
+app.post('/api/promo/validate', promoValidateLimiter, async (req, res) => {
+  const body = req.body || {};
+  const code = normalizeCode(body.code);
+  if (!code) throw bad('Enter a promo code');
+  if (!CODE_PATTERN.test(code)) throw promoError('invalid', 'This promo code is not valid.');
+  if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 50 ||
+      body.items.some((item) => !item || typeof item !== 'object' || Array.isArray(item))) {
+    throw bad('Add something to your bag before using a promo code.');
+  }
+  const ids = [...new Set(body.items.map((item) => String(item.productId || '')))];
+  if (ids.some((id) => !mongoose.isValidObjectId(id))) throw bad('An item in your bag is no longer available');
+  const products = await Product.find({ _id: { $in: ids } });
+  const byId = new Map(products.map((product) => [String(product._id), product]));
+  const lines = body.items.map((item) => {
+    const product = byId.get(String(item.productId));
+    const quantity = Number(item.quantity);
+    if (!product || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+      throw bad('An item in your bag is no longer available');
+    }
+    return { productId: String(product._id), category: product.type, unitPrice: discountedPrice(product.price), quantity };
+  });
+  const fulfillmentMethod = body.fulfillmentMethod === 'pickup' ? 'pickup' : 'delivery';
+  let deliveryFee = null;
+  if (fulfillmentMethod === 'pickup') deliveryFee = 0;
+  else {
+    const quote = deliveryQuote(String(body.state || '').trim(), String(body.city || '').trim());
+    if (quote) deliveryFee = quote.fee;
+  }
+  const { breakdown } = await resolvePromo({
+    code, lines, deliveryFee, fulfillmentMethod,
+    identity: { customerId: optionalCustomerId(req), email: body.email, phone: body.phone },
+  });
+  res.set('Cache-Control', 'no-store');
+  res.json({ valid: true, ...breakdown });
+});
+
+// ---------- Promo codes: admin management ----------
+const validPromoId = (req, res, next) =>
+  mongoose.isValidObjectId(req.params.id) ? next() : res.status(404).json({ error: 'Promo code not found' });
+
+function presentPromo(promo, now = new Date()) {
+  const raw = promo.toObject ? promo.toObject() : promo;
+  return {
+    id: String(raw._id),
+    code: raw.code,
+    description: raw.description || '',
+    discountType: raw.discountType,
+    discountValue: raw.discountValue,
+    minSubtotal: raw.minSubtotal || 0,
+    maxDiscount: raw.maxDiscount == null ? null : raw.maxDiscount,
+    startsAt: raw.startsAt || null,
+    expiresAt: raw.expiresAt || null,
+    maxRedemptions: raw.maxRedemptions == null ? null : raw.maxRedemptions,
+    perCustomerLimit: raw.perCustomerLimit == null ? null : raw.perCustomerLimit,
+    appliesTo: raw.appliesTo,
+    productIds: raw.productIds || [],
+    categories: raw.categories || [],
+    active: raw.active,
+    reservedCount: raw.reservedCount || 0,
+    redeemedCount: raw.redeemedCount || 0,
+    usedCount: (raw.reservedCount || 0) + (raw.redeemedCount || 0),
+    status: promoStatus(raw, now),
+    createdAt: raw.createdAt,
+  };
+}
+
+function promoNumber(value, label, { min = 0, max = Infinity, minExclusive = false } = {}) {
+  const n = Number(value);
+  const bad2 = !Number.isFinite(n) || (minExclusive ? n <= min : n < min) || n > max ||
+    Math.abs(Math.round(n * 100) / 100 - n) > 1e-9;
+  if (bad2) throw bad(`${label} must be a valid number${min > 0 || minExclusive ? ' greater than ' + min : ''} (up to 2 decimal places)`);
+  return n;
+}
+function optionalPromoInt(value, label) {
+  if (value === null || value === undefined || String(value).trim() === '') return null;
+  return int(value, 1, 10000000, label);
+}
+function optionalPromoDate(value, label) {
+  if (value === null || value === undefined || String(value).trim() === '') return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw bad(`${label} is not a valid date`);
+  return date;
+}
+
+async function readPromoFields(b, { creating = false, used = 0 } = {}) {
+  const fields = {};
+  if (creating) {
+    const code = normalizeCode(b.code);
+    if (!CODE_PATTERN.test(code)) throw bad('Code must be 3 to 30 characters: letters, numbers, hyphen or underscore (e.g. PALMZ10)');
+    fields.code = code;
+  }
+  fields.description = String(b.description || '').trim().slice(0, 200);
+  if (!PromoCode.DISCOUNT_TYPES.includes(b.discountType)) throw bad('Choose percentage, fixed amount or free delivery');
+  fields.discountType = b.discountType;
+  if (b.discountType === 'percentage') {
+    fields.discountValue = promoNumber(b.discountValue, 'Percentage', { min: 0, max: 100, minExclusive: true });
+  } else if (b.discountType === 'fixed') {
+    fields.discountValue = promoNumber(b.discountValue, 'Discount amount', { min: 0, max: 10000000, minExclusive: true });
+  } else {
+    fields.discountValue = 0;
+  }
+  fields.minSubtotal = String(b.minSubtotal ?? '').trim() === '' ? 0 : promoNumber(b.minSubtotal, 'Minimum order', { min: 0, max: 100000000 });
+  fields.maxDiscount = b.discountType === 'percentage' && String(b.maxDiscount ?? '').trim() !== ''
+    ? promoNumber(b.maxDiscount, 'Maximum discount', { min: 0, max: 100000000, minExclusive: true })
+    : null;
+  fields.startsAt = optionalPromoDate(b.startsAt, 'Start date');
+  fields.expiresAt = optionalPromoDate(b.expiresAt, 'Expiry date');
+  if (fields.startsAt && fields.expiresAt && fields.expiresAt <= fields.startsAt) throw bad('Expiry must be after the start date');
+  fields.maxRedemptions = optionalPromoInt(b.maxRedemptions, 'Total redemption limit');
+  if (fields.maxRedemptions != null && fields.maxRedemptions < used) {
+    throw bad(`Total redemption limit cannot be below the ${used} already used or held by pending orders`);
+  }
+  fields.perCustomerLimit = optionalPromoInt(b.perCustomerLimit, 'Per-customer limit');
+  fields.appliesTo = b.appliesTo === 'selected' ? 'selected' : 'all';
+  if (fields.appliesTo === 'selected') {
+    const productIds = [...new Set((Array.isArray(b.productIds) ? b.productIds : []).map(String))];
+    if (productIds.length > 200 || productIds.some((id) => !mongoose.isValidObjectId(id))) throw bad('One of the selected products is invalid');
+    if (productIds.length && await Product.countDocuments({ _id: { $in: productIds } }) !== productIds.length) {
+      throw bad('One of the selected products no longer exists');
+    }
+    const categories = [...new Set((Array.isArray(b.categories) ? b.categories : []).map((c) => String(c).trim()).filter(Boolean))];
+    if (categories.length > 50 || categories.some((c) => c.length > 40)) throw bad('Too many or too long category names');
+    if (!productIds.length && !categories.length) throw bad('Choose at least one product or category, or apply the code to all products');
+    fields.productIds = productIds;
+    fields.categories = categories;
+  } else {
+    fields.productIds = [];
+    fields.categories = [];
+  }
+  if (b.active !== undefined) fields.active = b.active === true || b.active === 'true';
+  return fields;
+}
+
+app.get('/api/admin/promos', requireAdmin, async (req, res) => {
+  await expireOrderReservations();
+  const promos = await PromoCode.find().sort({ createdAt: -1 });
+  res.set('Cache-Control', 'no-store');
+  res.json({ promos: promos.map((promo) => presentPromo(promo)) });
+});
+app.post('/api/admin/promos', requireAdmin, async (req, res) => {
+  const fields = await readPromoFields(req.body || {}, { creating: true });
+  try {
+    const promo = await PromoCode.create({ active: true, ...fields });
+    res.status(201).json({ promo: presentPromo(promo) });
+  } catch (error) {
+    if (error && error.code === 11000) throw bad('A promo code with this name already exists');
+    throw error;
+  }
+});
+app.put('/api/admin/promos/:id', requireAdmin, validPromoId, async (req, res) => {
+  const promo = await PromoCode.findById(req.params.id);
+  if (!promo) return res.status(404).json({ error: 'Promo code not found' });
+  const fields = await readPromoFields(req.body || {}, { used: promo.reservedCount + promo.redeemedCount });
+  promo.set(fields); // the code itself and the usage counters are never edited here
+  await promo.save();
+  res.json({ promo: presentPromo(promo) });
+});
+app.patch('/api/admin/promos/:id/active', requireAdmin, validPromoId, async (req, res) => {
+  if (typeof (req.body || {}).active !== 'boolean') throw bad('Send active as true or false');
+  const promo = await PromoCode.findByIdAndUpdate(req.params.id, { $set: { active: req.body.active } }, { new: true });
+  if (!promo) return res.status(404).json({ error: 'Promo code not found' });
+  res.json({ promo: presentPromo(promo) });
+});
+app.delete('/api/admin/promos/:id', requireAdmin, validPromoId, async (req, res) => {
+  if (await Order.exists({ 'promo.promoId': req.params.id })) {
+    throw bad('This code has orders attached to it. Deactivate it instead so the order history is kept.');
+  }
+  const promo = await PromoCode.findByIdAndDelete(req.params.id);
+  if (!promo) return res.status(404).json({ error: 'Promo code not found' });
+  await PromoUsage.deleteMany({ promoId: promo._id });
+  res.json({ ok: true });
+});
+app.get('/api/admin/promos/:id/orders', requireAdmin, validPromoId, async (req, res) => {
+  await expireOrderReservations();
+  const orders = await Order.find({ 'promo.promoId': req.params.id })
+    .select('customerName email phone status paymentProvider paymentStatus subtotalAmount deliveryFee totalAmount promo createdAt')
+    .sort({ createdAt: -1 }).limit(200).lean();
+  res.json({ orders: orders.map((order) => ({ ...order, promo: order.promo && { ...order.promo, usageKeys: undefined } })) });
+});
+
 // ---------- Admin order management ----------
 app.get('/api/admin/orders', requireAdmin, async (req, res) => {
   await expireOrderReservations();
@@ -985,18 +1235,6 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
     filter.status = req.query.status;
   }
   const orders = await Order.find(filter).sort({ createdAt: -1 }).limit(200).lean();
-  const missingImageProductIds = [...new Set(orders.flatMap((order) => (order.items || [])
-    .filter((item) => !item.imageUrl && item.productId)
-    .map((item) => item.productId)))];
-  if (missingImageProductIds.length) {
-    const products = await Product.find({ _id: { $in: missingImageProductIds } }).select('_id image').lean();
-    const imagesByProductId = new Map(products.map((product) => [String(product._id), product.image && product.image.url || '']));
-    for (const order of orders) {
-      for (const item of order.items || []) {
-        if (!item.imageUrl) item.imageUrl = imagesByProductId.get(item.productId) || '';
-      }
-    }
-  }
   res.json({ orders, statuses: Order.ORDER_STATUSES });
 });
 app.patch('/api/admin/orders/:id/payment', requireAdmin, async (req, res) => {
@@ -1043,7 +1281,7 @@ app.get('/api/admin/sales', requireAdmin, async (req, res) => {
       { 'salesHistory.0': { $exists: true } },
       { status: { $in: SALES_STATUSES } },
     ],
-  }).sort({ createdAt: -1 }).select('customerName email status items salesHistory createdAt updatedAt').lean();
+  }).sort({ createdAt: -1 }).select('customerName email status items salesHistory promo createdAt updatedAt').lean();
   const sales = [];
   for (const order of orders) {
     const events = order.salesHistory || [];
@@ -1055,6 +1293,7 @@ app.get('/api/admin/sales', requireAdmin, async (req, res) => {
         id: String(event._id), orderId: String(order._id), customerName: order.customerName,
         email: order.email, status: order.status, soldAt: event.createdAt,
         items: event.items, reversed: Boolean(reversal), reversedAt: reversal && reversal.createdAt,
+        promoCode: order.promo ? order.promo.code : '', itemDiscount: order.promo ? order.promo.itemDiscount : 0,
       });
     });
     if (!recordedSales.length && SALES_STATUSES.includes(order.status)) {
@@ -1062,6 +1301,7 @@ app.get('/api/admin/sales', requireAdmin, async (req, res) => {
         id: `legacy-${order._id}`, orderId: String(order._id), customerName: order.customerName,
         email: order.email, status: order.status, soldAt: order.updatedAt || order.createdAt,
         items: order.items, reversed: false, legacy: true,
+        promoCode: order.promo ? order.promo.code : '', itemDiscount: order.promo ? order.promo.itemDiscount : 0,
       });
     }
   }
@@ -1109,6 +1349,9 @@ app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
       const sale = [...order.salesHistory].reverse().find((event) => event.type === 'sale' && !order.salesHistory.some((candidate) => candidate.type === 'reversal' && candidate.reverses === String(event._id)));
       if (sale) order.salesHistory.push({ type: 'reversal', status, reverses: String(sale._id), items: sale.items, createdAt: new Date() });
     }
+
+    if (approved) await redeemPromo(order, session);
+    else if (status === 'cancelled') await releasePromo(order, session);
 
     order.status = status;
     order.statusUpdatedAt = new Date();
@@ -1184,7 +1427,7 @@ app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, a
   const files = productImageFiles(req);
   const images = files.length ? await uploadProductGallery(files) : null;
   let p;
-  let removedImages = [];
+  let removedImageIds = [];
   try {
     await mongoose.connection.transaction(async (session) => {
       p = await Product.findById(req.params.id).session(session);
@@ -1225,7 +1468,7 @@ app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, a
       data.images = nextImages;
       data.image = nextImages[0];
       const nextPublicIds = new Set(nextImages.map((image) => image.publicId).filter(Boolean));
-      removedImages = productImageAssets(p).filter((image) => !nextPublicIds.has(image.publicId));
+      removedImageIds = productImagePublicIds(p).filter((publicId) => !nextPublicIds.has(publicId));
       p.set(data);
       await p.save({ session });
     });
@@ -1233,7 +1476,7 @@ app.put('/api/admin/products/:id', requireAdmin, validId, uploadProductImages, a
     if (images) await Promise.all(images.map((image) => removeFromCloudinary(image.publicId)));
     throw error;
   }
-  await removeUnreferencedProductImages(removedImages);
+  await Promise.all(removedImageIds.map(removeFromCloudinary));
   res.json(p);
 });
 
@@ -1284,7 +1527,7 @@ app.delete('/api/admin/products/:id', requireAdmin, validId, async (req, res) =>
     p = await Product.findByIdAndDelete(req.params.id, { session });
   });
   if (!p) return res.status(404).json({ error: 'Product not found' });
-  await removeUnreferencedProductImages(productImageAssets(p));
+  await Promise.all(productImagePublicIds(p).map(removeFromCloudinary));
   res.json({ ok: true });
 });
 
@@ -1293,6 +1536,7 @@ const pub = path.join(__dirname, 'public');
 app.get('/admin', (req, res) => res.sendFile(path.join(pub, 'admin.html')));
 app.get('/admin/orders', (req, res) => res.sendFile(path.join(pub, 'orders.html')));
 app.get('/admin/sales', (req, res) => res.sendFile(path.join(pub, 'sales.html')));
+app.get('/admin/promos', (req, res) => res.sendFile(path.join(pub, 'promos.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(pub, 'terms.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(pub, 'privacy.html')));
 app.get(['/shop', '/cart', '/checkout', '/about', '/contact', '/customize', '/product/:id'], (req, res) =>
@@ -1313,7 +1557,10 @@ app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? (err.field === 'referenceImage' ? 'Reference image must be under 3MB' : 'Image must be under 4MB') : err.message });
   if (err.name === 'ValidationError') return res.status(400).json({ error: Object.values(err.errors).map((e) => e.message).join(', ') });
   if (!err.expose) console.error(err);
-  res.status(err.status || 500).json({ error: err.expose ? err.message : 'Something went wrong' });
+  res.status(err.status || 500).json({
+    error: err.expose ? err.message : 'Something went wrong',
+    ...(err.expose && err.reason ? { reason: err.reason } : {}),
+  });
 });
 
 module.exports = app;

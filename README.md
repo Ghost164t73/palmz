@@ -44,3 +44,29 @@ Add imported pairs in `/admin` and set their category to **Foreign Footwear**. T
 Guest checkout remains available. To enable optional Google sign-in, set `GOOGLE_CLIENT_ID` to a Google OAuth 2.0 web client ID and configure its authorized JavaScript origins for the local site and deployed domain. Keep `JWT_SECRET` set for signed customer sessions. Signed-in customers can see checkout requests in their account; requests are saved as pending confirmation when sent to WhatsApp; inventory is reserved temporarily and released when the order is confirmed, cancelled, or expires.
 
 Set the customer-facing application name and logo in Google Cloud Console under Google Auth Platform > Branding. Google displays that OAuth branding (currently reported as “Kano Wholesale”) during sign-in; it is controlled by the Google Cloud project, not by the storefront page. Set the app name to PALMZ and configure the support email and authorized domains there.
+
+## Promo codes
+Manage codes in `/admin/promos` (sidebar: **Promo codes**). Customers enter a code on `/checkout`; the server prices it against current database prices, never against anything the browser sends.
+
+- **Types:** percentage (optional maximum discount), fixed amount in naira, or free delivery (delivery orders only).
+- **Rules:** minimum order subtotal, start and expiry date, total redemption limit, per-customer limit, and optional restriction to chosen products or categories. Discounts apply on top of the store's existing 10% sale price, and the minimum order is checked against that sale-priced bag total.
+- **Redemption slots:** validating a code never uses one. A slot is held atomically when an order is saved (inside the same MongoDB transaction that reserves stock), becomes *redeemed* when you confirm the order in `/admin/orders`, and is given back when the order is cancelled, its stock hold expires, or a Paystack payment fails. Paid Paystack orders keep their slot held until you confirm them.
+- **Per-customer limit:** matched on signed-in account, email address and phone number, so using a different email alone does not get round it. It cannot recognise a customer who uses a different email *and* phone number.
+- **Deleting:** a code that has orders attached cannot be deleted (deactivate it to keep the history). The code text cannot be edited after creation.
+- **Orders:** each order stores the promo snapshot (`promo`: code, discounts, state `reserved` / `redeemed` / `released`) and `subtotalAmount`; `totalAmount` is the discounted total, which is also what Paystack charges.
+- **WhatsApp:** the order is saved first, then the WhatsApp message is built from the server's totals (subtotal, promo, delivery fee, total) and includes an order reference. Opening WhatsApp is not confirmation: the order is only confirmed when you move it forward in `/admin/orders`, and WhatsApp payments are still recorded by hand.
+
+API: `POST /api/promo/validate` (public, rate limited); admin only: `GET/POST /api/admin/promos`, `PUT /api/admin/promos/:id`, `PATCH /api/admin/promos/:id/active`, `DELETE /api/admin/promos/:id`, `GET /api/admin/promos/:id/orders`. Run the unit tests with `npm test`. No new environment variables are needed; the new collections and indexes are created automatically on first use.
+
+## Promo codes
+Manage codes in `/admin/promos` (sidebar: **Promo codes**). Customers enter a code on `/checkout`; the server prices it against current database prices, never against anything the browser sends.
+
+- **Types:** percentage (optional maximum discount), fixed amount in naira, or free delivery (delivery orders only).
+- **Rules:** minimum order subtotal, start and expiry date, total redemption limit, per-customer limit, and optional restriction to chosen products or categories. Discounts apply on top of the store's existing 10% sale price, and the minimum order is checked against that sale-priced bag total.
+- **Redemption slots:** validating a code never uses one. A slot is held atomically when an order is saved (inside the same MongoDB transaction that reserves stock), becomes *redeemed* when you confirm the order in `/admin/orders`, and is given back when the order is cancelled, its stock hold expires, or a Paystack payment fails. Paid Paystack orders keep their slot held until you confirm them.
+- **Per-customer limit:** matched on signed-in account, email address and phone number, so using a different email alone does not get round it. It cannot recognise a customer who uses a different email *and* phone number.
+- **Deleting:** a code that has orders attached cannot be deleted (deactivate it to keep the history). The code text cannot be edited after creation.
+- **Orders:** each order stores the promo snapshot (`promo`: code, discounts, state `reserved` / `redeemed` / `released`) and `subtotalAmount`; `totalAmount` is the discounted total, which is also what Paystack charges.
+- **WhatsApp:** the order is saved first, then the WhatsApp message is built from the server's totals (subtotal, promo, delivery fee, total) and includes an order reference. Opening WhatsApp is not confirmation: the order is only confirmed when you move it forward in `/admin/orders`, and WhatsApp payments are still recorded by hand.
+
+API: `POST /api/promo/validate` (public, rate limited); admin only: `GET/POST /api/admin/promos`, `PUT /api/admin/promos/:id`, `PATCH /api/admin/promos/:id/active`, `DELETE /api/admin/promos/:id`, `GET /api/admin/promos/:id/orders`. Run the unit tests with `npm test`. No new environment variables are needed; the new collections and indexes are created automatically on first use.

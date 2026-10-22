@@ -1553,6 +1553,20 @@
       font-size: 15px
     }
 
+    .checkout-layout .checkout-aside { grid-column: 2; grid-row: 1; position: sticky; top: 100px; display: grid; gap: 14px; min-width: 0 }
+    .checkout-layout .checkout-aside .summary { position: static; grid-column: auto; grid-row: auto }
+    .promo-box { padding: 18px 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface2) }
+    .promo-box label { display: block; margin: 0 0 8px; color: var(--text); font-size: 12px; font-weight: 750 }
+    .promo-row { display: flex; gap: 8px }
+    .promo-row input { flex: 1; min-width: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; letter-spacing: .06em; text-transform: uppercase }
+    .promo-row input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px }
+    .promo-row .btn { padding: 11px 18px; white-space: nowrap }
+    .promo-applied { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px dashed var(--gold); border-radius: 8px; color: var(--text); font-size: 13px; font-weight: 800; letter-spacing: .04em }
+    .promo-remove { padding: 4px 8px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; text-decoration: underline; cursor: pointer }
+    .promo-msg { min-height: 18px; margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--muted) }
+    .promo-msg.ok { color: #1f8a4c }
+    .promo-msg.err { color: #d6453d }
+
     .checkout-layout .form {
       grid-column: 1;
       grid-row: 1;
@@ -2080,6 +2094,12 @@
         position: static
       }
 
+      .checkout-layout .checkout-aside {
+        grid-column: 1;
+        grid-row: 2;
+        position: static
+      }
+
       .checkout-layout .form {
         grid-column: 1;
         grid-row: 1;
@@ -2461,18 +2481,29 @@
       </div>
       <div id="paymentResult" role="status" aria-live="polite" hidden></div>
       <div class="checkout-layout" id="checkoutContent">
-        <div class="summary" id="summary"></div>
+        <div class="checkout-aside">
+          <div class="summary" id="summary"></div>
+          <div class="promo-box" id="promoBox">
+            <label for="promoInput">Promo code</label>
+            <div class="promo-row" id="promoEntry">
+              <input id="promoInput" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Enter code" onkeydown="if(event.key==='Enter'){event.preventDefault();applyPromo()}">
+              <button class="btn btn-gold" id="promoApply" type="button" onclick="applyPromo()">Apply</button>
+            </div>
+            <div class="promo-applied" id="promoApplied" hidden><span id="promoAppliedText"></span><button class="promo-remove" type="button" onclick="removePromo()">Remove</button></div>
+            <div class="promo-msg" id="promoMsg" role="status" aria-live="polite"></div>
+          </div>
+        </div>
         <form class="form" onsubmit="submitOrder(event)">
         <label>Full name
           <input id="customerName" required placeholder="Your full name">
         </label>
         <label>Phone number <span style="font-weight:400">(WhatsApp if
             possible)</span>
-          <input id="customerPhone" required type="tel" placeholder="080...">
+          <input id="customerPhone" required type="tel" placeholder="080..." onchange="schedulePromoRefresh()">
         </label>
         <label>Email
           <input id="customerEmail" required type="email"
-            placeholder="you@example.com">
+            placeholder="you@example.com" onchange="schedulePromoRefresh()">
         </label>
         <fieldset class="payment-options">
           <legend>How would you like to order?</legend>
@@ -2490,10 +2521,10 @@
         </label>
         <div id="deliveryCityField" class="delivery-fields checkout-wide">
           <label>City
-            <input id="customerCity" required maxlength="80" placeholder="e.g. Kano" oninput="updateCheckoutSummary()">
+            <input id="customerCity" required maxlength="80" placeholder="e.g. Kano" oninput="updateCheckoutSummary();schedulePromoRefresh()">
           </label>
           <label>State
-            <select id="deliveryState" required disabled onchange="updateCheckoutSummary()">
+            <select id="deliveryState" required disabled onchange="updateCheckoutSummary();schedulePromoRefresh()">
               <option value="">Loading delivery states…</option>
             </select>
           </label>
@@ -2549,6 +2580,13 @@
     let googleClientId = "";
     let customerSessionPromise = Promise.resolve();
     let orderSubmitting = false;
+    const PROMO_STORAGE_KEY = "palmz_promo_v1";
+    let appliedPromo = null;
+    let promoBusy = false;
+    let promoPending = false;
+    let promoSeq = 0;
+    let promoTimer = null;
+    let promoRestored = false;
     let googleSignInReady = false;
     let WHATSAPP_NUMBER = "";
     let DELIVERY_TIERS = [];
@@ -2736,6 +2774,7 @@
         fulfillmentMethod,
         pickupBranchId: fulfillmentMethod === "pickup" ? $("#pickupBranch").value : "",
         note: $("#customerNote").value.trim(),
+        promoCode: appliedPromo ? appliedPromo.code : "",
         items: cart.map(item => ({
           productId: item.id,
           size: item.size,
@@ -2772,22 +2811,143 @@
       });
       const itemTotal = allPricesKnown ? cart.reduce((total, item) =>
         total + discountedPrice(PRODUCTS.find(product => product.id === item.id).price) * item.qty, 0) : null;
+      let itemDiscount = 0, deliveryDiscount = 0, promoLine = "";
+      if (appliedPromo && itemTotal != null) {
+        if (promoPending) {
+          promoLine = `Promo ${esc(appliedPromo.code)}: updating…<br>`;
+        } else {
+          itemDiscount = Number(appliedPromo.itemDiscount) || 0;
+          deliveryDiscount = fulfillmentMethod === "delivery" ? Math.min(Number(appliedPromo.deliveryDiscount) || 0, deliveryFee) : 0;
+          const saved = itemDiscount + deliveryDiscount;
+          promoLine = saved > 0
+            ? `Promo ${esc(appliedPromo.code)}: −${money(saved)}<br>`
+            : `Promo ${esc(appliedPromo.code)} applied — free delivery once you choose a state<br>`;
+        }
+      }
+      const deliveryChosen = fulfillmentMethod !== "delivery" || !!deliveryQuoteFor($("#deliveryState").value);
       const orderTotal = itemTotal == null ? "PALMZ to confirm item prices" :
-        (fulfillmentMethod === "delivery" && !deliveryQuoteFor($("#deliveryState").value)
+        (!deliveryChosen
           ? "Choose a delivery state"
-          : money(itemTotal + deliveryFee));
+          : (appliedPromo && promoPending
+            ? "Updating discount…"
+            : money(Math.round((itemTotal - itemDiscount + deliveryFee - deliveryDiscount) * 100) / 100)));
+      const subtotalLine = itemTotal != null ? `Subtotal: ${money(itemTotal)}<br>` : "";
       $("#summary").innerHTML = `<strong>Your order</strong><br>${lines.join("<br>")}` +
-        `<br><br>${deliveryLine}<br><strong>Total: ${orderTotal}</strong>`;
+        `<br><br>${subtotalLine}${promoLine}${deliveryLine}<br><strong>Total: ${orderTotal}</strong>`;
       $("#deliveryEstimate").textContent = fulfillmentMethod === "pickup"
         ? "No delivery fee for branch pickup."
         : (deliveryQuoteFor($("#deliveryState").value, $("#customerCity").value)?.estimate || "Choose a state to see its fee and delivery estimate.");
       const button = $("#submitOrderButton");
+      if (!orderSubmitting) button.disabled = promoPending;
       button.classList.toggle("whatsapp", method === "whatsapp");
       button.classList.toggle("btn-gold", method === "paystack");
       button.textContent = method === "paystack" ? "Pay securely with Paystack →" : "Send order to PALMZ WhatsApp →";
       $("#orderMethodNote").textContent = method === "paystack"
         ? "You’ll be redirected to Paystack to complete payment. Your delivery fee and total are shown in the order summary."
         : "WhatsApp will open with your order and delivery estimate. PALMZ will confirm your item prices and payment details.";
+    }
+
+    // ---------- Promo codes ----------
+    // The server prices every code; the page only displays what the server returns.
+    function savedPromoCode() {
+      try { return localStorage.getItem(PROMO_STORAGE_KEY) || ""; } catch (e) { return ""; }
+    }
+    function savePromoCode(code) {
+      try { if (code) localStorage.setItem(PROMO_STORAGE_KEY, code); else localStorage.removeItem(PROMO_STORAGE_KEY); } catch (e) {}
+    }
+    function setPromoMessage(text, kind) {
+      const el = $("#promoMsg");
+      if (!el) return;
+      el.textContent = text || "";
+      el.className = "promo-msg" + (kind ? " " + kind : "");
+    }
+    function renderPromoBox() {
+      if (!$("#promoBox")) return;
+      $("#promoEntry").hidden = !!appliedPromo;
+      $("#promoApplied").hidden = !appliedPromo;
+      if (appliedPromo) $("#promoAppliedText").textContent = `${appliedPromo.code} applied`;
+      $("#promoApply").disabled = promoBusy;
+      $("#promoApply").textContent = promoBusy ? "Checking…" : "Apply";
+    }
+    function promoSuccessText(result) {
+      if (result.discountType === "free_delivery") {
+        return result.deliveryDiscountPending
+          ? "Free delivery applied. Choose your state to see your delivery fee waived."
+          : `Free delivery applied — you save ${money(result.deliveryDiscount)}.`;
+      }
+      return `Promo applied — you save ${money(result.totalDiscount)}.`;
+    }
+    async function validatePromo(code, { remember = true } = {}) {
+      const seq = ++promoSeq;
+      promoBusy = true;
+      promoPending = true;
+      renderPromoBox();
+      updateCheckoutSummary();
+      try {
+        const p = orderPayload();
+        const result = await customerRequest("/api/promo/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code, items: p.items, fulfillmentMethod: p.fulfillmentMethod,
+            state: p.state, city: p.city, email: p.email, phone: p.phone
+          })
+        });
+        if (seq !== promoSeq) return;
+        appliedPromo = result;
+        if (remember) savePromoCode(result.code);
+        setPromoMessage(promoSuccessText(result), "ok");
+      } catch (error) {
+        if (seq !== promoSeq) return;
+        appliedPromo = null;
+        savePromoCode("");
+        setPromoMessage(error.message || "Could not check that code. Please try again.", "err");
+      } finally {
+        if (seq === promoSeq) {
+          promoBusy = false;
+          promoPending = false;
+          renderPromoBox();
+          updateCheckoutSummary();
+        }
+      }
+    }
+    function applyPromo() {
+      if (promoBusy) return;
+      const code = $("#promoInput").value.trim().toUpperCase();
+      $("#promoInput").value = code;
+      if (!code) { setPromoMessage("Enter a promo code.", "err"); return; }
+      if (!cart.length) { setPromoMessage("Add something to your bag first.", "err"); return; }
+      setPromoMessage("");
+      validatePromo(code);
+    }
+    function removePromo() {
+      promoSeq++;
+      clearTimeout(promoTimer);
+      appliedPromo = null;
+      promoBusy = false;
+      promoPending = false;
+      savePromoCode("");
+      if ($("#promoInput")) $("#promoInput").value = "";
+      setPromoMessage("");
+      renderPromoBox();
+      updateCheckoutSummary();
+    }
+    // Called whenever something the discount depends on changes (bag, delivery, contact details).
+    function schedulePromoRefresh() {
+      if (!appliedPromo) return;
+      if (!cart.length) { removePromo(); return; }
+      clearTimeout(promoTimer);
+      promoPending = true;
+      updateCheckoutSummary();
+      promoTimer = setTimeout(() => validatePromo(appliedPromo.code), 350);
+    }
+    function restorePromo() {
+      if (promoRestored || !$("#promoBox")) return;
+      promoRestored = true;
+      const code = savedPromoCode();
+      if (!code || !cart.length) return;
+      $("#promoInput").value = code;
+      validatePromo(code);
     }
 
     function save() {
@@ -2826,7 +2986,7 @@
           <div class="sizes">Sizes ${product.sizeMin}–${product.sizeMax}</div>
           <div class="card-actions">
             <button class="view" data-id="${esc(product.id)}" onclick="openProduct(this.dataset.id)">View pair</button>
-            ${product.inStock ? `<button class="add" data-id="${esc(product.id)}" onclick="openProduct(this.dataset.id)">Choose size</button>` : `<button class="add" disabled style="opacity:.5;cursor:not-allowed">${product.available === false ? "Unavailable" : "Sold out"}</button>`}
+            ${product.inStock ? `<button class="add" data-id="${esc(product.id)}" onclick="openProduct(this.dataset.id)">Choose size</button>` : `<button class="add" disabled style="opacity:.5;cursor:not-allowed">Sold out</button>`}
           </div>
         </div>
       </article>`;
@@ -2857,7 +3017,7 @@
         <div class="sizes">Sizes ${p.sizeMin}–${p.sizeMax}</div>
         <div class="card-actions">
           <button class="view" onclick="openProduct('${p.id}')">View pair</button>
-          ${p.inStock?`<button class="add" onclick="openProduct('${p.id}')">Choose size</button>`:`<button class="add" disabled style="opacity:.5;cursor:not-allowed">${p.available === false ? "Unavailable" : "Sold out"}</button>`}
+          ${p.inStock?`<button class="add" onclick="openProduct('${p.id}')">Choose size</button>`:`<button class="add" disabled style="opacity:.5;cursor:not-allowed">Sold out</button>`}
         </div>
       </div>
     </article>`).join("") :
@@ -3015,7 +3175,7 @@
         $("#productPageDetail").innerHTML = `<div class="product-page-empty"><h2>Product not found</h2><p>This pair may no longer be available.</p><a class="btn btn-gold" href="/shop">Browse footwear</a></div>`;
         $("#productPageDetail").setAttribute("aria-busy", "false"); return;
       }
-      const sizesInStock = selectedProduct.available === false ? [] : selectedProduct.sizes.filter(size => selectedProduct.colors.some(color => variantStock(selectedProduct, color, size) > 0));
+      const sizesInStock = selectedProduct.sizes.filter(size => selectedProduct.colors.some(color => variantStock(selectedProduct, color, size) > 0));
       selectedSize = sizesInStock[0] || null;
       selectedColor = selectedProduct.colors.find(color => variantStock(selectedProduct, color, selectedSize) > 0) || null;
       document.title = `${selectedProduct.name} — PALMZ`;
@@ -3026,7 +3186,7 @@
       <h3>${esc(selectedProduct.name)}</h3>
       <div class="desc">${esc(selectedProduct.desc)}</div>
       <div class="label">SIZE</div>
-      <div class="options" id="sizeOptions">${sizesInStock.map(s=>`<button class="option ${s===selectedSize?"selected":""}" onclick="chooseSize('${s}')">${s}</button>`).join("") || `<span class="desc">${selectedProduct.available === false ? "This product is currently unavailable." : "No sizes currently in stock."}</span>`}</div>
+      <div class="options" id="sizeOptions">${sizesInStock.map(s=>`<button class="option ${s===selectedSize?"selected":""}" onclick="chooseSize('${s}')">${s}</button>`).join("") || '<span class="desc">No sizes currently in stock.</span>'}</div>
       <div class="label">COLOUR / VARIANT</div>
       <div class="options" id="colorOptions">${availableColorsMarkup(selectedProduct, selectedSize)}</div>
       <div class="label">PRICE</div>
@@ -3045,7 +3205,6 @@
     }
 
     function availableColorsMarkup(product, size) {
-      if (product.available === false) return '<span class="desc">This product is currently unavailable.</span>';
       if (!size) return '<span class="desc">No colors currently in stock.</span>';
       return product.colors.filter(color => variantStock(product, color, size) > 0).map(color =>
         `<button class="option ${color===selectedColor?"selected":""}" data-v="${esc(color)}" onclick="chooseColor(this.dataset.v)">${esc(color)}</button>`
@@ -3054,13 +3213,6 @@
 
     function updateVariantButton() {
       if (!selectedProduct || !document.getElementById("addSelectedButton")) return;
-      if (selectedProduct.available === false) {
-        const unavailableButton = $("#addSelectedButton");
-        unavailableButton.disabled = true;
-        unavailableButton.textContent = "Currently unavailable";
-        $("#variantAvailability").textContent = "This product is currently unavailable for ordering.";
-        return;
-      }
       const available = selectedColor ? variantStock(selectedProduct, selectedColor, selectedSize) : 0;
       const inCart = cart.filter(item => item.id === selectedProduct.id && item.size === selectedSize && item.color === selectedColor).reduce((n, item) => n + item.qty, 0);
       const button = $("#addSelectedButton");
@@ -3087,10 +3239,6 @@
     }
 
     function addSelected() {
-      if (selectedProduct && selectedProduct.available === false) {
-        showToast("This product is currently unavailable for ordering");
-        return;
-      }
       if (!selectedProduct || !selectedColor || !selectedSize) {
         showToast("Choose an available color and size first");
         return;
@@ -3117,6 +3265,7 @@
       updateCart();
       updateVariantButton();
       closeProduct();
+      schedulePromoRefresh();
       showToast("Added to your bag");
     }
 
@@ -3149,12 +3298,14 @@
       if (cart[i].qty <= 0) cart.splice(i, 1);
       save();
       updateCart();
+      schedulePromoRefresh();
     }
 
     function removeItem(i) {
       cart.splice(i, 1);
       save();
       updateCart();
+      schedulePromoRefresh();
     }
 
     function openCart() {
@@ -3176,6 +3327,7 @@
       $("#pickupBranchField").hidden = !pickup;
       $("#pickupBranch").required = pickup;
       updateCheckoutSummary();
+      schedulePromoRefresh();
     }
     updateFulfillmentFields();
 
@@ -3217,6 +3369,7 @@
         cart = [];
         save();
         updateCart();
+        savePromoCode("");
       }
       const isEmpty = cart.length === 0;
       $("#checkoutEmpty").hidden = !isEmpty || paymentResult === "success";
@@ -3381,6 +3534,12 @@
     async function submitOrder(e) {
       e.preventDefault();
       if (orderSubmitting) return;
+      if (promoPending) { showToast("Updating your discount — one moment."); return; }
+      if (!appliedPromo && $("#promoInput") && $("#promoInput").value.trim()) {
+        showToast("Press Apply to use your promo code, or clear the box.");
+        $("#promoInput").focus();
+        return;
+      }
       orderSubmitting = true;
       const submitButton = e.submitter;
       const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
@@ -3450,10 +3609,33 @@ Delivery fee: ${deliveryQuote ? `${money(deliveryQuote.fee)} (${deliveryQuote.es
       }
       try {
         whatsappWindow.opener = null;
+        // Save the order first; the message below uses the totals the server calculated.
+        const saved = await customerRequest(customer ? "/api/customer/orders" : "/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const b = saved.breakdown || {};
+        const orderRef = b.orderId ? String(b.orderId).slice(-8).toUpperCase() : "";
+        let pricing = "";
+        if (b.subtotal != null) {
+          pricing = `
+
+PAYMENT SUMMARY
+Subtotal: ${money(b.subtotal)}` +
+            (b.promoCode ? `
+Promo code: ${b.promoCode}
+Discount: -${money((Number(b.itemDiscount) || 0) + (Number(b.deliveryDiscount) || 0))}` : "") +
+            (fulfillmentMethod === "delivery" ? `
+Delivery fee: ${money(b.deliveryFee)}` : "") +
+            `
+Total to pay: ${money(b.total)}`;
+        }
         const msg =
           `Hello PALMZ 👋
 
-I'd like to place an order.
+I'd like to place an order.${orderRef ? `
+Order reference: ${orderRef}` : ""}
 
 CUSTOMER DETAILS
 Full name: ${payload.customerName}
@@ -3465,14 +3647,9 @@ ${deliverySummary}`}
 ${$("#customerNote").value.trim()?`Order note: ${$("#customerNote").value.trim()}`: ""}
 
 ORDER
-${lines}
+${lines}${pricing}
 
 Please confirm item availability and payment details. Thank you!`;
-        await customerRequest(customer ? "/api/customer/orders" : "/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
         whatsappWindow.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
       } catch (error) {
         whatsappWindow.close();
@@ -3481,6 +3658,7 @@ Please confirm item availability and payment details. Thank you!`;
       cart = [];
       save();
       updateCart();
+      removePromo();
       closeCheckout();
       showToast(customer ? "Order request saved to your account" : "Order request sent to PALMZ");
     }
@@ -3588,8 +3766,6 @@ Please confirm item availability and payment details. Thank you!`;
     }
 
     function badge(p) {
-      if (p.available === false)
-      return '<span class="tag" style="left:auto;right:12px;background:#b3261e">Unavailable</span>';
       if (!p.inStock)
       return '<span class="tag" style="left:auto;right:12px;background:#b3261e">Sold out</span>';
       if (p.quantity <= 5)
@@ -3624,7 +3800,6 @@ Please confirm item availability and payment details. Thank you!`;
       $("#products").setAttribute("aria-busy", "false");
       cart = cart.flatMap(item => {
         const product = PRODUCTS.find(p => p.id === item.id);
-        if (!product || product.available === false) return [];
         const available = product ? variantStock(product, item.color, item.size) : 0;
         if (!available) return [];
         item.qty = Math.min(item.qty, available);
@@ -3633,6 +3808,7 @@ Please confirm item availability and payment details. Thank you!`;
       save();
       render();
       refreshCheckoutPage();
+      if (location.pathname.replace(/\/+$/, "") === "/checkout" && cart.length) restorePromo();
     }
     loadProducts();
     deliveryOptionsPromise = loadDeliveryOptions();
