@@ -1185,6 +1185,41 @@ app.get('/api/admin/promos', requireAdmin, async (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.json({ promos: promos.map((promo) => presentPromo(promo)) });
 });
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  const page = Math.max(1, Math.min(100000, Number.parseInt(req.query.page, 10) || 1));
+  const limit = Math.max(1, Math.min(100, Number.parseInt(req.query.limit, 10) || 25));
+  const search = String(req.query.search || '').trim().slice(0, 100);
+  const filter = {};
+  if (search) {
+    const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    filter.$or = [
+      { name: { $regex: escaped, $options: 'i' } },
+      { email: { $regex: escaped, $options: 'i' } },
+    ];
+  }
+  const [total, customers] = await Promise.all([
+    Customer.countDocuments(filter),
+    Customer.find(filter).select('name email picture createdAt').sort({ createdAt: -1, _id: -1 })
+      .skip((page - 1) * limit).limit(limit).lean(),
+  ]);
+  const customerIds = customers.map((customer) => customer._id);
+  const orderCounts = customerIds.length
+    ? await Order.aggregate([
+      { $match: { customer: { $in: customerIds } } },
+      { $group: { _id: '$customer', count: { $sum: 1 } } },
+    ])
+    : [];
+  const countsByCustomer = new Map(orderCounts.map((entry) => [String(entry._id), entry.count]));
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    users: customers.map((customer) => ({
+      id: String(customer._id), name: customer.name, email: customer.email,
+      picture: customer.picture || '', createdAt: customer.createdAt,
+      orderCount: countsByCustomer.get(String(customer._id)) || 0,
+    })),
+    page, limit, total,
+  });
+});
 app.post('/api/admin/promos', requireAdmin, async (req, res) => {
   const fields = await readPromoFields(req.body || {}, { creating: true });
   try {
@@ -1537,6 +1572,7 @@ app.get('/admin', (req, res) => res.sendFile(path.join(pub, 'admin.html')));
 app.get('/admin/orders', (req, res) => res.sendFile(path.join(pub, 'orders.html')));
 app.get('/admin/sales', (req, res) => res.sendFile(path.join(pub, 'sales.html')));
 app.get('/admin/promos', (req, res) => res.sendFile(path.join(pub, 'promos.html')));
+app.get('/admin/users', (req, res) => res.sendFile(path.join(pub, 'users.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(pub, 'terms.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(pub, 'privacy.html')));
 app.get(['/shop', '/cart', '/checkout', '/about', '/contact', '/customize', '/product/:id'], (req, res) =>

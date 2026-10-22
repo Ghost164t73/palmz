@@ -216,7 +216,7 @@ tbody tr{transition:background .18s}tbody tr:hover{transform:none}
     <div class="bar"><h2>Inventory</h2><button class="btn" onclick="openForm()">+ Add product</button></div>
     <div class="stats" id="stats"></div>
     <div class="inventory-tools"><input id="search" placeholder="Search products…" oninput="inventoryPage=1;renderTable()"><select id="category" onchange="inventoryPage=1;renderTable()"><option value="">All categories</option></select><select id="stockFilter" onchange="inventoryPage=1;renderTable()"><option value="">All stock statuses</option><option value="In stock">In stock</option><option value="Low stock">Low stock</option><option value="Sold out">Sold out</option><option value="Unavailable">Unavailable</option></select></div>
-    <div class="inventory-status" id="inventoryStatus" role="status" aria-live="polite" hidden></div><div class="table-wrap" id="inventoryTable" aria-busy="false"><table><thead><tr><th>Product</th><th>Variant</th><th>Size</th><th>Stock</th><th>Status</th></tr></thead><tbody id="list"></tbody></table></div><div class="pagination" id="inventoryPagination"></div>
+    <div class="inventory-status" id="inventoryStatus" role="status" aria-live="polite" hidden></div><div class="table-wrap" id="inventoryTable" aria-busy="false"><table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Variants</th><th>Sizes</th><th>Stock on hand</th><th>Status</th></tr></thead><tbody id="list"></tbody></table></div><div class="pagination" id="inventoryPagination"></div>
     <section class="detail" id="detail" role="dialog" aria-modal="true" aria-label="Product inventory details" onclick="if(event.target===this)closeDetail()"></section>
   </div>
 </div>
@@ -228,7 +228,7 @@ tbody tr{transition:background .18s}tbody tr:hover{transform:none}
     <a href="/admin" aria-current="page" title="Inventory"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Inventory</span></a>
     <a href="/admin/orders" title="Orders"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-label">Orders</span><span class="orders-notification" hidden aria-label="Pending orders"></span></a>
     <a href="/admin/sales" title="Sales history"><span class="nav-icon" aria-hidden="true">↗</span><span class="nav-label">Sales history</span></a>
-    <a href="/admin/promos" title="Promo codes"><span class="nav-icon" aria-hidden="true">%</span><span class="nav-label">Promo codes</span></a><a href="/" target="_blank" rel="noopener" title="View store"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-label">View store</span></a>
+    <a href="/admin/promos" title="Promo codes"><span class="nav-icon" aria-hidden="true">%</span><span class="nav-label">Promo codes</span></a><a href="/admin/users" title="Users"><span class="nav-icon" aria-hidden="true">♙</span><span class="nav-label">Users</span></a><a href="/" target="_blank" rel="noopener" title="View store"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-label">View store</span></a>
     <button type="button" onclick="logout()" title="Sign out"><span class="nav-icon" aria-hidden="true">⇥</span><span class="nav-label">Sign out</span></button>
   </nav>
 </aside>
@@ -324,7 +324,7 @@ async function load() {
   status.innerHTML = '<span class="spinner" aria-hidden="true"></span><span>Loading inventory…</span>';
   $("#inventoryTable").setAttribute("aria-busy", "true");
   $("#list").setAttribute("aria-busy", "true");
-  $("#list").innerHTML = Array.from({length: 4}, () => '<tr class="loading-row" aria-hidden="true"><td><div class="loading-bar"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td></tr>').join("");
+  $("#list").innerHTML = Array.from({length: 4}, () => '<tr class="loading-row" aria-hidden="true"><td><div class="loading-bar"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td><td><div class="loading-bar short"></div></td></tr>').join("");
   try {
     const response = await api("/api/products", { signal: controller.signal });
     if (request !== inventoryRequest) return;
@@ -336,7 +336,7 @@ async function load() {
     const message = controller.signal.aborted ? "Inventory took too long to load. Check your connection and try again." : err.message;
     status.className = "inventory-status error";
     status.innerHTML = `<span>${esc(message)}</span><button type="button" onclick="load()">Try again</button>`;
-    $("#list").innerHTML = '<tr><td colspan="5" class="empty">Inventory could not be loaded.</td></tr>';
+    $("#list").innerHTML = '<tr><td colspan="7" class="empty">Inventory could not be loaded.</td></tr>';
   } finally {
     clearTimeout(timeout);
     if (request === inventoryRequest) {
@@ -357,6 +357,7 @@ function variantQuantities(p){
 }
 function total(p){return Object.values(variantQuantities(p)).reduce((a,b)=>a+Number(b||0),0)}function stockStatus(p){const n=total(p);return !p.available?'Unavailable':n===0?'Sold out':n<=5?'Low stock':'In stock'}
 function badge(s){return `<span class="chip ${s==='In stock'?'ok':s==='Low stock'?'low':s==='Sold out'?'out':'off'}">${s}</span>`}
+function inventoryPrice(value){return value==null?'Price via WhatsApp':new Intl.NumberFormat('en-NG',{style:'currency',currency:'NGN',maximumFractionDigits:0}).format(Number(value)||0)}
 function render(){
  const sum=products.reduce((a,p)=>a+total(p),0);
  $("#stats").innerHTML=`<div class="stat"><b>${products.length}</b><span>Products</span></div><div class="stat"><b>${sum}</b><span>Pairs available</span></div><div class="stat"><b>${products.filter(p=>stockStatus(p)==='Low stock').length}</b><span>Low stock</span></div><div class="stat"><b>${products.filter(p=>stockStatus(p)==='Sold out').length}</b><span>Sold out</span></div>`;
@@ -376,7 +377,7 @@ function renderTable(){
  const q=$("#search").value.toLowerCase(),cat=$("#category").value,f=$("#stockFilter").value;
  const rows=products.filter(p=>(!q||`${p.name} ${p.type} ${(p.colors||[]).join(' ')}`.toLowerCase().includes(q))&&(!cat||p.type===cat)&&(!f||stockStatus(p)===f));
  inventoryPage=Math.max(1,Math.min(inventoryPage,Math.ceil(rows.length/inventoryPageSize)||1));const start=(inventoryPage-1)*inventoryPageSize,pageRows=rows.slice(start,start+inventoryPageSize);
- $("#list").innerHTML=pageRows.length?pageRows.map(p=>`<tr data-id="${p.id}" class="${selectedId===p.id?'selected':''}"><td><div class="product-cell"><img src="${esc(p.image)}" alt=""><span>${esc(p.name)}</span></div></td><td>${(p.colors||[]).map(esc).join(', ')}</td><td>${p.sizeMin}–${p.sizeMax}</td><td><b>${total(p)}</b></td><td>${badge(stockStatus(p))}</td></tr>`).join(''):`<tr><td colspan="5" class="empty">${products.length?'No products match these filters.':'No products yet. Add your first product.'}</td></tr>`;
+ $("#list").innerHTML=pageRows.length?pageRows.map(p=>`<tr data-id="${p.id}" class="${selectedId===p.id?'selected':''}"><td><div class="product-cell"><img src="${esc(p.image)}" alt=""><span>${esc(p.name)}</span></div></td><td>${esc(p.type||'Palm')}</td><td>${esc(inventoryPrice(p.price))}</td><td>${(p.colors||[]).map(esc).join(', ')||'Standard'}</td><td>${p.sizeMin}–${p.sizeMax}</td><td><b>${total(p)}</b></td><td>${badge(stockStatus(p))}</td></tr>`).join(''):`<tr><td colspan="7" class="empty">${products.length?'No products match these filters.':'No products yet. Add your first product.'}</td></tr>`;
  renderPagination("#inventoryPagination",rows.length,inventoryPage,inventoryPageSize,(page)=>{inventoryPage=page;renderTable()},(size)=>{inventoryPageSize=size;inventoryPage=1;renderTable()});
 }
 function closeDetail(){selectedId=null;$("#detail").classList.remove("open");document.body.style.overflow="";renderTable()}

@@ -2716,17 +2716,17 @@
     }
 
     function discountedPrice(price) {
-      return price == null ? null : Math.round(Number(price) * 0.9 * 100) / 100;
+      return price == null ? null : Number(price);
     }
 
     function salePriceLabel(product) {
       if (product.price == null) return "Price via WhatsApp";
-      return `<span class="price-original">${money(product.price)}</span>${money(discountedPrice(product.price))}<br><span class="sale-tag">10% OFF</span>`;
+      return money(product.price);
     }
 
     function cardPriceLabel(product) {
       if (product.price == null) return "Price via WhatsApp";
-      return `<span class="price-original">${money(product.price)}</span><span>${money(discountedPrice(product.price))}</span><span class="sale-tag">10% OFF</span>`;
+      return money(product.price);
     }
 
     async function loadDeliveryOptions() {
@@ -3596,7 +3596,7 @@
       const pickupBranchLabel = fulfillmentMethod === "pickup" ? $("#pickupBranch").selectedOptions[0].textContent : "";
       const lines = cart.map(x => {
         const p = PRODUCTS.find(z => z.id === x.id);
-        return `• ${x.qty} × ${x.name} | Size ${x.size} | ${x.color}${p&&p.price!=null?` | ${money(discountedPrice(p.price))} each (10% off ${money(p.price)})`:""}`;
+        return `• ${x.qty} × ${x.name} | Size ${x.size} | ${x.color}${p&&p.price!=null?` | ${money(p.price)} each`:""}`;
       }).join("\n");
       const deliveryQuote = fulfillmentMethod === "delivery" ? deliveryQuoteFor($("#deliveryState").value, payload.city) : null;
       const deliverySummary = fulfillmentMethod === "pickup"
@@ -3762,7 +3762,7 @@ Please confirm item availability and payment details. Thank you!`;
     }
 
     function priceLabel(p) {
-      return p.price != null ? money(discountedPrice(p.price)) : "Price via WhatsApp";
+      return p.price != null ? money(p.price) : "Price via WhatsApp";
     }
 
     function badge(p) {
