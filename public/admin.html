@@ -270,8 +270,10 @@ let imageItems = [];
 function toast(t, bad) { const el = $("#toast"); el.textContent = t; el.className = "toast show" + (bad ? " bad" : ""); clearTimeout(window.__t); window.__t = setTimeout(() => el.classList.remove("show"), 2200); }
 function showLogin() { $("#bootView").style.display = "none"; $("#appView").style.display = "none"; $("#loginView").style.display = "block"; $("#adminDrawer").classList.add("auth-hidden"); }
 function showApp() {
-  if (new URLSearchParams(location.search).get("next") === "orders") {
-    location.replace("/admin/orders");
+  const requestedPage = new URLSearchParams(location.search).get("next");
+  const adminPages = { orders: "/admin/orders", sales: "/admin/sales", promos: "/admin/promos", users: "/admin/users", delivery: "/admin/delivery" };
+  if (adminPages[requestedPage]) {
+    location.replace(adminPages[requestedPage]);
     return false;
   }
   $("#bootView").style.display = "none"; $("#loginView").style.display = "none"; $("#appView").style.display = "block"; $("#adminDrawer").classList.remove("auth-hidden");

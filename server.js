@@ -310,6 +310,17 @@ function requireAdmin(req, res, next) {
     res.status(401).json({ error: 'Not signed in' });
   }
 }
+function requireAdminPage(req, res, next) {
+  if (!productionAuthConfigReady()) return res.redirect('/admin');
+  try {
+    const claims = jwt.verify(readCookie(req) || '', process.env.JWT_SECRET || '');
+    if (typeof claims === 'object' && claims.admin === true) return next();
+  } catch {}
+  const page = String(req.path || '').split('/').filter(Boolean).pop() || '';
+  const allowedPages = new Set(['orders', 'sales', 'promos', 'users', 'delivery']);
+  const pageKey = page.replace(/\.html$/i, '');
+  return res.redirect(`/admin?next=${allowedPages.has(pageKey) ? encodeURIComponent(pageKey) : ''}`);
+}
 function requireCustomer(req, res, next) {
   if (!productionAuthConfigReady()) return res.status(503).json({ error: 'Production authentication secrets are not securely configured' });
   try {
@@ -1706,6 +1717,7 @@ app.delete('/api/admin/products/:id', requireAdmin, validId, async (req, res) =>
 // ---------- Pages ----------
 const pub = path.join(__dirname, 'public');
 app.get('/admin', (req, res) => res.sendFile(path.join(pub, 'admin.html')));
+app.use('/admin', requireAdminPage);
 app.get('/admin/orders', (req, res) => res.sendFile(path.join(pub, 'orders.html')));
 app.get('/admin/sales', (req, res) => res.sendFile(path.join(pub, 'sales.html')));
 app.get('/admin/promos', (req, res) => res.sendFile(path.join(pub, 'promos.html')));
@@ -1715,6 +1727,7 @@ app.get('/terms', (req, res) => res.sendFile(path.join(pub, 'terms.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(pub, 'privacy.html')));
 app.get(['/shop', '/cart', '/checkout', '/about', '/contact', '/customize', '/product/:id'], (req, res) =>
   res.sendFile(path.join(pub, 'index.html')));
+app.use(['/orders.html', '/sales.html', '/promos.html', '/users.html', '/delivery.html'], requireAdminPage);
 app.use(express.static(pub));
 
 // Express 4 doesn't catch rejected promises by itself, so wrap async routes
