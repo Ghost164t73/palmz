@@ -1545,8 +1545,16 @@
       display: grid;
       grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
       gap: 32px;
-      align-items: start
+      align-items: start;
+      width: 100%;
+      min-width: 0
     }
+
+    .checkout-layout > *,
+    .checkout-layout .checkout-aside,
+    .checkout-layout .summary,
+    .checkout-layout .promo-box,
+    .checkout-layout .form { min-width: 0; max-width: 100% }
 
     .checkout-layout .summary {
       grid-column: 2;
@@ -1562,6 +1570,9 @@
 
     .checkout-layout .checkout-aside { grid-column: 2; grid-row: 1; position: sticky; top: 100px; display: grid; gap: 14px; min-width: 0 }
     .checkout-layout .checkout-aside .summary { position: static; grid-column: auto; grid-row: auto }
+    .checkout-layout .summary,
+    .checkout-layout .promo-applied,
+    .checkout-layout .promo-msg { overflow-wrap: anywhere }
     .promo-box { padding: 18px 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface2) }
     .promo-box label { display: block; margin: 0 0 8px; color: var(--text); font-size: 12px; font-weight: 750 }
     .promo-row { display: flex; gap: 8px }
@@ -1988,6 +1999,14 @@
       }
     }
 
+    @media(max-width:760px) {
+      .checkout-layout { grid-template-columns: minmax(0, 1fr); gap: 16px }
+      .checkout-layout .summary { grid-column: 1; grid-row: 2; position: static }
+      .checkout-layout .checkout-aside { grid-column: 1; grid-row: 2; position: static }
+      .checkout-layout .form { grid-column: 1; grid-row: 1 }
+      .checkout-layout .promo-row > * { min-width: 0 }
+    }
+
     @media(max-width:620px) {
       #recommendedProducts.products { grid-template-columns: 1fr }
       .container {
@@ -2090,10 +2109,7 @@
         font-size: 12px
       }
 
-      .checkout-layout {
-        grid-template-columns: 1fr;
-        gap: 16px
-      }
+      .checkout-layout { grid-template-columns: minmax(0, 1fr); gap: 16px }
 
       .checkout-layout .summary {
         grid-column: 1;
@@ -2112,6 +2128,10 @@
         grid-row: 1;
         grid-template-columns: 1fr
       }
+
+      .checkout-layout .checkout-aside { grid-column: 1; grid-row: 2 }
+
+      .checkout-layout .promo-row > * { min-width: 0 }
 
       .checkout-layout .form label,
       .checkout-layout .form .note,
@@ -3407,11 +3427,10 @@
           </div>
           <p class="payment-success-kicker">Payment successful</p> 
           <h2 class="payment-success-title">Thank you for your order.</h2>
-          <p class="payment-success-copy">Your payment has been confirmed securely by Paystack. We’ll contact you shortly on the email you provided to coordinate your order.</p>
+          <p class="payment-success-copy">Your payment has been confirmed securely by Palmz. We’ll contact you shortly on the email you provided to coordinate your order.</p>
           <p class="payment-success-copy payment-success-thanks">Thank you for shopping with PALMZ.</p>
           <div class="payment-success-actions">
-            <button class="btn btn-whatsapp" type="button" onclick="confirmPaidOrderOnWhatsApp()">Confirm my order on WhatsApp</button>
-            <a class="btn btn-gold" href="/shop">Back to shop</a>
+            <a class="btn btn-gold" href="/shop">Continue shopping</a>
           </div>`;
         $("#paymentResult").hidden = false;
         history.replaceState(null, "", location.pathname);
@@ -3467,6 +3486,10 @@
     }
 
     function openCustomerAccount() {
+      if (location.pathname.startsWith("/product/")) {
+        window.location.href = "/account.html";
+        return;
+      }
       if (customer) {
         window.location.href = "account.html";
         return;
