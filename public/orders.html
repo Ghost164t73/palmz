@@ -94,7 +94,12 @@
     .contact { margin-top: 8px; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere }
     .contact a { text-decoration: underline; text-underline-offset: 2px }
     .delivery-manage{grid-column:1/-1}.delivery-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface2)}.delivery-form label{display:grid;gap:5px;color:var(--muted);font-size:11px;font-weight:700}.delivery-form input,.delivery-form textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font:inherit}.delivery-form textarea{grid-column:1/3;min-height:42px;resize:vertical}.delivery-form button{align-self:end;padding:10px 14px;border:0;border-radius:10px;background:var(--gold);color:#171208;font-weight:800}.delivery-current{margin-bottom:8px;color:var(--muted);font-size:12px;line-height:1.6}
-    .items { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.8 }
+    .items { display:grid;gap:10px;margin:0;padding:0;list-style:none;font-size:12px;line-height:1.5 }
+    .ordered-item { display:flex;align-items:center;gap:11px;min-width:0 }
+    .ordered-item-image { display:block;flex:0 0 54px;width:54px;height:54px;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--surface2);object-fit:cover }
+    .ordered-item-image.placeholder { display:grid;place-items:center;color:var(--muted);font-size:10px;text-align:center }
+    .ordered-item-copy { min-width:0;overflow-wrap:anywhere }
+    .ordered-item-copy small { display:block;margin-top:3px;color:var(--muted) }
     .order-note { margin-top: 8px; color: var(--muted); font-size: 12px; white-space: pre-wrap }
     .order-manage { display: grid; align-content: start; gap: 10px }
     .order-manage select { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface2); color: var(--text) }
@@ -223,6 +228,7 @@
         <option value="pending_confirmation">Pending confirmation</option>
         <option value="confirmed">Confirmed</option>
         <option value="preparing">Preparing</option>
+        <option value="ready_for_pickup">Ready for pickup</option>
         <option value="dispatched">Dispatched</option>
         <option value="out_for_delivery">Out for delivery</option>
         <option value="delivered">Delivered</option>
@@ -259,6 +265,7 @@
       pending_confirmation: "Pending confirmation",
       confirmed: "Confirmed",
       preparing: "Preparing",
+      ready_for_pickup: "Ready for pickup",
       dispatched: "Dispatched",
       out_for_delivery: "Out for delivery",
       delivered: "Delivered",
@@ -272,6 +279,28 @@
       failed: "Failed",
       refunded: "Refunded"
     };
+    const STATUS_TRANSITIONS = {
+      pending_confirmation: ["confirmed", "cancelled"],
+      confirmed: ["preparing", "fulfilled", "cancelled"],
+      preparing: ["dispatched", "ready_for_pickup", "fulfilled", "cancelled"],
+      ready_for_pickup: ["fulfilled", "cancelled"],
+      dispatched: ["out_for_delivery"],
+      out_for_delivery: ["delivered"],
+      delivered: [], fulfilled: [], cancelled: []
+    };
+
+    function statusesForOrder(order) {
+      let next = STATUS_TRANSITIONS[order.status] || [];
+      if (order.fulfillmentMethod === "pickup") {
+        next = order.status === "preparing" ? ["ready_for_pickup", "cancelled"]
+          : order.status === "ready_for_pickup" ? ["fulfilled", "cancelled"]
+          : order.status === "pending_confirmation" ? ["confirmed", "cancelled"]
+          : order.status === "confirmed" ? ["preparing", "cancelled"] : [];
+      } else {
+        next = next.filter(status => status !== "ready_for_pickup");
+      }
+      return [...new Set([order.status, ...next])];
+    }
 
     function escapeHtml(value) {
       return String(value == null ? "" : value).replace(/[&<>"']/g, char => ({
@@ -305,6 +334,7 @@
         <div class="stat"><b>${counts.pending_confirmation}</b><span>Pending confirmation</span></div>
         <div class="stat"><b>${counts.confirmed}</b><span>Confirmed</span></div>
         <div class="stat"><b>${counts.preparing}</b><span>Preparing</span></div>
+        <div class="stat"><b>${counts.ready_for_pickup}</b><span>Ready for pickup</span></div>
         <div class="stat"><b>${counts.dispatched}</b><span>Dispatched</span></div>
         <div class="stat"><b>${counts.out_for_delivery}</b><span>Out for delivery</span></div>
         <div class="stat"><b>${counts.delivered}</b><span>Delivered</span></div>
@@ -323,7 +353,7 @@
       const date = new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.createdAt));
       const phoneDigits = order.phone.replace(/\D/g, "");
       const whatsappNumber = phoneDigits.startsWith("0") ? `234${phoneDigits.slice(1)}` : phoneDigits;
-      const items = order.items.map(item => `<li>${item.quantity} × ${escapeHtml(item.name)} — size ${escapeHtml(item.size)}, ${escapeHtml(item.color)}${item.unitPrice != null ? ` — ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}</li>`).join("");
+      const items = order.items.map(item => `<li class="ordered-item">${item.imageUrl ? `<img class="ordered-item-image" src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async">` : '<span class="ordered-item-image placeholder" aria-label="Product image unavailable">No image</span>'}<span class="ordered-item-copy"><strong>${Number(item.quantity)} × ${escapeHtml(item.name)}</strong><small>Size ${escapeHtml(item.size)} · ${escapeHtml(item.color)}${item.unitPrice != null ? ` · ₦${Number(item.unitPrice).toLocaleString("en-NG")} each` : ""}</small></span></li>`).join("");
       const paymentStatus = PAYMENT_LABELS[order.paymentStatus] || "Not started";
       const paymentIsPaid = order.paymentStatus === "paid";
       const addressLines = [order.streetAddress || order.address, order.area && `Area: ${order.area}`, order.landmark && `Nearby landmark: ${order.landmark}`, order.city].filter(Boolean).map(escapeHtml).join("<br>");
@@ -337,7 +367,7 @@
           <div class="order-content">
           <section><div class="label">Customer</div><div class="customer-name">${escapeHtml(order.customerName)}</div><div class="contact"><a href="mailto:${encodeURIComponent(order.email)}">${escapeHtml(order.email)}</a><br><a href="tel:${encodeURIComponent(order.phone)}">${escapeHtml(order.phone)}</a>${whatsappNumber ? `<br><a target="_blank" rel="noopener noreferrer" href="https://wa.me/${encodeURIComponent(whatsappNumber)}">Message on WhatsApp</a>` : ""}<br>${fulfillmentDetails}${order.promo ? `<br>Promo ${escapeHtml(order.promo.code)}: −₦${Number(order.promo.totalDiscount || 0).toLocaleString("en-NG")} (${escapeHtml(({ reserved: "pending", redeemed: "redeemed", released: "released" })[order.promo.state] || order.promo.state)})` : ""}${order.totalAmount != null ? `<br>Order total: ₦${Number(order.totalAmount).toLocaleString("en-NG")}` : ""}</div></section>
           <section><div class="label">Items</div><ul class="items">${items}</ul>${order.note ? `<div class="order-note"><strong>Note:</strong> ${escapeHtml(order.note)}</div>` : ""}</section>
-          <section class="order-manage"><div class="label">Order status</div><select aria-label="Update order status" onchange="updateStatus('${escapeHtml(order._id)}', this.value, this)">${Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${order.status === value ? "selected" : ""}>${label}</option>`).join("")}</select><div class="payment"><strong>Payment:</strong> ${escapeHtml(order.paymentProvider || "whatsapp")} · ${escapeHtml(paymentStatus)}${Number.isSafeInteger(order.paidAmountKobo) ? `<br>Amount received: ₦${(order.paidAmountKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}${Number.isSafeInteger(order.paystackFeeKobo) && order.paystackFeeKobo > 0 ? `<br>Paystack checkout charge: ₦${(order.paystackFeeKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (not added by PALMZ)` : ""}${order.paystackReference ? `<br>Paystack reference: ${escapeHtml(order.paystackReference)}` : ""}${order.paymentReference ? `<br>Payment reference: ${escapeHtml(order.paymentReference)}` : ""}<br>Payment tracking is separate from order status.</div>
+          <section class="order-manage"><div class="label">Order status</div><select aria-label="Update order status" onchange="updateStatus('${escapeHtml(order._id)}', this.value, this)">${statusesForOrder(order).map(value => `<option value="${value}" ${order.status === value ? "selected" : ""}>${STATUS_LABELS[value]}</option>`).join("")}</select><div class="payment"><strong>Payment:</strong> ${escapeHtml(order.paymentProvider || "whatsapp")} · ${escapeHtml(paymentStatus)}${Number.isSafeInteger(order.paidAmountKobo) ? `<br>Amount received: ₦${(order.paidAmountKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}${Number.isSafeInteger(order.paystackFeeKobo) && order.paystackFeeKobo > 0 ? `<br>Paystack checkout charge: ₦${(order.paystackFeeKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (not added by PALMZ)` : ""}${order.paystackReference ? `<br>Paystack reference: ${escapeHtml(order.paystackReference)}` : ""}${order.paymentReference ? `<br>Payment reference: ${escapeHtml(order.paymentReference)}` : ""}<br>Payment tracking is separate from order status.</div>
             ${order.paymentProvider === "whatsapp" && !paymentIsPaid ? `<form class="payment-form" onsubmit="recordManualPayment(event, '${escapeHtml(order._id)}')"><label>Amount received (₦)<input name="amount" type="number" min="${order.totalAmount != null ? Number(order.totalAmount).toFixed(2) : "0.01"}" step="0.01" required></label><label>Payment reference <span class="muted">(optional)</span><input name="reference" type="text" maxlength="120" placeholder="Bank transfer reference"></label><button type="submit">Record payment received</button></form>` : ""}
           </section>
           ${order.fulfillmentMethod === "delivery" ? `<section class="delivery-manage"><div class="label">Delivery handling</div>${renderDeliveryForm(order)}</section>` : ""}

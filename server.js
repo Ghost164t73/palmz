@@ -32,6 +32,7 @@ const ORDER_EMAIL_EVENTS = new Set([
   'paystack_receipt',
   'status_confirmed',
   'status_preparing',
+  'status_ready_for_pickup',
   'status_dispatched',
   'status_out_for_delivery',
   'status_delivered',
@@ -39,11 +40,12 @@ const ORDER_EMAIL_EVENTS = new Set([
   'late_payment_after_cancellation',
   'admin_late_payment_after_cancellation',
 ]);
-const SALES_STATUSES = ['confirmed', 'preparing', 'dispatched', 'out_for_delivery', 'delivered', 'fulfilled'];
+const SALES_STATUSES = ['confirmed', 'preparing', 'ready_for_pickup', 'dispatched', 'out_for_delivery', 'delivered', 'fulfilled'];
 const NEXT_ORDER_STATUSES = {
   pending_confirmation: ['confirmed', 'cancelled'],
   confirmed: ['preparing', 'fulfilled', 'cancelled'],
-  preparing: ['dispatched', 'fulfilled', 'cancelled'],
+  preparing: ['dispatched', 'ready_for_pickup', 'fulfilled', 'cancelled'],
+  ready_for_pickup: ['fulfilled', 'cancelled'],
   dispatched: ['out_for_delivery'],
   out_for_delivery: ['delivered'],
   delivered: [],
@@ -63,6 +65,8 @@ function safeEmailError(error) {
 }
 async function notifyOrderEmail(order, event) {
   if (!ORDER_EMAIL_EVENTS.has(event)) return;
+  if (event === 'status_ready_for_pickup' && order.fulfillmentMethod !== 'pickup') return;
+  if (event === 'status_delivered' && order.fulfillmentMethod !== 'delivery') return;
   const eventPath = `emailNotifications.${event}`;
   const statusPath = `${eventPath}.status`;
   const attemptPath = `${eventPath}.attemptedAt`;
@@ -727,6 +731,7 @@ async function orderContact(body, account = null, paymentProvider = 'whatsapp') 
     return {
       productId,
       name: product.name,
+      imageUrl: product.images && product.images[0] && product.images[0].url || product.image && product.image.url || '',
       size,
       color,
       quantity,
@@ -1504,7 +1509,13 @@ app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
       throw bad(`Move this order forward from ${order.status.replaceAll('_', ' ')}; cancelled and completed orders cannot be reopened.`);
     }
     if (order.fulfillmentMethod === 'pickup' && ['dispatched', 'out_for_delivery', 'delivered'].includes(status)) {
-      throw bad('Use Preparing and Fulfilled statuses for pickup orders.');
+      throw bad('Use Preparing, Ready for pickup, then Fulfilled for pickup orders.');
+    }
+    if (status === 'ready_for_pickup' && order.fulfillmentMethod !== 'pickup') {
+      throw bad('Ready for pickup status only applies to pickup orders.');
+    }
+    if (order.fulfillmentMethod === 'pickup' && status === 'fulfilled' && order.status !== 'ready_for_pickup') {
+      throw bad('Mark the pickup order ready before marking it fulfilled.');
     }
     if (approved && order.paymentProvider === 'paystack' && order.paymentStatus !== 'paid') {
       throw bad('A Paystack order must be paid before processing can continue');

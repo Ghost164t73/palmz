@@ -1,11 +1,12 @@
 const mongoose = require('mongoose');
 
-const ORDER_STATUSES = ['pending_confirmation', 'confirmed', 'preparing', 'dispatched', 'out_for_delivery', 'delivered', 'fulfilled', 'cancelled'];
+const ORDER_STATUSES = ['pending_confirmation', 'confirmed', 'preparing', 'ready_for_pickup', 'dispatched', 'out_for_delivery', 'delivered', 'fulfilled', 'cancelled'];
 
 const OrderItemSchema = new mongoose.Schema(
   {
     productId: { type: String, required: true },
     name: { type: String, required: true },
+    imageUrl: { type: String, trim: true, default: '' },
     size: { type: String, required: true },
     color: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
