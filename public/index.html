@@ -144,7 +144,8 @@
 
     .navlinks a {
       flex: 0 0 auto;
-      white-space: nowrap
+      white-space: nowrap;
+      color: var(--muted);
     }
 
     .navlinks a:hover {
@@ -1020,12 +1021,13 @@
       position: absolute;
       right: 0;
       top: 0;
-      width: min(450px, 100%);
+      width: min(500px, 100%);
       height: 100%;
       background: var(--surface);
       display: flex;
       flex-direction: column;
-      border-left: 1px solid var(--line)
+      border-left: 1px solid var(--line);
+      box-shadow: -24px 0 70px rgba(0, 0, 0, .18)
     }
 
     .overlay.open .drawer {
@@ -1033,16 +1035,24 @@
     }
 
     .drawer-head {
-      padding: 18px;
+      padding: 23px 24px;
       border-bottom: 1px solid var(--line);
       display: flex;
       justify-content: space-between;
-      align-items: center
+      align-items: center;
+      background: linear-gradient(135deg, var(--surface) 55%, var(--surface2))
     }
 
     .drawer-head h3 {
       margin: 0;
-      font: 700 27px Georgia, serif
+      font: 700 29px Georgia, serif;
+      letter-spacing: -.04em
+    }
+
+    .drawer-head p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 12px
     }
 
     .close {
@@ -1055,18 +1065,19 @@
     }
 
     .cart-list {
-      padding: 15px;
+      padding: 8px 24px 18px;
       overflow: auto;
       flex: 1
     }
 
     .cart-row {
       display: grid;
-      grid-template-columns: 76px 1fr auto;
-      gap: 12px;
-      padding: 13px 0;
-      border-bottom: 1px solid var(--line)
-      ;animation: cart-item-enter .3s ease both
+      grid-template-columns: 88px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--line);
+      animation: cart-item-enter .3s ease both
     }
 
     @keyframes cart-item-enter {
@@ -1079,10 +1090,10 @@
     .cart-row:nth-child(4) { animation-delay: .12s }
 
     .cart-thumb {
-      height: 76px;
-      border-radius: 0;
+      height: 88px;
+      border-radius: 12px;
       overflow: hidden;
-      background: #eee
+      background: var(--surface2)
     }
 
     .cart-thumb img {
@@ -1092,57 +1103,96 @@
     }
 
     .cart-name {
-      font-weight: 900;
-      font-size: 12px
+      font-weight: 750;
+      font-size: 14px;
+      line-height: 1.4
     }
 
     .cart-meta {
-      font-size: 10px;
+      font-size: 12px;
       color: var(--muted);
-      margin-top: 5px;
+      margin-top: 4px;
       line-height: 1.5
     }
 
     .qty {
       display: flex;
       align-items: center;
-      gap: 7px;
-      margin-top: 9px
+      gap: 10px;
+      margin-top: 12px;
+      font-size: 13px
     }
 
     .qty button {
-      width: 25px;
-      height: 25px;
+      width: 30px;
+      height: 30px;
       border: 1px solid var(--line);
-      border-radius: 7px;
+      border-radius: 50%;
       background: var(--surface2);
-      color: var(--text)
+      color: var(--text);
+      font-size: 16px
+    }
+
+    .qty button:hover {
+      border-color: var(--gold);
+      background: var(--surface)
+    }
+
+    .cart-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px
+    }
+
+    .cart-item-price {
+      font-size: 14px;
+      font-weight: 750;
+      white-space: nowrap
     }
 
     .cart-remove {
       border: 0;
       background: none;
-      color: #9b9da6;
-      font-size: 10px
+      color: var(--muted);
+      font-size: 11px;
+      padding: 3px 0;
+      text-decoration: underline;
+      text-underline-offset: 3px
+    }
+
+    .cart-remove:hover {
+      color: var(--text)
     }
 
     .drawer-foot {
       border-top: 1px solid var(--line);
-      padding: 17px
+      padding: 21px 24px 24px;
+      background: var(--surface2)
     }
 
     .total-line {
       display: flex;
       justify-content: space-between;
-      font-weight: 900;
+      align-items: baseline;
+      gap: 16px;
+      font-weight: 650;
+      font-size: 14px;
       margin-bottom: 7px
     }
 
+    .total-line strong {
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      text-align: right
+    }
+
     .total-note {
-      font-size: 10px;
+      font-size: 11px;
       color: var(--muted);
       line-height: 1.5;
-      margin-bottom: 13px
+      margin: 0 0 17px
     }
 
     .full {
@@ -1158,8 +1208,25 @@
     .empty-cart {
       text-align: center;
       color: var(--muted);
-      padding: 65px 20px;
-      font-size: 13px
+      padding: 72px 20px;
+      font-size: 14px
+    }
+
+    .empty-cart p {
+      margin: 0 0 8px;
+      color: var(--text);
+      font: 700 22px Georgia, serif
+    }
+
+    .empty-cart a {
+      display: inline-block;
+      margin-top: 19px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: underline;
+      text-decoration-color: var(--gold);
+      text-underline-offset: 4px
     }
 
     .modal {
@@ -1434,7 +1501,7 @@
       min-height: 0;
       margin: 0 auto;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 18px;
       box-shadow: var(--shadow);
       overflow: hidden
     }
@@ -1447,27 +1514,25 @@
       min-height: 120px;
       max-height: none;
       overflow: visible;
-      padding: 8px 28px 18px
+      padding: 8px 32px 18px
     }
 
     html[data-page="/cart"] .drawer-head {
-      padding: 24px 28px;
-      background: var(--surface2)
+      padding: 24px 32px
     }
 
     html[data-page="/cart"] .drawer-foot {
-      padding: 22px 28px 26px;
-      background: var(--surface2)
+      padding: 24px 32px 28px
     }
 
     html[data-page="/cart"] .drawer-head h3 {
-      font-size: 32px
+      font-size: 25px
     }
 
     html[data-page="/cart"] .cart-row {
       grid-template-columns: 104px minmax(0, 1fr) auto;
       gap: 20px;
-      padding: 20px 0
+      padding: 22px 0
     }
 
     html[data-page="/cart"] .cart-thumb {
@@ -1475,40 +1540,30 @@
     }
 
     html[data-page="/cart"] .cart-name {
-      font-size: 17px;
+      font-size: 16px;
       line-height: 1.4
     }
 
     html[data-page="/cart"] .cart-meta {
-      font-size: 14px;
+      font-size: 13px;
       margin-top: 7px
     }
 
-    html[data-page="/cart"] .qty {
-      gap: 10px;
-      margin-top: 12px;
-      font-size: 15px
-    }
-
-    html[data-page="/cart"] .qty button {
-      width: 32px;
-      height: 32px;
-      font-size: 18px
-    }
-
     html[data-page="/cart"] .cart-remove {
-      font-size: 13px;
-      text-decoration: underline;
-      text-underline-offset: 3px
+      font-size: 12px
     }
 
     html[data-page="/cart"] .total-line {
-      font-size: 18px;
-      margin-bottom: 10px
+      font-size: 15px;
+      margin-bottom: 8px
+    }
+
+    html[data-page="/cart"] .total-line strong {
+      font-size: 24px
     }
 
     html[data-page="/cart"] .total-note {
-      font-size: 13px;
+      font-size: 12px;
       margin-bottom: 18px
     }
 
@@ -1519,6 +1574,45 @@
 
     html[data-page="/cart"] .empty-cart {
       padding: 44px 20px
+    }
+
+    @media (max-width: 560px) {
+      .drawer-head {
+        padding: 18px
+      }
+
+      .cart-list {
+        padding: 4px 18px 14px
+      }
+
+      .cart-row,
+      html[data-page="/cart"] .cart-row {
+        grid-template-columns: 68px minmax(0, 1fr);
+        gap: 12px;
+        padding: 16px 0
+      }
+
+      .cart-thumb,
+      html[data-page="/cart"] .cart-thumb {
+        height: 76px
+      }
+
+      .cart-actions {
+        grid-column: 2;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: -4px
+      }
+
+      html[data-page="/cart"] .drawer-head,
+      html[data-page="/cart"] .drawer-foot {
+        padding: 18px
+      }
+
+      html[data-page="/cart"] .cart-list {
+        padding: 4px 18px 14px
+      }
     }
 
     html[data-page="/checkout"] #checkoutModal.open {
@@ -2462,9 +2556,9 @@
 
   <main class="container commerce-heading" id="cartPageHeading">
     <a href="/shop">← Continue shopping</a>
-    <!-- <div class="eyebrow">Your selection</div>
+    <div class="eyebrow">Your selection</div>
     <h1>Your bag</h1>
-    <p>Review your pairs and quantities before checkout.</p> -->
+    <p>Review your pairs and quantities before checkout.</p>
   </main>
 
   <main class="container commerce-heading" id="checkoutPageHeading">
@@ -2476,14 +2570,15 @@
     onclick="if(event.target===this)closeCart()">
     <aside class="drawer">
       <div class="drawer-head">
-        <h3>Your bag</h3><button class="close" onclick="closeCart()" aria-label="Continue shopping">×</button>
+        <div><h3>Your selection</h3><p>Made for wherever you’re headed.</p></div>
+        <button class="close" onclick="closeCart()" aria-label="Continue shopping">×</button>
       </div>
       <div class="cart-list" id="cartList"></div>
       <div class="drawer-foot">
-        <div class="total-line"><span>Items</span><span id="itemsTotal">0</span>
+        <div class="total-line"><span>Subtotal (<span id="itemsTotal">0</span> <span id="bagItemLabel">items</span>)</span><strong id="bagSubtotal">—</strong>
         </div>
-        
-        <button class="btn whatsapp full" onclick="openCheckout()">Proceed to checkout →</button>
+        <p class="total-note">Delivery fees and any promo savings are confirmed at checkout.</p>
+        <button class="btn btn-gold full" onclick="openCheckout()">Continue to checkout →</button>
       </div>
     </aside>
   </div>
@@ -3306,10 +3401,29 @@
       showToast("Added to your bag");
     }
 
+    function cartItemPrice(item) {
+      const product = PRODUCTS.find(candidate => candidate.id === item.id);
+      if (!product || product.price == null) return null;
+      const price = discountedPrice(product.price);
+      return Number.isFinite(price) ? price : null;
+    }
+
     function updateCart() {
       $("#count").textContent = qty();
-      $("#itemsTotal").textContent = qty();
-      $("#cartList").innerHTML = cart.length ? cart.map((x, i) => `
+      const itemCount = qty();
+      const itemPrices = cart.map(cartItemPrice);
+      const subtotal = cart.length && itemPrices.every(price => price != null)
+        ? cart.reduce((total, item, index) => total + itemPrices[index] * item.qty, 0)
+        : null;
+      $("#itemsTotal").textContent = itemCount;
+      $("#bagItemLabel").textContent = itemCount === 1 ? "item" : "items";
+      $("#bagSubtotal").textContent = !cart.length
+        ? "—"
+        : (subtotal == null ? "Price via WhatsApp" : money(subtotal));
+      $("#cartList").innerHTML = cart.length ? cart.map((x, i) => {
+        const price = itemPrices[i];
+        const lineTotal = price == null ? "Price via WhatsApp" : money(price * x.qty);
+        return `
     <div class="cart-row">
       <div class="cart-thumb"><img src="${x.image}" alt=""></div>
       <div>
@@ -3317,9 +3431,13 @@
         <div class="cart-meta">Size ${x.size}<br>${esc(x.color)}</div>
         <div class="qty"><button onclick="changeQty(${i},-1)">−</button><span>${x.qty}</span><button onclick="changeQty(${i},1)">+</button></div>
       </div>
-      <button class="cart-remove" onclick="removeItem(${i})">Remove</button>
-    </div>`).join("") :
-        `<div class="empty-cart">Your bag is empty.<br><br>Let's fix that</div>`;
+      <div class="cart-actions">
+        <div class="cart-item-price">${lineTotal}</div>
+        <button class="cart-remove" onclick="removeItem(${i})">Remove</button>
+      </div>
+    </div>`;
+      }).join("") :
+        `<div class="empty-cart"><p>Your bag is waiting.</p><span>Find a pair that feels like you.</span><br><a href="/shop">Explore the collection →</a></div>`;
     }
 
     function changeQty(i, d) {
