@@ -1008,9 +1008,9 @@
       to { opacity: 1 }
     }
 
-    @keyframes bag-drawer-enter {
-      from { opacity: .7; transform: translateX(32px) }
-      to { opacity: 1; transform: translateX(0) }
+    @keyframes bag-slide-in {
+      from { transform: translateX(100%) }
+      to { transform: translateX(0) }
     }
 
     .overlay.open {
@@ -1031,7 +1031,7 @@
     }
 
     .overlay.open .drawer {
-      animation: bag-drawer-enter .32s cubic-bezier(.2, .75, .25, 1) both
+      animation: bag-slide-in .36s cubic-bezier(.2, .75, .25, 1) both
     }
 
     .drawer-head {
@@ -1076,18 +1076,8 @@
       align-items: center;
       gap: 16px;
       padding: 20px 0;
-      border-bottom: 1px solid var(--line);
-      animation: cart-item-enter .3s ease both
+      border-bottom: 1px solid var(--line)
     }
-
-    @keyframes cart-item-enter {
-      from { opacity: 0; transform: translateX(18px) }
-      to { opacity: 1; transform: translateX(0) }
-    }
-
-    .cart-row:nth-child(2) { animation-delay: .04s }
-    .cart-row:nth-child(3) { animation-delay: .08s }
-    .cart-row:nth-child(4) { animation-delay: .12s }
 
     .cart-thumb {
       height: 88px;
