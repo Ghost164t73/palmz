@@ -259,6 +259,10 @@
       pointer-events: none;
       transition: opacity .32s ease, visibility .32s
     }
+
+    .navlinks a{
+      color: var(--muted);
+    }
     html.nav-compact .mobile-nav-backdrop.open { opacity: 1; visibility: visible; pointer-events: auto }
     html.nav-compact .navlinks.open { transform: translateX(0); visibility: visible }
     html.nav-compact .account-button { flex: 0 0 38px; width: 38px; height: 38px }
@@ -624,9 +628,14 @@
         <p class="lead">View your saved details and order requests.</p>
 
         <section class="panel" id="signedOut">
-          <h2>Sign in with Google</h2>
+          <h2>Sign in to your account</h2>
           <p class="muted">Save your checkout details and access your order history on any device. Guest checkout is also available.</p>
           <div id="googleButton"></div>
+          <p class="muted">Or use your email address:</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="btn btn-gold" href="/signin?next=/account.html">Sign in with email</a>
+            <a class="btn ghost" href="/signup?next=/account.html">Create account</a>
+          </div>
           <div class="message" id="status" aria-live="polite"><span class="loading-indicator"><span class="spinner" aria-hidden="true"></span>Checking Google sign-in…</span></div>
         </section>
 

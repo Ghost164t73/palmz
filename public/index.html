@@ -2660,7 +2660,7 @@
           <textarea id="customerNote"
             placeholder="Anything PALMZ should know?"></textarea>
         </label>
-        <div class="note" id="checkoutAccountMessage">Guest checkout is available. Use the account icon to sign in with Google and save your order history.</div>
+        <div class="note" id="checkoutAccountMessage">Guest checkout is available. Use the account icon to sign in or create an account and save your order history.</div>
         <button id="submitOrderButton" class="btn btn-gold full" type="submit">Pay securely with Paystack →</button>
         <div class="note" id="orderMethodNote">You’ll be redirected to Paystack to complete payment. Your delivery fee and total are shown in the order summary.</div>
         </form>
@@ -2677,13 +2677,18 @@
       <div class="account-signin-message" id="googleStatus" aria-live="polite">Checking Google sign-in…</div>
       <div class="account-signin" id="customerSignedOut">
         <div id="googleButton"></div>
+        <div class="account-signin-message">Or use your email address:</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a class="btn btn-gold" href="/signin">Sign in with email</a>
+          <a class="btn ghost" href="/signup">Create account</a>
+        </div>
       </div>
       <div id="customerSignedIn" hidden>
         <div class="account-profile">
           <img id="customerPicture" alt="" hidden>
           <div><strong id="accountCustomerName"></strong><div class="account-signin-message" id="accountCustomerEmail"></div></div>
         </div>
-        <p class="account-signin-message">Your Google sign-in is ready. View your order history on your account page.</p>
+        <p class="account-signin-message">You're signed in. View your order history on your account page.</p>
         <a class="btn btn-gold" href="account.html">View order history</a>
         <button class="btn ghost" type="button" onclick="customerLogout()">Sign out</button>
       </div>
@@ -3576,12 +3581,12 @@
 
     function setCustomer(profile) {
       customer = profile;
-      $("#accountButton").setAttribute("aria-label", profile ? `Account for ${profile.name}` : "Sign in with Google");
+      $("#accountButton").setAttribute("aria-label", profile ? `Account for ${profile.name}` : "Sign in or create an account");
       $("#customerSignedOut").hidden = Boolean(profile);
       $("#customerSignedIn").hidden = !profile;
       $("#checkoutAccountMessage").textContent = profile ?
         `Signed in as ${profile.email}. Your checkout requests will be saved to your account.` :
-        "Guest checkout is available. Use the account icon to sign in with Google and save your order history.";
+        "Guest checkout is available. Use the account icon to sign in or create an account and save your order history.";
       $("#accountCustomerName").textContent = profile ? profile.name : "";
       $("#accountCustomerEmail").textContent = profile ? profile.email : "";
       $("#customerName").value = profile ? profile.name : "";

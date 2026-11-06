@@ -26,6 +26,7 @@ const {
   paymentAmountMismatchDetails,
 } = require('./lib/paystack');
 const { sendOrderEmail, sendCustomizationEmail } = require('./lib/email');
+const { hashPassword, verifyPassword, normalizeEmail, validateSignup } = require('./lib/password');
 
 const ORDER_EMAIL_EVENTS = new Set([
   'admin_new_order',
@@ -330,12 +331,12 @@ function requireCustomer(req, res, next) {
   try {
     const claims = jwt.verify(readCustomerCookie(req) || '', process.env.JWT_SECRET || '');
     if (typeof claims !== 'object' || claims.scope !== 'customer' || !mongoose.isValidObjectId(claims.customer)) {
-      return res.status(401).json({ error: 'Please sign in with Google' });
+      return res.status(401).json({ error: 'Please sign in' });
     }
     req.customerId = claims.customer;
     next();
   } catch {
-    res.status(401).json({ error: 'Please sign in with Google' });
+    res.status(401).json({ error: 'Please sign in' });
   }
 }
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many attempts. Try again in 15 minutes.' } });
@@ -385,6 +386,14 @@ app.post('/api/customer/google', customerLoginLimiter, async (req, res) => {
     return res.status(401).json({ error: 'Use a Google account with a verified email address' });
   }
 
+  // Link Google to an existing email/password account with the same verified email.
+  if (!(await Customer.exists({ googleId: profile.sub }))) {
+    await ensureCustomerIndexes();
+    await Customer.updateOne(
+      { email: String(profile.email).toLowerCase(), googleId: { $exists: false } },
+      { $set: { googleId: profile.sub } }
+    );
+  }
   const customer = await Customer.findOneAndUpdate(
     { googleId: profile.sub },
     {
@@ -396,14 +405,75 @@ app.post('/api/customer/google', customerLoginLimiter, async (req, res) => {
     },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
   );
+  setCustomerCookie(res, customer);
+  res.json({ customer });
+});
+
+// ---------- Email + password accounts ----------
+function setCustomerCookie(res, customer) {
   const token = jwt.sign({ customer: String(customer._id), scope: 'customer' }, process.env.JWT_SECRET, { expiresIn: '7d' });
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   res.setHeader('Set-Cookie', `${CUSTOMER_COOKIE}=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax${secure}`);
+}
+// Older databases have a non-sparse unique googleId index, which would block
+// more than one account without Google. Replace it with a sparse one once.
+let customerIndexesPromise = null;
+function ensureCustomerIndexes() {
+  customerIndexesPromise = customerIndexesPromise || (async () => {
+    const indexes = await Customer.collection.indexes().catch(() => []);
+    const googleIndex = indexes.find((index) => index.key && index.key.googleId === 1 && Object.keys(index.key).length === 1);
+    if (googleIndex && !googleIndex.sparse) await Customer.collection.dropIndex(googleIndex.name);
+    if (!googleIndex || !googleIndex.sparse) await Customer.collection.createIndex({ googleId: 1 }, { unique: true, sparse: true });
+  })().catch((error) => { customerIndexesPromise = null; throw error; });
+  return customerIndexesPromise;
+}
+function authConfigError(res) {
+  if (!process.env.JWT_SECRET || !productionAuthConfigReady()) {
+    res.status(503).json({ error: 'Sign-in is not configured yet' });
+    return true;
+  }
+  return false;
+}
+app.post('/api/customer/signup', customerLoginLimiter, async (req, res) => {
+  if (authConfigError(res)) return;
+  const input = validateSignup(req.body || {});
+  if (input.error) return res.status(400).json({ error: input.error });
+  await ensureCustomerIndexes();
+  const existing = await Customer.findOne({ email: input.email }).select('+passwordHash googleId');
+  if (existing) {
+    return res.status(409).json({
+      error: existing.passwordHash
+        ? 'An account with this email already exists. Please sign in instead.'
+        : 'This email is linked to Google. Please use Continue with Google.',
+    });
+  }
+  const customer = await Customer.create({
+    name: input.name,
+    email: input.email,
+    passwordHash: await hashPassword(input.password),
+  });
+  setCustomerCookie(res, customer);
+  res.status(201).json({ customer });
+});
+app.post('/api/customer/login', customerLoginLimiter, async (req, res) => {
+  if (authConfigError(res)) return;
+  const email = normalizeEmail(req.body && req.body.email);
+  const password = req.body && typeof req.body.password === 'string' ? req.body.password : '';
+  if (!email || !password || password.length > 128) return res.status(400).json({ error: 'Enter your email and password' });
+  const customer = await Customer.findOne({ email, passwordHash: { $exists: true } }).select('+passwordHash');
+  const ok = await verifyPassword(password, customer && customer.passwordHash);
+  if (!customer || !ok) {
+    const googleOnly = !customer && await Customer.exists({ email, googleId: { $exists: true } });
+    return res.status(401).json({
+      error: googleOnly ? 'This email is linked to Google. Please use Continue with Google.' : 'Incorrect email or password',
+    });
+  }
+  setCustomerCookie(res, customer);
   res.json({ customer });
 });
 app.get('/api/customer/me', requireCustomer, async (req, res) => {
   const customer = await Customer.findById(req.customerId);
-  if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
+  if (!customer) return res.status(401).json({ error: 'Please sign in' });
   res.json({ customer });
 });
 app.post('/api/customer/logout', (req, res) => {
@@ -419,7 +489,7 @@ app.get('/api/customer/orders', requireCustomer, async (req, res) => {
 app.get('/api/customer/rewards', requireCustomer, async (req, res) => {
   res.set('Cache-Control', 'no-store');
   const customer = await Customer.findById(req.customerId).select('rewardNotificationsSeen');
-  if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
+  if (!customer) return res.status(401).json({ error: 'Please sign in' });
   const orders = await Order.find({
     customer: req.customerId,
     paymentStatus: 'paid',
@@ -810,7 +880,7 @@ app.post('/api/orders', guestOrderLimiter, async (req, res) => {
 app.post('/api/customer/orders', requireCustomer, async (req, res) => {
   await expireOrderReservations();
   const customer = await Customer.findById(req.customerId);
-  if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
+  if (!customer) return res.status(401).json({ error: 'Please sign in' });
   const order = await createReservedOrder(new Order(await orderContact(req.body || {}, customer)));
   await notifyOrderEmail(order, 'admin_new_order');
   const saved = order.toObject();
@@ -914,7 +984,7 @@ app.post('/api/orders/paystack', guestOrderLimiter, paystackOrderLimiter, async 
 });
 app.post('/api/customer/orders/paystack', requireCustomer, paystackOrderLimiter, async (req, res) => {
   const customer = await Customer.findById(req.customerId);
-  if (!customer) return res.status(401).json({ error: 'Please sign in with Google' });
+  if (!customer) return res.status(401).json({ error: 'Please sign in' });
   const authorizationUrl = await createPaystackOrder(req, customer);
   res.status(201).json({ authorizationUrl });
 });
@@ -1736,6 +1806,7 @@ app.get('/admin/users', (req, res) => res.sendFile(path.join(pub, 'users.html'))
 app.get('/admin/delivery', (req, res) => res.sendFile(path.join(pub, 'delivery.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(pub, 'terms.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(pub, 'privacy.html')));
+app.get(['/signin', '/signup'], (req, res) => res.sendFile(path.join(pub, 'signin.html')));
 app.get(['/shop', '/cart', '/checkout', '/about', '/contact', '/customize', '/product/:id'], (req, res) =>
   res.sendFile(path.join(pub, 'index.html')));
 app.use(['/orders.html', '/sales.html', '/promos.html', '/users.html', '/delivery.html'], requireAdminPage);
