@@ -1,6 +1,27 @@
 {
   "version": 2,
-  "builds": [{ "src": "server.js", "use": "@vercel/node", "config": { "includeFiles": ["public/**"] } }],
-  "routes": [{ "src": "/(.*)", "dest": "server.js" }],
-  "crons": [{ "path": "/api/cron/expire-order-reservations", "schedule": "0 0 * * *" }]
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "public/**",
+          "pages/**"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/expire-order-reservations",
+      "schedule": "0 0 * * *"
+    }
+  ]
 }

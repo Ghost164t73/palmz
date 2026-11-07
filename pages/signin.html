@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Sign in or create your PALMZ account to save your details, track orders and earn rewards.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <title>Sign in — PALMZ</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f5ef;
+      --surface: #ffffff;
+      --surface2: #f1efe8;
+      --text: #11141c;
+      --muted: #6e6d68;
+      --line: rgba(17, 20, 28, .12);
+      --navy: #0c1227;
+      --gold: #c9a34a;
+      --gold2: #e5c66f;
+      --danger: #b3261e;
+      --ok: #1f7a4d;
+      --shadow: 0 30px 80px rgba(12, 18, 39, .14)
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #080a10;
+        --surface: #0e111a;
+        --surface2: #151927;
+        --text: #f6f4ed;
+        --muted: #a5a8b4;
+        --line: rgba(255, 255, 255, .11);
+        --danger: #f2b8b5;
+        --ok: #7fd3a6;
+        --shadow: 0 30px 80px rgba(0, 0, 0, .5)
+      }
+    }
+    * { box-sizing: border-box }
+    html, body { height: 100% }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased
+    }
+    a { color: inherit }
+    .auth {
+      min-height: 100%;
+      display: grid;
+      grid-template-columns: 1.05fr 1fr
+    }
+    .brand {
+      position: relative;
+      overflow: hidden;
+      background: var(--navy) url("/story-sandals.jpeg") center / cover no-repeat;
+      color: #f6f4ed;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 44px
+    }
+    .brand::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(12, 18, 39, .55) 0%, rgba(12, 18, 39, .2) 40%, rgba(12, 18, 39, .92) 100%)
+    }
+    .brand > * { position: relative }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      font-family: "Playfair Display", Georgia, serif;
+      font-weight: 900;
+      letter-spacing: .22em;
+      font-size: 18px
+    }
+    .logo img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover }
+    .brand h2 {
+      font-family: "Playfair Display", Georgia, serif;
+      font-size: clamp(32px, 3.6vw, 52px);
+      line-height: 1.05;
+      margin: 0 0 14px;
+      font-weight: 700
+    }
+    .brand h2 em { color: var(--gold2); font-style: italic }
+    .brand p { margin: 0; max-width: 420px; line-height: 1.6; color: rgba(246, 244, 237, .82) }
+    .perks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px }
+    .perks span {
+      border: 1px solid rgba(229, 198, 111, .45);
+      color: var(--gold2);
+      padding: 7px 12px;
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase
+    }
+    .panel-wrap { display: grid; place-items: center; padding: 40px 22px }
+    .card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      padding: 36px 34px 30px
+    }
+    .back { display: inline-flex; gap: 6px; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: 22px }
+    .back:hover { color: var(--text) }
+    .kicker { color: var(--gold); font-size: 12px; letter-spacing: .22em; font-weight: 700 }
+    h1 {
+      font-family: "Playfair Display", Georgia, serif;
+      font-size: 32px;
+      margin: 8px 0 6px;
+      line-height: 1.15
+    }
+    .sub { color: var(--muted); margin: 0 0 22px; font-size: 14px; line-height: 1.5 }
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: var(--surface2);
+      padding: 4px;
+      margin-bottom: 22px
+    }
+    .tabs button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-weight: 600;
+      font-size: 14px;
+      padding: 10px;
+      cursor: pointer;
+      transition: background .2s, color .2s
+    }
+    .tabs button[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 2px 10px rgba(0, 0, 0, .08) }
+    .google-slot { display: flex; justify-content: center; min-height: 44px }
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      margin: 20px 0
+    }
+    .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line) }
+    form { display: grid; gap: 14px }
+    label { display: grid; gap: 6px; font-size: 13px; font-weight: 600 }
+    .field { position: relative }
+    input {
+      width: 100%;
+      font: inherit;
+      font-size: 15px;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--line);
+      padding: 13px 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s
+    }
+    input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201, 163, 74, .2) }
+    input[aria-invalid="true"] { border-color: var(--danger) }
+    .toggle-pw {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 6px 8px
+    }
+    .field input { padding-right: 64px }
+    .hint { font-size: 12px; color: var(--muted); font-weight: 400 }
+    .submit {
+      margin-top: 4px;
+      border: 0;
+      background: var(--navy);
+      color: #f6f4ed;
+      font: inherit;
+      font-weight: 700;
+      letter-spacing: .06em;
+      padding: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform .15s, background .2s
+    }
+    @media (prefers-color-scheme: dark) { .submit { background: var(--gold); color: #0c1227 } }
+    .submit:hover { transform: translateY(-1px) }
+    .submit:disabled { opacity: .65; cursor: wait; transform: none }
+    .spinner {
+      width: 15px; height: 15px; border-radius: 50%;
+      border: 2px solid currentColor; border-right-color: transparent;
+      animation: spin .7s linear infinite
+    }
+    @keyframes spin { to { transform: rotate(360deg) } }
+    .message { min-height: 20px; font-size: 13px; line-height: 1.5; margin-top: 14px; text-align: center }
+    .message.error { color: var(--danger) }
+    .message.ok { color: var(--ok) }
+    .switch { text-align: center; font-size: 13px; color: var(--muted); margin-top: 18px }
+    .switch button { border: 0; background: none; color: var(--gold); font: inherit; font-weight: 700; cursor: pointer; padding: 0 }
+    .legal { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 14px; line-height: 1.5 }
+    [hidden] { display: none !important }
+    @media (max-width: 860px) {
+      .auth { grid-template-columns: 1fr }
+      .brand { min-height: 230px; padding: 26px }
+      .brand .copy p, .perks { display: none }
+      .brand h2 { font-size: 30px; margin: 0 }
+      .card { padding: 28px 22px 24px; box-shadow: none }
+      .panel-wrap { padding: 0; align-items: start }
+      .card { border: 0; max-width: none; min-height: 100% }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth">
+    <aside class="brand">
+      <a class="logo" href="/"><img src="/palmz-logo.jpeg" alt="">PALMZ</a>
+      <div class="copy">
+        <h2>Step in.<br><em>Stay comfortable.</em></h2>
+        <p>Your PALMZ account keeps your details ready for checkout, tracks every order and counts your pairs toward a free shoe.</p>
+        <div class="perks"><span>Order history</span><span>Faster checkout</span><span>PALMZ Rewards</span></div>
+      </div>
+    </aside>
+
+    <main class="panel-wrap">
+      <div class="card">
+        <a class="back" href="/">← Back to store</a>
+        <div class="kicker">PALMZ ACCOUNT</div>
+        <h1 id="title">Welcome back</h1>
+        <p class="sub" id="subtitle">Sign in to see your orders and check out faster.</p>
+
+        <div class="tabs" role="tablist" aria-label="Account">
+          <button type="button" role="tab" id="tabSignin" aria-selected="true" aria-controls="signinForm" onclick="setMode('signin')">Sign in</button>
+          <button type="button" role="tab" id="tabSignup" aria-selected="false" aria-controls="signupForm" onclick="setMode('signup')">Create account</button>
+        </div>
+
+        <div class="google-slot" id="googleButton"></div>
+        <div class="divider" id="googleDivider">or use email</div>
+
+        <form id="signinForm" novalidate>
+          <label>Email
+            <input type="email" name="email" autocomplete="email" required maxlength="254" placeholder="you@example.com">
+          </label>
+          <label>Password
+            <span class="field">
+              <input type="password" name="password" autocomplete="current-password" required maxlength="128" placeholder="Your password">
+              <button type="button" class="toggle-pw" aria-label="Show password">Show</button>
+            </span>
+          </label>
+          <button class="submit" type="submit">Sign in</button>
+        </form>
+
+        <form id="signupForm" novalidate hidden>
+          <label>Full name
+            <input type="text" name="name" autocomplete="name" required maxlength="80" placeholder="Ada Okafor">
+          </label>
+          <label>Email
+            <input type="email" name="email" autocomplete="email" required maxlength="254" placeholder="you@example.com">
+          </label>
+          <label>Password <span class="hint">At least 8 characters, with a letter and a number</span>
+            <span class="field">
+              <input type="password" name="password" autocomplete="new-password" required minlength="8" maxlength="128" placeholder="Create a password">
+              <button type="button" class="toggle-pw" aria-label="Show password">Show</button>
+            </span>
+          </label>
+          <label>Confirm password
+            <span class="field">
+              <input type="password" name="confirm" autocomplete="new-password" required maxlength="128" placeholder="Repeat your password">
+              <button type="button" class="toggle-pw" aria-label="Show password">Show</button>
+            </span>
+          </label>
+          <button class="submit" type="submit">Create account</button>
+        </form>
+
+        <div class="message" id="message" role="status" aria-live="polite"></div>
+        <div class="switch" id="switchText"></div>
+        <p class="legal">By continuing you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>. Guest checkout is always available.</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const params = new URLSearchParams(location.search);
+    const rawNext = params.get("next") || "";
+    // Only allow same-site paths like "/account.html" or "/checkout".
+    const nextUrl = /^\/(?!\/)[A-Za-z0-9/_\-.?=&%]*$/.test(rawNext) ? rawNext : "/account.html";
+    let mode = location.pathname.replace(/\/+$/, "") === "/signup" || params.get("mode") === "signup" ? "signup" : "signin";
+    let googleReady = false;
+    const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+    function setMessage(text, kind) {
+      const el = $("#message");
+      el.textContent = text || "";
+      el.className = "message" + (kind ? " " + kind : "");
+    }
+
+    function setMode(next) {
+      mode = next;
+      const up = mode === "signup";
+      $("#tabSignin").setAttribute("aria-selected", String(!up));
+      $("#tabSignup").setAttribute("aria-selected", String(up));
+      $("#signinForm").hidden = up;
+      $("#signupForm").hidden = !up;
+      $("#title").textContent = up ? "Create your account" : "Welcome back";
+      $("#subtitle").textContent = up ? "Join PALMZ to save your details, track orders and earn rewards." : "Sign in to see your orders and check out faster.";
+      $("#switchText").innerHTML = up
+        ? 'Already have an account? <button type="button" onclick="setMode(\'signin\')">Sign in</button>'
+        : 'New to PALMZ? <button type="button" onclick="setMode(\'signup\')">Create an account</button>';
+      document.title = up ? "Create account — PALMZ" : "Sign in — PALMZ";
+      history.replaceState(null, "", (up ? "/signup" : "/signin") + location.search);
+      setMessage("");
+      renderGoogle();
+    }
+
+    async function request(url, body) {
+      const response = await fetch(url, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Something went wrong. Please try again.");
+      return data;
+    }
+
+    function setBusy(form, busy, label) {
+      const btn = form.querySelector(".submit");
+      btn.disabled = busy;
+      btn.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span>Please wait…' : label;
+    }
+
+    function invalid(input, text) {
+      input.setAttribute("aria-invalid", "true");
+      input.focus();
+      setMessage(text, "error");
+      return false;
+    }
+
+    function done() {
+      setMessage("Success! Taking you to your account…", "ok");
+      window.location.href = nextUrl;
+    }
+
+    $("#signinForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      form.querySelectorAll("input").forEach(i => i.removeAttribute("aria-invalid"));
+      const email = form.email.value.trim();
+      const password = form.password.value;
+      if (!EMAIL.test(email)) return invalid(form.email, "Enter a valid email address");
+      if (!password) return invalid(form.password, "Enter your password");
+      setBusy(form, true);
+      setMessage("");
+      try {
+        await request("/api/customer/login", { email, password });
+        done();
+      } catch (error) {
+        setMessage(error.message, "error");
+        setBusy(form, false, "Sign in");
+      }
+    });
+
+    $("#signupForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      form.querySelectorAll("input").forEach(i => i.removeAttribute("aria-invalid"));
+      const name = form.name.value.trim();
+      const email = form.email.value.trim();
+      const password = form.password.value;
+      if (!name) return invalid(form.name, "Enter your name");
+      if (!EMAIL.test(email)) return invalid(form.email, "Enter a valid email address");
+      if (password.length < 8) return invalid(form.password, "Password must be at least 8 characters");
+      if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) return invalid(form.password, "Password must include at least one letter and one number");
+      if (password !== form.confirm.value) return invalid(form.confirm, "Passwords do not match");
+      setBusy(form, true);
+      setMessage("");
+      try {
+        await request("/api/customer/signup", { name, email, password });
+        done();
+      } catch (error) {
+        setMessage(error.message, "error");
+        setBusy(form, false, "Create account");
+      }
+    });
+
+    document.querySelectorAll(".toggle-pw").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const input = btn.parentElement.querySelector("input");
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.textContent = show ? "Hide" : "Show";
+        btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+      });
+    });
+
+    async function googleCredential(response) {
+      setMessage("Signing in with Google…");
+      try {
+        await request("/api/customer/google", { credential: response.credential });
+        done();
+      } catch (error) {
+        setMessage(error.message, "error");
+      }
+    }
+
+    function renderGoogle() {
+      if (!googleReady) return;
+      const slot = $("#googleButton");
+      slot.replaceChildren();
+      window.google.accounts.id.renderButton(slot, {
+        theme: "outline",
+        size: "large",
+        text: mode === "signup" ? "signup_with" : "continue_with",
+        shape: "rectangular",
+        width: Math.min(372, slot.clientWidth || 372)
+      });
+    }
+
+    function hideGoogle() {
+      $("#googleButton").hidden = true;
+      $("#googleDivider").hidden = true;
+    }
+
+    async function initializeGoogle() {
+      try {
+        const response = await fetch("/api/customer/google-config", { credentials: "same-origin" });
+        const config = await response.json().catch(() => ({}));
+        if (!config.clientId || !window.google || !window.google.accounts) return hideGoogle();
+        window.google.accounts.id.initialize({ client_id: config.clientId, callback: googleCredential });
+        googleReady = true;
+        renderGoogle();
+      } catch {
+        hideGoogle();
+      }
+    }
+
+    // Already signed in? Skip straight to the account.
+    fetch("/api/customer/me", { credentials: "same-origin" }).then(r => { if (r.ok) window.location.replace(nextUrl); }).catch(() => {});
+    setMode(mode);
+  </script>
+  <script src="https://accounts.google.com/gsi/client" async defer onload="initializeGoogle()" onerror="hideGoogle()"></script>
+</body>
+</html>

@@ -70,3 +70,20 @@ Manage codes in `/admin/promos` (sidebar: **Promo codes**). Customers enter a co
 - **WhatsApp:** the order is saved first, then the WhatsApp message is built from the server's totals (subtotal, promo, delivery fee, total) and includes an order reference. Opening WhatsApp is not confirmation: the order is only confirmed when you move it forward in `/admin/orders`, and WhatsApp payments are still recorded by hand.
 
 API: `POST /api/promo/validate` (public, rate limited); admin only: `GET/POST /api/admin/promos`, `PUT /api/admin/promos/:id`, `PATCH /api/admin/promos/:id/active`, `DELETE /api/admin/promos/:id`, `GET /api/admin/promos/:id/orders`. Run the unit tests with `npm test`. No new environment variables are needed; the new collections and indexes are created automatically on first use.
+
+## Project structure
+
+```
+server.js            Starts the app (also the Vercel entry)
+app.js               Builds the Express app and mounts everything in order
+config/              Database, Cloudinary and shared constants
+middleware/          Auth guards, rate limits, uploads, security headers, errors
+routes/              URL definitions only (admin, customer, orders, store, customize, pages)
+controllers/         What each URL does
+services/            Shared business logic (orders, Paystack, promos, images...)
+utils/               Small validation helpers
+models/              Mongoose models
+lib/                 Pure helpers covered by tests
+pages/               HTML pages
+public/              Images, icons and browser scripts
+```
