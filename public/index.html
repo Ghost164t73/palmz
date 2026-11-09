@@ -1616,8 +1616,9 @@
     }
 
     html[data-page="/checkout"] #checkoutModal .modal-box {
-      width: min(980px, 100%);
+      width: min(1240px, 100%);
       max-height: none;
+      overflow: visible;
       margin: auto;
       padding: clamp(20px, 4vw, 36px);
       border-radius: 14px;
@@ -1627,8 +1628,8 @@
 
     .checkout-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
-      gap: 32px;
+      grid-template-columns: minmax(0, 1.8fr) minmax(300px, .95fr);
+      gap: 28px;
       align-items: start;
       width: 100%;
       min-width: 0
@@ -1640,20 +1641,51 @@
     .checkout-layout .promo-box,
     .checkout-layout .form { min-width: 0; max-width: 100% }
 
-    .checkout-layout .summary {
+    .checkout-layout .checkout-aside {
       grid-column: 2;
       grid-row: 1;
       position: sticky;
-      top: 100px;
+      top: 24px;
+      align-self: start;
+      min-width: 0;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: var(--shadow)
+    }
+    .checkout-layout .checkout-details-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 0 14px;
+      color: var(--text);
+      font-size: 21px;
+      font-weight: 750;
+      cursor: pointer;
+      list-style: none
+    }
+    .checkout-layout .checkout-details-toggle::-webkit-details-marker { display: none }
+    .checkout-layout .checkout-details-toggle::after { display: none }
+    .checkout-layout .checkout-aside .summary {
       margin: 0;
-      padding: 24px;
-      border-radius: 10px;
-      line-height: 2;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      line-height: 1.9;
       font-size: 15px
     }
-
-    .checkout-layout .checkout-aside { grid-column: 2; grid-row: 1; position: sticky; top: 100px; display: grid; gap: 14px; min-width: 0 }
-    .checkout-layout .checkout-aside .summary { position: static; grid-column: auto; grid-row: auto }
+    .checkout-layout .summary > strong:first-child { display: none }
+    .checkout-layout .promo-box {
+      margin-top: 16px;
+      padding: 16px 0 0;
+      border: 0;
+      border-top: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent
+    }
     .checkout-layout .summary,
     .checkout-layout .promo-applied,
     .checkout-layout .promo-msg { overflow-wrap: anywhere }
@@ -1674,7 +1706,18 @@
       grid-row: 1;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 20px 16px;
-      padding: 4px 0
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: var(--shadow)
+    }
+
+    .checkout-layout .details-heading {
+      grid-column: 1 / -1;
+      margin: 0;
+      color: var(--text);
+      font-size: 21px
     }
 
     .checkout-layout .form .checkout-wide,
@@ -2085,10 +2128,13 @@
 
     @media(max-width:760px) {
       .checkout-layout { grid-template-columns: minmax(0, 1fr); gap: 16px }
-      .checkout-layout .summary { grid-column: 1; grid-row: 2; position: static }
-      .checkout-layout .checkout-aside { grid-column: 1; grid-row: 2; position: static }
-      .checkout-layout .form { grid-column: 1; grid-row: 1 }
+      .checkout-layout .checkout-aside { grid-column: 1; grid-row: 1; position: static }
+      .checkout-layout .form { grid-column: 1; grid-row: 2 }
       .checkout-layout .promo-row > * { min-width: 0 }
+      .checkout-layout .checkout-details-toggle { padding-bottom: 0 }
+      .checkout-layout .checkout-details-toggle::after { display: block; content: "+"; color: var(--gold); font-size: 20px }
+      .checkout-layout .checkout-aside[open] .checkout-details-toggle { padding-bottom: 14px }
+      .checkout-layout .checkout-aside[open] .checkout-details-toggle::after { content: "−" }
     }
 
     @media(max-width:620px) {
@@ -2197,23 +2243,22 @@
 
       .checkout-layout .summary {
         grid-column: 1;
-        grid-row: 2;
+        grid-row: 1;
         position: static
       }
 
       .checkout-layout .checkout-aside {
         grid-column: 1;
-        grid-row: 2;
-        position: static
+        grid-row: 1;
+        position: static;
+        padding: 18px
       }
 
       .checkout-layout .form {
         grid-column: 1;
-        grid-row: 1;
+        grid-row: 2;
         grid-template-columns: 1fr
       }
-
-      .checkout-layout .checkout-aside { grid-column: 1; grid-row: 2 }
 
       .checkout-layout .promo-row > * { min-width: 0 }
 
@@ -2587,13 +2632,15 @@
         <h3>Checkout</h3><button class="close"
           onclick="closeCheckout()">×</button>
       </div>
+      <p class="checkout-subtitle">Choose how you’d like to receive and pay for your order.</p>
       <div class="checkout-empty" id="checkoutEmpty" hidden>
         <p>Your bag is empty.</p>
         <a class="btn btn-gold" href="/shop">Browse footwear</a>
       </div>
       <div id="paymentResult" role="status" aria-live="polite" hidden></div>
       <div class="checkout-layout" id="checkoutContent">
-        <div class="checkout-aside">
+        <details class="checkout-aside" id="checkoutDetails">
+          <summary class="checkout-details-toggle">Your order</summary>
           <div class="summary" id="summary"></div>
           <div class="promo-box" id="promoBox">
             <label for="promoInput">Promo code</label>
@@ -2604,8 +2651,9 @@
             <div class="promo-applied" id="promoApplied" hidden><span id="promoAppliedText"></span><button class="promo-remove" type="button" onclick="removePromo()">Remove</button></div>
             <div class="promo-msg" id="promoMsg" role="status" aria-live="polite"></div>
           </div>
-        </div>
+        </details>
         <form class="form" onsubmit="submitOrder(event)">
+        <h4 class="details-heading">Your details</h4>
         <label>Full name
           <input id="customerName" required placeholder="Your full name">
         </label>
@@ -3967,6 +4015,8 @@ Please confirm item availability and payment details. Thank you!`;
       refreshCheckoutPage();
       if (location.pathname.replace(/\/+$/, "") === "/checkout" && cart.length) restorePromo();
     }
+    const checkoutDetails = $("#checkoutDetails");
+    if (checkoutDetails) checkoutDetails.open = !window.matchMedia("(max-width: 760px)").matches;
     loadProducts();
     deliveryOptionsPromise = loadDeliveryOptions();
     customerSessionPromise = restoreCustomerSession();
