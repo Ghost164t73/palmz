@@ -1605,25 +1605,18 @@
       }
     }
 
-    html[data-page="/checkout"] #checkoutModal.open {
-      position: static;
-      inset: auto;
-      z-index: auto;
-      display: block;
-      padding: 0 18px 48px;
-      background: transparent;
-      animation: none
+    #checkoutModal {
+      display: none
     }
 
-    html[data-page="/checkout"] #checkoutModal .modal-box {
-      width: min(1240px, 100%);
-      max-height: none;
-      overflow: visible;
-      margin: auto;
-      padding: clamp(20px, 4vw, 36px);
-      border-radius: 14px;
-      box-shadow: var(--shadow);
-      border-top: 4px solid var(--gold)
+    html[data-page="/checkout"] #checkoutModal {
+      display: block;
+      width: min(1240px, calc(100% - 150px));
+      margin: 32px auto 64px
+    }
+
+    html[data-page="/checkout"] #checkoutModal .checkout-head .close {
+      display: none
     }
 
     .checkout-layout {
@@ -1651,8 +1644,7 @@
       padding: 22px;
       border: 1px solid var(--line);
       border-radius: 14px;
-      background: var(--surface);
-      box-shadow: var(--shadow)
+      background: var(--surface)
     }
     .checkout-layout .checkout-details-toggle {
       display: flex;
@@ -1709,8 +1701,7 @@
       padding: 22px;
       border: 1px solid var(--line);
       border-radius: 14px;
-      background: var(--surface);
-      box-shadow: var(--shadow)
+      background: var(--surface)
     }
 
     .checkout-layout .details-heading {
@@ -2268,9 +2259,48 @@
         grid-column: 1
       }
 
-      html[data-page="/checkout"] #checkoutModal.open {
-        padding: 0 14px 32px
+    }
+
+    @media(max-width:760px) {
+      html[data-page="/checkout"] #checkoutModal {
+        width: calc(100% - 32px);
+        margin: 22px auto 40px
       }
+
+      html[data-page="/checkout"] .checkout-head { margin-bottom: 16px }
+      html[data-page="/checkout"] .checkout-head h3 { font-size: 30px }
+      html[data-page="/checkout"] .checkout-subtitle {
+        margin: -8px 0 18px;
+        font-size: 14px
+      }
+
+      .checkout-layout { gap: 12px }
+      .checkout-layout .form,
+      .checkout-layout .checkout-aside {
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: none
+      }
+      .checkout-layout .form { gap: 14px 12px }
+      .checkout-layout .details-heading,
+      .checkout-layout .checkout-details-toggle { font-size: 18px }
+      .checkout-layout .form label { font-size: 13px }
+      .checkout-layout .form input,
+      .checkout-layout .form textarea { padding: 11px 12px; font-size: 14px }
+      .checkout-layout .form button { min-height: 44px; font-size: 14px }
+      .checkout-layout .checkout-aside .summary { font-size: 13px; line-height: 1.7 }
+      .checkout-layout .promo-box { margin-top: 12px; padding-top: 12px }
+      .checkout-layout .promo-row input,
+      .checkout-layout .promo-row .btn { padding: 9px 10px; font-size: 13px }
+    }
+
+    @media(max-width:380px) {
+      html[data-page="/checkout"] #checkoutModal { width: calc(100% - 24px) }
+      .checkout-layout .form,
+      .checkout-layout .checkout-aside { padding: 13px }
+      .checkout-layout .form { gap: 12px }
+      .checkout-layout .details-heading,
+      .checkout-layout .checkout-details-toggle { font-size: 17px }
     }
 
     @media(max-width:360px) {
@@ -2589,17 +2619,17 @@
     </footer>
   </div>
 
-  <main class="container commerce-heading" id="cartPageHeading">
+  <!-- <main class="container commerce-heading" id="cartPageHeading">
     <a href="/shop">← Continue shopping</a>
     <div class="eyebrow">Your selection</div>
     <h1>Your bag</h1>
     <p>Review your pairs and quantities before checkout.</p>
-  </main>
+  </main> -->
 
-  <main class="container commerce-heading" id="checkoutPageHeading">
-    <!-- <h1>Checkout</h1>
-    <p>Share your delivery details and PALMZ will confirm your order on WhatsApp.</p> -->
-  </main>
+  <!-- <main class="container commerce-heading" id="checkoutPageHeading">
+    <h1>Checkout</h1>
+    <p>Share your delivery details and PALMZ will confirm your order on WhatsApp.</p>
+  </main> -->
 
   <div class="overlay" id="cartOverlay"
     onclick="if(event.target===this)closeCart()">
@@ -2626,11 +2656,9 @@
     </div>
   </div>
 
-  <div class="modal" id="checkoutModal">
-    <div class="modal-box">
+  <section class="checkout-page" id="checkoutModal" aria-labelledby="checkoutHeading">
       <div class="checkout-head">
-        <h3>Checkout</h3><button class="close"
-          onclick="closeCheckout()">×</button>
+        <h3 id="checkoutHeading">Checkout</h3>
       </div>
       <p class="checkout-subtitle">Choose how you’d like to receive and pay for your order.</p>
       <div class="checkout-empty" id="checkoutEmpty" hidden>
@@ -2712,8 +2740,7 @@
         <button id="submitOrderButton" class="btn btn-gold full" type="submit">Pay securely with Paystack →</button>
         <div class="note" id="orderMethodNote">You’ll be redirected to Paystack to complete payment. Your delivery fee and total are shown in the order summary.</div>
         </form>
-      </div>
-    </div>
+    </section>
   </div>
 
   <div class="modal" id="customerModal">
